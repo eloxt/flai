@@ -8,6 +8,8 @@ import (
 	"flai/internal/dao"
 	"flai/internal/logic"
 	"flai/internal/logic/llm"
+	"flai/internal/middleware"
+	"flai/internal/model/do"
 	"flai/internal/model/entity"
 	"strings"
 
@@ -17,6 +19,26 @@ import (
 )
 
 func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.CreateRes, err error) {
+	user, ok := middleware.GetUserFromContext(ctx)
+	if !ok {
+		return nil, gerror.New("User not found")
+	}
+
+	// Make sure user has access to the conversation
+	var conversation entity.Conversation
+	err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
+		Id:     req.Id,
+		UserId: user.Id,
+	}).
+		WhereNull("deleted_at").
+		Scan(&conversation)
+	if err != nil {
+		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch conversation")
+	}
+	if conversation.Id == "" {
+		return nil, gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
+	}
+
 	// Fetch message history based on MessagePath
 	historyMessages, err := dao.FetchMessageHistory(ctx, req.MessagePath)
 	if err != nil {

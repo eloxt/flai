@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router";
 import { useAuthStore } from "../store/auth-store";
 
 export interface ApiRequestInit extends RequestInit {
@@ -103,10 +102,11 @@ export const api = {
             body: JSON.stringify(data),
         });
     },
-    del: <T>(url: string, options?: ApiRequestInit) => {
+    del: <T>(url: string, data?: any, options?: ApiRequestInit) => {
         return request<T>(url, {
             ...options,
             method: 'DELETE',
+            body: JSON.stringify(data),
         });
     },
     stream: async (url: string, options?: ApiRequestInit): Promise<Response> => {

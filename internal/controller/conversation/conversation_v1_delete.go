@@ -18,9 +18,6 @@ func (c *ControllerV1) Delete(ctx context.Context, req *v1.DeleteReq) (res *v1.D
 	}
 
 	conversationId := req.Id
-	if conversationId == "" {
-		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "Conversation ID is required")
-	}
 	_, err = dao.Conversation.Ctx(ctx).Delete(do.Conversation{
 		Id:     conversationId,
 		UserId: user.Id,

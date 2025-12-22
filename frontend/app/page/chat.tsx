@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy, Trash2 } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
 import { useModelStore } from "../store/model-store";
 import { api, ApiError } from "../lib/api";
@@ -410,7 +410,7 @@ export default function Chat() {
         }
     };
 
-    const retryMessage = async (message: Message) => {
+    const retryMessage = async (message: TreeNode) => {
         // const newPath = [...path];
         // if (message.role === "assistant") {
         //     newPath.pop();
@@ -421,6 +421,49 @@ export default function Chat() {
         // const lastContent = content[content.length - 1]
         // sendMessage({ text: lastContent.data.content })
     }
+
+    const deleteMessage = async (message: TreeNode) => {
+        try {
+            await api.del("/api/messages", {
+                id: message.id,
+                parent_id: message.parent_id,
+                children: message.children.map((child) => child.id),
+                conversation_id: conversationId
+            })
+        } catch (error) {
+            if (error instanceof ApiError) {
+                toast.error(error.message);
+            } else {
+                toast.error("网络异常，请稍后重试。");
+            }
+            return;
+        }
+
+        // remove from nodeMap
+        const newMap = new Map(nodeMap);
+        newMap.delete(message.id);
+
+        // remove from newPath
+        const newPath = [...path];
+        newPath.splice(newPath.indexOf(message), 1);
+
+        // change children relations
+        if (message.children && message.children.length > 0) {
+            if (message.parent_id) {
+                const parent = nodeMap.get(message.parent_id);
+                if (parent) {
+                    parent.children = message.children;
+                }
+            }
+            message.children.forEach((child) => {
+                child.parent_id = message.parent_id;
+            });
+        }
+
+        setNodeMap(newMap);
+        setPath(newPath);
+    }
+
     return (
         <div className="flex-1 overflow-y-scroll p-4 pb-0 flex flex-col">
             <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full flex-1">
@@ -481,7 +524,6 @@ export default function Chat() {
                                 </div>
                             ))}
                             <div className={`flex items-center gap-0 px-3 py-1 ${message.role === "user" ? "self-end opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
-
                                 {message.parent_id &&
                                     (nodeMap.get(message.parent_id)?.children?.length ?? 0) > 1 && (
                                         <>
@@ -513,6 +555,11 @@ export default function Chat() {
                                     }}
                                 >
                                     <Copy className="size-4 text-muted-foreground" />
+                                </Button>
+                                <Button variant="ghost" size="icon-sm"
+                                    onClick={() => deleteMessage(message)}
+                                >
+                                    <Trash2 className="size-4 text-muted-foreground" />
                                 </Button>
                                 <Button variant="ghost" size="icon-sm"
                                     onClick={() => retryMessage(message)}

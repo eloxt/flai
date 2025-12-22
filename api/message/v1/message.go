@@ -40,9 +40,11 @@ type EditReq struct {
 type EditRes struct{}
 
 type DeleteReq struct {
-	g.Meta `path:"/messages/" method:"delete" tag:"" summary:"Delete message"`
-	Id     string   `json:"id"`
-	Ids    []string `json:"ids"`
+	g.Meta         `path:"/messages/" method:"delete" tag:"" summary:"Delete message"`
+	Id             string   `json:"id"`
+	ConversationId string   `json:"conversation_id"`
+	ParentId       string   `json:"parent_id"`
+	Children       []string `json:"children"`
 }
 
 type DeleteRes struct{}
