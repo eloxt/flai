@@ -1,0 +1,48 @@
+{
+    "greeting": "有什么可以帮忙的?",
+    "placeholder": "问点什么...",
+    "attachment": "附件",
+    "search": "搜索",
+    "login": {
+        "expired": "登录状态已过期，请重新登录"
+    },
+    "error": {
+        "fetchMessages": "获取消息失败",
+        "sendMessage": "发送消息失败",
+        "modelProviderNotFound": "未找到模型提供商。请先选择一个模型。",
+        "network": "网络异常，请稍后重试。"
+    },
+    "success": {
+        "conversationDeleted": "聊天删除成功"
+    },
+    "reasoning": {
+        "process": "思考过程",
+        "done": "已思考"
+    },
+    "loading": "加载中...",
+    "sidebar": {
+        "newChat": "新聊天",
+        "searchChat": "搜索聊天",
+        "settings": "设置",
+        "logout": "注销",
+        "chats": "聊天",
+        "regenerateTitle": "重新生成标题",
+        "delete": "删除"
+    },
+    "model": {
+        "select": "选择模型",
+        "trainingUntil": "训练截至",
+        "contextWindow": "上下文窗口",
+        "maxOutput": "最大输出",
+        "pricing": "价格 (每1M tokens)",
+        "input": "输入",
+        "output": "输出",
+        "inputModalities": "输入模态",
+        "badge": {
+            "attachment": "附件",
+            "reasoning": "推理",
+            "toolCall": "工具调用",
+            "structuredOutput": "结构化输出"
+        }
+    }
+}

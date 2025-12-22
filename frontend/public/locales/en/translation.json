@@ -1,0 +1,48 @@
+{
+    "greeting": "How can I help you?",
+    "placeholder": "Ask anything...",
+    "attachment": "Attachment",
+    "search": "Search",
+    "login": {
+        "expired": "Login expired, please login again"
+    },
+    "error": {
+        "fetchMessages": "Failed to fetch messages",
+        "sendMessage": "Failed to send message",
+        "modelProviderNotFound": "Model provider not found. Please select a model.",
+        "network": "Network error, please try again later."
+    },
+    "success": {
+        "conversationDeleted": "Conversation deleted successfully"
+    },
+    "reasoning": {
+        "process": "Reasoning Process",
+        "done": "Reasoned"
+    },
+    "loading": "Loading...",
+    "sidebar": {
+        "newChat": "New Chat",
+        "searchChat": "Search Chat",
+        "settings": "Settings",
+        "logout": "Logout",
+        "chats": "Chats",
+        "regenerateTitle": "Regenerate Title",
+        "delete": "Delete"
+    },
+    "model": {
+        "select": "Select Model",
+        "trainingUntil": "Training until",
+        "contextWindow": "Context Window",
+        "maxOutput": "Max Output",
+        "pricing": "Pricing (per 1M tokens)",
+        "input": "Input",
+        "output": "Output",
+        "inputModalities": "Input Modalities",
+        "badge": {
+            "attachment": "Attachment",
+            "reasoning": "Reasoning",
+            "toolCall": "Tool Call",
+            "structuredOutput": "Structured Output"
+        }
+    }
+}

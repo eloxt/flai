@@ -1,0 +1,21 @@
+
+# CLI tool, only in development environment.
+# https://goframe.org/docs/cli
+gfcli:
+  build:
+    name: "flai"
+    arch: "amd64,arm64"
+    system: "linux,darwin,windows"
+    version: "0.0.1"
+    path: "./bin"
+    packSrc: "resource/public"
+
+  gen:
+    dao:
+      - link: "pgsql:postgres:pwv*XNX@pyz1xjz6mqr@tcp(10.1.1.170:5432)/flai-dev"
+        descriptionTag: true
+
+  docker:
+    build: "-a amd64 -s linux -p temp -ew"
+    tagPrefixes:
+      - my.image.pub/my-app
