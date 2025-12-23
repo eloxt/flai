@@ -1,7 +1,7 @@
-import { ArrowUpIcon, Globe, Paperclip } from "lucide-react";
+import { ArrowUpIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
 
 interface ChatInputProps {

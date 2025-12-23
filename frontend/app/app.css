@@ -4,9 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  color-scheme: light;
   font-family: var(--font-family-sans);
-
   --font-family-sans: "-apple-system",
     "Noto Sans",
     "Helvetica Neue",
@@ -26,10 +24,7 @@
     SimHei,
     "WenQuanYi Zen Hei Sharp",
     sans-serif;
-  --font-size-base: 16px;
-  --font-size-title: 17px;
-  --font-size-hero: 30px;
-
+  
   --color-hover: rgba(15, 23, 42, 0.08);
   --color-active: #eeeeee;
   --color-scrollbar: rgba(0, 0, 0, 0.2);

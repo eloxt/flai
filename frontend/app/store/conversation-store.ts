@@ -26,7 +26,7 @@ interface ConversationState {
     deleteConversation: (id: string) => Promise<void>;
 }
 
-export const useConversationStore = create<ConversationState>((set, get) => ({
+export const useConversationStore = create<ConversationState>((set) => ({
     conversations: [],
     isLoading: false,
     fetchConversations: async () => {
@@ -55,7 +55,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             updated_at: new Date().toISOString(),
         };
         set((state) => ({ conversations: [newConversation, ...state.conversations] }));
-        get().generateTitle(id);
     },
     generateTitle: async (id: string) => {
         try {

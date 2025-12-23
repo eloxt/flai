@@ -11,7 +11,7 @@ import {
     Construction,
 } from "lucide-react";
 import { NavLink } from "react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useConversationStore } from "../store/conversation-store";
 import { getInitials } from "../lib/auth-client";
 import { useAppStore } from "../store/app-store";
@@ -21,13 +21,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
     Empty,
@@ -51,6 +50,8 @@ export default function Sidebar() {
     const deleteConversation = useConversationStore((state) => state.deleteConversation);
     const generateTitle = useConversationStore((state) => state.generateTitle);
     const navigate = useNavigate();
+    const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+    const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
     useEffect(() => {
         if (tokens?.access_token) {
@@ -87,7 +88,6 @@ export default function Sidebar() {
         icon: React.ReactNode;
         to: string;
     }
-
 
     return (
         <aside
@@ -170,11 +170,10 @@ export default function Sidebar() {
                                         {chat.icon && chat.icon !== "" && <span className="mr-2 text-lg">{chat.icon}</span>}
                                         {chat.title}
                                     </span>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <button className="p-1 hover:bg-[var(--color-active)] rounded-md outline-none"
-                                                    onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <EllipsisVertical className="size-4 text-[var(--muted-foreground)]" />
                                                 </button>
@@ -186,35 +185,13 @@ export default function Sidebar() {
                                                     <RefreshCw className="mr-2 size-4" />
                                                     {t("sidebar.regenerateTitle")}
                                                 </DropdownMenuItem>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem
-                                                            className="text-destructive focus:text-destructive focus:bg-red-50 dark:focus:bg-red-950"
-                                                            onSelect={(e) => e.preventDefault()}
-                                                        >
-                                                            <Trash className="mr-2 size-4" />
-                                                            {t("sidebar.delete")}
-                                                        </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                className="bg-destructive hover:bg-destructive/80"
-                                                                onClick={() => {
-                                                                    deleteConversation(chat.id);
-                                                                    navigate("/");
-                                                                }}
-                                                            >Confirm</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                <DropdownMenuItem
+                                                    variant="destructive"
+                                                    onClick={() => setConversationToDelete(chat.id)}
+                                                >
+                                                    <Trash className="mr-2 size-4" />
+                                                    {t("sidebar.delete")}
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -224,66 +201,88 @@ export default function Sidebar() {
                     ))
                 )}
             </div>
-            <Dialog>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <div
-                            className={`flex mx-2 mb-2 items-center gap-2 rounded-xl pl-2 py-2 transition hover:bg-[var(--color-hover)]`}
-                            style={{ color: "var(--primary)" }}
-                        >
-                            <div className="flex items-center gap-2 min-w-0">
-                                <Avatar className="size-6">
-                                    <AvatarImage>
-                                    </AvatarImage>
-                                    <AvatarFallback className="text-[0.6rem]">
-                                        {getInitials(user?.username)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <span className={`flex-1 text-sm text-start font-medium truncate transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-                                    {user?.username || "User"}
-                                </span>
-                            </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <div
+                        className={`flex mx-2 mb-2 items-center gap-2 rounded-xl pl-2 py-2 transition hover:bg-[var(--color-hover)]`}
+                        style={{ color: "var(--primary)" }}
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="size-6">
+                                <AvatarImage>
+                                </AvatarImage>
+                                <AvatarFallback className="text-[0.6rem]">
+                                    {getInitials(user?.username)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span className={`flex-1 text-sm text-start font-medium truncate transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+                                {user?.username || "User"}
+                            </span>
                         </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="start">
-                        <DropdownMenuLabel>
-                            {user?.email || "user@example.com"}
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                            <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <Settings className="size-4" />
-                                    <span>{t("sidebar.settings")}</span>
-                                </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>{t("sidebar.settings")}</DialogTitle>
-                                </DialogHeader>
-                                <div className="flex h-full w-full items-center justify-center p-4">
-                                    <Empty>
-                                        <EmptyHeader>
-                                            <EmptyMedia variant="icon">
-                                                <Construction className="size-6" />
-                                            </EmptyMedia>
-                                            <EmptyTitle>Settings Under Construction</EmptyTitle>
-                                            <EmptyDescription>
-                                                We are working hard to bring you the best settings experience. Please
-                                                check back later.
-                                            </EmptyDescription>
-                                        </EmptyHeader>
-                                    </Empty>
-                                </div>
-                            </DialogContent>
-                            <DropdownMenuItem onClick={logout}>
-                                <LogOut className="size-4" />
-                                <span>{t("sidebar.logout")}</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="start">
+                    <DropdownMenuLabel>
+                        {user?.email || "user@example.com"}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                        <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                            <Settings className="size-4" />
+                            <span>{t("sidebar.settings")}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={logout}>
+                            <LogOut className="size-4" />
+                            <span>{t("sidebar.logout")}</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("sidebar.settings")}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex h-full w-full items-center justify-center p-4">
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Construction className="size-6" />
+                                </EmptyMedia>
+                                <EmptyTitle>Settings Under Construction</EmptyTitle>
+                                <EmptyDescription>
+                                    We are working hard to bring you the best settings experience. Please
+                                    check back later.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
+                    </div>
+                </DialogContent>
             </Dialog>
+
+            <AlertDialog open={!!conversationToDelete} onOpenChange={(open) => !open && setConversationToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete your conversation and remove it from our servers.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (conversationToDelete) {
+                                    deleteConversation(conversationToDelete);
+                                    navigate("/");
+                                }
+                                setConversationToDelete(null);
+                            }}
+                        >Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </aside>
     );
 }

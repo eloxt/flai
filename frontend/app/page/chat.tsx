@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useLocation } from "react-router";
+import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy, Trash2 } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
@@ -106,6 +106,7 @@ export default function Chat() {
     const setMainInput = useInputStore((state) => state.setMainInput);
     const setSendMainInput = useInputStore((state) => state.setSendMainInput);
     const addConversation = useConversationStore((state) => state.addConversation);
+    const generateTitle = useConversationStore((state) => state.generateTitle);
     const hasInitialized = useRef(false);
 
     useEffect(() => {
@@ -114,19 +115,18 @@ export default function Chat() {
 
     useEffect(() => {
         const init = async () => {
-            await fetchMessages();
-
-            setTimeout(() => {
-                if (sendMainInput && mainInput && conversationId && !hasInitialized.current) {
-                    hasInitialized.current = true;
-                    addConversation(conversationId);
-                    sendMessage({
-                        text: mainInput,
-                    });
-                    setSendMainInput(false);
-                    setMainInput("");
-                }
-            }, 100);
+            if (sendMainInput && mainInput && conversationId && !hasInitialized.current) {
+                hasInitialized.current = true;
+                setSendMainInput(false);
+                setMainInput("");
+                addConversation(conversationId);
+                sendMessage({
+                    text: mainInput,
+                });
+                generateTitle(conversationId);
+            } else {
+                await fetchMessages();
+            }
         }
         init();
     }, [conversationId, tokens]);
@@ -437,60 +437,16 @@ export default function Chat() {
         sendMessage({ text: lastContent.data.content, retry: true, pathParam: newPath, messageId: lastMessage.id })
     }
 
-    const deleteMessage = async (message: TreeNode) => {
-        if (message.parent_id) {
-            const parent = nodeMap.get(message.parent_id);
-            if (parent) {
-                let grandParent: TreeNode | undefined;
-                if (parent.parent_id) {
-                    grandParent = nodeMap.get(parent.parent_id);
-                    if (grandParent) {
-                        grandParent.children = grandParent.children.filter((msg) => msg.id !== parent.id);
-                    }
-                }
-                if (parent.children.length > 1 || (grandParent && grandParent.children.length > 1)) {
-                    const childrenIndex = parent.children.indexOf(message);
-                    parent.children = parent.children.filter((msg) => msg.id !== message.id);
+    const deleteMessage = async () => {
+        if (path.length === 0) return;
 
-                    const index = path.indexOf(message);
-                    const messageIdToDelete = path.slice(index, path.length).map((msg) => msg.id);
-                    try {
-                        await api.del("/api/messages", {
-                            ids: messageIdToDelete,
-                            conversation_id: conversationId,
-                            parent_id: message.parent_id,
-                        })
-                    } catch (error) {
-                        if (error instanceof ApiError) {
-                            toast.error(error.message);
-                        } else {
-                            toast.error("网络异常，请稍后重试。");
-                        }
-                        return;
-                    }
-                    const newPath = path.slice(0, index);
-                    if (childrenIndex > 0) {
-                        newPath.push(parent.children[childrenIndex - 1]);
-                    } else {
-                        newPath.push(parent.children[childrenIndex]);
-                    }
-                    setPath(newPath);
-                    const newMap = new Map(nodeMap);
-                    messageIdToDelete.forEach((id) => {
-                        newMap.delete(id);
-                    })
-                    setNodeMap(newMap);
-                    return;
-                }
-            }
-        }
+        const lastMessage = path[path.length - 1];
+
         try {
             await api.del("/api/messages", {
-                id: message.id,
-                parent_id: message.parent_id,
-                children: message.children.map((child) => child.id),
-                conversation_id: conversationId
-            })
+                ids: lastMessage.id,
+                conversation_id: conversationId,
+            });
         } catch (error) {
             if (error instanceof ApiError) {
                 toast.error(error.message);
@@ -500,33 +456,36 @@ export default function Chat() {
             return;
         }
 
-        // change children relations
-        if (message.children && message.children.length > 0) {
-            if (message.parent_id) {
-                const parent = nodeMap.get(message.parent_id);
-                if (parent) {
-                    parent.children = message.children;
+        const newMap = new Map(nodeMap);
+        newMap.delete(lastMessage.id);
+
+        let siblingNode: TreeNode | undefined;
+        if (lastMessage.parent_id) {
+            const parent = newMap.get(lastMessage.parent_id);
+            if (parent) {
+                const siblingIndex = parent.children.indexOf(lastMessage);
+                parent.children = parent.children.filter(
+                    child => child.id !== lastMessage.id
+                );
+                if (parent.children.length > 0) {
+                    siblingNode = siblingIndex > 0
+                        ? parent.children[siblingIndex - 1]
+                        : parent.children[0];
                 }
             }
-            message.children.forEach((child) => {
-                child.parent_id = message.parent_id;
-            });
         }
-
-        // remove from nodeMap
-        const newMap = new Map(nodeMap);
-        newMap.delete(message.id);
         setNodeMap(newMap);
 
-        // remove from path if has no siblings
-        if (message.parent_id) {
-            const parent = nodeMap.get(message.parent_id);
-            if (parent && parent.children.length === 1) {
-                const newPath = [...path];
-                newPath.splice(newPath.indexOf(message), 1);
-                setPath(newPath);
+        const newPath = path.slice(0, path.length - 1);
+        if (siblingNode) {
+            newPath.push(siblingNode);
+            let current = siblingNode;
+            while (current.children && current.children.length > 0) {
+                current = current.children[0];
+                newPath.push(current);
             }
         }
+        setPath(newPath);
     }
 
     return (
@@ -576,13 +535,13 @@ export default function Chat() {
                                                 >
                                                     <div className="overflow-hidden border-l-1 border-[var(--border)] pl-4">
                                                         <div className="markdown-body pb-2">
-                                                            <Streamdown>{content.data.content}</Streamdown>
+                                                            <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <Streamdown>{content.data.content}</Streamdown>
+                                            <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
                                         )}
                                     </div>
 
@@ -621,29 +580,29 @@ export default function Chat() {
                                 >
                                     <Copy className="size-4 text-muted-foreground" />
                                 </Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon-sm"
-                                        >
-                                            <Trash2 className="size-4 text-muted-foreground" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                <span>This action will delete this message and <span className="text-primary font-semibold">all below messages.</span></span>
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                className="bg-destructive hover:bg-destructive/80"
-                                                onClick={() => deleteMessage(message)}
-                                            >Confirm</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                {messageIndex === path.length - 1 && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon-sm">
+                                                <Trash2 className="size-4 text-muted-foreground" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action will delete the latest message pair.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={() => deleteMessage()}
+                                                >Confirm</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
                                 <Button variant="ghost" size="icon-sm"
                                     onClick={() => retryMessage(message)}
                                 >
