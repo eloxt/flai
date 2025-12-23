@@ -13,6 +13,9 @@
         "paths": {
             "@/*": [
                 "./app/*"
+            ],
+            "@coss/ui/*": [
+                "./app/components/ui/*"
             ]
         }
     }

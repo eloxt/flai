@@ -4,10 +4,10 @@ import { ChevronDown } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
 import { useModelStore, Model, Provider } from "../store/model-store";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Menu, MenuCheckboxItem, MenuGroup, MenuGroupLabel, MenuPopup, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { api, ApiError } from "@/lib/api";
 import { toast } from "sonner";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { PreviewCard, PreviewCardPopup, PreviewCardTrigger } from "@/components/ui/preview-card";
 import { Badge } from "./ui/badge";
 
 interface ModelCardDetailProps {
@@ -48,47 +48,47 @@ export default function ModelSelector() {
         <header
             className="flex items-center justify-between px-4 py-2"
         >
-            <DropdownMenu onOpenChange={setShowModelMenu}>
-                <DropdownMenuTrigger asChild>
+            <Menu onOpenChange={setShowModelMenu}>
+                <MenuTrigger render={
                     <Button
                         variant="ghost"
                         disabled={isLoading}
                         className="text-lg font-normal"
-                    >
-                        {currentModel ? currentModel.name : t("model.select")}
-                        <ChevronDown
-                            className={`size-4 text-muted-foreground transition-transform duration-200 ${showModelMenu ? "rotate-180" : ""}`}
-                        />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-3xs" align="start">
+                    />
+                }>
+                    {currentModel ? currentModel.name : t("model.select")}
+                    <ChevronDown
+                        className={`size-4 text-muted-foreground transition-transform duration-200 ${showModelMenu ? "rotate-180" : ""}`}
+                    />
+                </MenuTrigger>
+                <MenuPopup className="w-3xs" align="start">
                     {providers.map((provider, index) => (
-                        <>
-                            <DropdownMenuLabel
+                        <MenuGroup key={provider.id}>
+                            <MenuGroupLabel
                                 className="font-normal text-neutral-500"
-                                key={provider.id}>{provider.name}
-                            </DropdownMenuLabel>
+                            >{provider.name}
+                            </MenuGroupLabel>
                             {provider.model.map((model) => (
-                                <HoverCard openDelay={150} closeDelay={150}>
-                                    <HoverCardTrigger>
-                                        <DropdownMenuCheckboxItem
+                                <PreviewCard key={model.id}>
+                                    <PreviewCardTrigger delay={150} closeDelay={150}>
+                                        <MenuCheckboxItem
                                             className="font-normal"
                                             key={model.id}
                                             checked={currentModel?.id === model.id}
                                             onCheckedChange={() => setCurrentModel({ ...model, provider_id: provider.id })}>
                                             {model.name}
-                                        </DropdownMenuCheckboxItem>
-                                    </HoverCardTrigger>
-                                    <HoverCardContent className="min-w-2xs max-w-sm" side="right" align="start" sideOffset={15}>
+                                        </MenuCheckboxItem>
+                                    </PreviewCardTrigger>
+                                    <PreviewCardPopup className="min-w-2xs max-w-sm" align="start" sideOffset={15} side="right">
                                         <ModelCardDetail model={model} />
-                                    </HoverCardContent>
-                                </HoverCard>
+                                    </PreviewCardPopup>
+                                </PreviewCard>
                             ))}
-                            {index < providers.length - 1 && <DropdownMenuSeparator />}
-                        </>
+                            {index < providers.length - 1 && <MenuSeparator />}
+                        </MenuGroup>
                     ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
+                </MenuPopup>
+            </Menu>
         </header>
     );
 }

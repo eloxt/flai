@@ -1,8 +1,9 @@
-import { ArrowUpIcon, Globe, Paperclip } from "lucide-react";
+import { ArrowUpIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
+import { ToggleGroup } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
+import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
     value: string;
@@ -47,7 +48,7 @@ export function ChatInput({
                 className="flex field-sizing-content w-full resize-none rounded-md bg-transparent px-3 py-2.5 text-base transition-all outline-none md:text-sm"
             />
             <InputGroupAddon align="block-end">
-                <ToggleGroup type="multiple" spacing={2} >
+                <ToggleGroup className="gap-2">
                     {/* <ToggleGroupItem
                         value="attachment"
                         variant="outline"
@@ -65,7 +66,7 @@ export function ChatInput({
                         {t("search")}
                     </ToggleGroupItem> */}
                 </ToggleGroup>
-                <InputGroupButton
+                <Button
                     variant="default"
                     className="rounded-full ml-auto"
                     size="icon-xs"
@@ -73,7 +74,7 @@ export function ChatInput({
                     disabled={isLoading || !value.trim()}
                 >
                     <ArrowUpIcon />
-                </InputGroupButton>
+                </Button>
             </InputGroupAddon>
         </InputGroup>
     );

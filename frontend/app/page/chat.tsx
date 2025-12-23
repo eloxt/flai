@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
-import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogPopup, AlertDialogTitle, AlertDialogDescription, AlertDialogClose, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 interface Message {
     id: string;
@@ -622,13 +622,12 @@ export default function Chat() {
                                     <Copy className="size-4 text-muted-foreground" />
                                 </Button>
                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon-sm"
-                                        >
-                                            <Trash2 className="size-4 text-muted-foreground" />
-                                        </Button>
+                                    <AlertDialogTrigger render={
+                                        <Button variant="ghost" size="icon-sm" />
+                                    }>
+                                        <Trash2 className="size-4 text-muted-foreground" />
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent>
+                                    <AlertDialogPopup>
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                             <AlertDialogDescription>
@@ -636,13 +635,13 @@ export default function Chat() {
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                className="bg-destructive hover:bg-destructive/80"
+                                            <AlertDialogClose render={<Button variant="ghost"/>}>Cancel</AlertDialogClose>
+                                            <AlertDialogClose
+                                                render={<Button variant="destructive"/>}
                                                 onClick={() => deleteMessage(message)}
-                                            >Confirm</AlertDialogAction>
+                                            >Confirm</AlertDialogClose>
                                         </AlertDialogFooter>
-                                    </AlertDialogContent>
+                                    </AlertDialogPopup>
                                 </AlertDialog>
                                 <Button variant="ghost" size="icon-sm"
                                     onClick={() => retryMessage(message)}
