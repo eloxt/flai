@@ -13,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
+import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 interface Message {
     id: string;
@@ -234,7 +235,7 @@ export default function Chat() {
         sendMessage({ text: input });
     };
 
-    const sendMessage = async ({ text }: { text: string }) => {
+    const sendMessage = async ({ text, retry, pathParam, messageId }: { text: string, retry?: boolean, pathParam?: TreeNode[], messageId?: string }) => {
         if (!text.trim() || !conversationId || !tokens?.access_token) return;
         setIsInterference(true);
         const providerId = useModelStore.getState().currentModel?.provider_id;
@@ -245,36 +246,39 @@ export default function Chat() {
             return;
         }
 
-        const userMsgId = crypto.randomUUID();
+        const userMsgId = messageId || crypto.randomUUID();
+        let newPath = pathParam || [...path];
+        let newMap = new Map(nodeMap);
 
         // Optimistic update
-        const userMessage: TreeNode = {
-            id: userMsgId,
-            parent_id: path.length > 0 ? path[path.length - 1].id : "",
-            role: "user",
-            content: [
-                {
-                    type: "message",
-                    data: {
-                        content: text
+        if (!retry) {
+            const userMessage: TreeNode = {
+                id: userMsgId,
+                parent_id: path.length > 0 ? path[path.length - 1].id : "",
+                role: "user",
+                content: [
+                    {
+                        type: "message",
+                        data: {
+                            content: text
+                        }
                     }
-                }
-            ],
-            created_at: new Date(),
-            children: []
-        }
-        let newPath = [...path, userMessage];
-        setPath(newPath);
-        if (userMessage.parent_id) {
-            const parent = nodeMap.get(userMessage.parent_id);
-            if (parent) {
-                parent.children.push(userMessage);
+                ],
+                created_at: new Date(),
+                children: []
             }
+            newPath.push(userMessage);
+            setPath(newPath);
+            if (userMessage.parent_id) {
+                const parent = nodeMap.get(userMessage.parent_id);
+                if (parent) {
+                    parent.children.push(userMessage);
+                }
+            }
+            newMap.set(userMsgId, userMessage);
+            setNodeMap(newMap);
+            setInput("");
         }
-        let newMap = new Map(nodeMap);
-        newMap.set(userMsgId, userMessage);
-        setNodeMap(newMap);
-        setInput("");
 
         try {
             const messageRequest: MessageRequest = {
@@ -282,7 +286,7 @@ export default function Chat() {
                 conversation_id: conversationId,
                 provider_id: providerId,
                 model_name: modelName,
-                messagePath: path.map(msg => msg.id),
+                messagePath: newPath.filter(msg => msg.id !== userMsgId).map(msg => msg.id),
                 prompt: text
             };
 
@@ -411,18 +415,75 @@ export default function Chat() {
     };
 
     const retryMessage = async (message: TreeNode) => {
-        // const newPath = [...path];
-        // if (message.role === "assistant") {
-        //     newPath.pop();
-        //     setPath(newPath);
-        // }
-        // const lastMessage = newPath[newPath.length - 1];
-        // const content = lastMessage.content
-        // const lastContent = content[content.length - 1]
-        // sendMessage({ text: lastContent.data.content })
+        const newPath = [...path];
+
+        const index = newPath.indexOf(message);
+        if (message.role === "assistant") {
+            // remove message after this message, include this message
+            newPath.splice(index, newPath.length - index);
+        } else {
+            // remove message after this message
+            newPath.splice(index + 1, newPath.length - index - 1);
+        }
+        setPath(newPath);
+
+        const lastMessage = newPath[newPath.length - 1];
+        if (lastMessage.role === "assistant") {
+            toast.error("Something wrong, please try again.")
+            return;
+        }
+        const content = lastMessage.content
+        const lastContent = content[content.length - 1]
+        sendMessage({ text: lastContent.data.content, retry: true, pathParam: newPath, messageId: lastMessage.id })
     }
 
     const deleteMessage = async (message: TreeNode) => {
+        if (message.parent_id) {
+            const parent = nodeMap.get(message.parent_id);
+            if (parent) {
+                let grandParent: TreeNode | undefined;
+                if (parent.parent_id) {
+                    grandParent = nodeMap.get(parent.parent_id);
+                    if (grandParent) {
+                        grandParent.children = grandParent.children.filter((msg) => msg.id !== parent.id);
+                    }
+                }
+                if (parent.children.length > 1 || (grandParent && grandParent.children.length > 1)) {
+                    const childrenIndex = parent.children.indexOf(message);
+                    parent.children = parent.children.filter((msg) => msg.id !== message.id);
+
+                    const index = path.indexOf(message);
+                    const messageIdToDelete = path.slice(index, path.length).map((msg) => msg.id);
+                    try {
+                        await api.del("/api/messages", {
+                            ids: messageIdToDelete,
+                            conversation_id: conversationId,
+                            parent_id: message.parent_id,
+                        })
+                    } catch (error) {
+                        if (error instanceof ApiError) {
+                            toast.error(error.message);
+                        } else {
+                            toast.error("网络异常，请稍后重试。");
+                        }
+                        return;
+                    }
+                    const newPath = path.slice(0, index);
+                    if (childrenIndex > 0) {
+                        newPath.push(parent.children[childrenIndex - 1]);
+                    } else {
+                        newPath.push(parent.children[childrenIndex]);
+                    }
+                    setPath(newPath);
+                    const newMap = new Map(nodeMap);
+                    messageIdToDelete.forEach((id) => {
+                        newMap.delete(id);
+                    })
+                    setNodeMap(newMap);
+                    return;
+                }
+            }
+        }
         try {
             await api.del("/api/messages", {
                 id: message.id,
@@ -439,14 +500,6 @@ export default function Chat() {
             return;
         }
 
-        // remove from nodeMap
-        const newMap = new Map(nodeMap);
-        newMap.delete(message.id);
-
-        // remove from newPath
-        const newPath = [...path];
-        newPath.splice(newPath.indexOf(message), 1);
-
         // change children relations
         if (message.children && message.children.length > 0) {
             if (message.parent_id) {
@@ -460,8 +513,20 @@ export default function Chat() {
             });
         }
 
+        // remove from nodeMap
+        const newMap = new Map(nodeMap);
+        newMap.delete(message.id);
         setNodeMap(newMap);
-        setPath(newPath);
+
+        // remove from path if has no siblings
+        if (message.parent_id) {
+            const parent = nodeMap.get(message.parent_id);
+            if (parent && parent.children.length === 1) {
+                const newPath = [...path];
+                newPath.splice(newPath.indexOf(message), 1);
+                setPath(newPath);
+            }
+        }
     }
 
     return (
@@ -470,7 +535,7 @@ export default function Chat() {
                 {isLoading ? (
                     <ChatSkeleton />
                 ) : (
-                    path.map((message) => (
+                    path.map((message, messageIndex) => (
                         <div key={message.id}
                             className="flex flex-col gap-1 group"
                         >
@@ -501,7 +566,7 @@ export default function Chat() {
                                                         <ChevronRight className="size-3" />
                                                     )}
                                                     <span>{t("reasoning.process")}</span>
-                                                    {isInterference && <Spinner />}
+                                                    {isInterference && messageIndex === path.length - 1 && index === message.content.length - 1 && <Spinner />}
                                                 </Button>
                                                 <div
                                                     className={`grid transition-all duration-300 ease-in-out ${expandedReasoning.has(message.id)
@@ -556,11 +621,29 @@ export default function Chat() {
                                 >
                                     <Copy className="size-4 text-muted-foreground" />
                                 </Button>
-                                <Button variant="ghost" size="icon-sm"
-                                    onClick={() => deleteMessage(message)}
-                                >
-                                    <Trash2 className="size-4 text-muted-foreground" />
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon-sm"
+                                        >
+                                            <Trash2 className="size-4 text-muted-foreground" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                <span>This action will delete this message and <span className="text-primary font-semibold">all below messages.</span></span>
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-destructive hover:bg-destructive/80"
+                                                onClick={() => deleteMessage(message)}
+                                            >Confirm</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 <Button variant="ghost" size="icon-sm"
                                     onClick={() => retryMessage(message)}
                                 >

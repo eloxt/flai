@@ -27,7 +27,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	// Make sure user has access to the conversation
 	var conversation entity.Conversation
 	err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
-		Id:     req.Id,
+		Id:     req.ConversationId,
 		UserId: user.Id,
 	}).
 		WhereNull("deleted_at").

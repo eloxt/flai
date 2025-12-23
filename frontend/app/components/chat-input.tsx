@@ -48,7 +48,7 @@ export function ChatInput({
             />
             <InputGroupAddon align="block-end">
                 <ToggleGroup type="multiple" spacing={2} >
-                    <ToggleGroupItem
+                    {/* <ToggleGroupItem
                         value="attachment"
                         variant="outline"
                         className="rounded-xl"
@@ -63,7 +63,7 @@ export function ChatInput({
                     >
                         <Globe />
                         {t("search")}
-                    </ToggleGroupItem>
+                    </ToggleGroupItem> */}
                 </ToggleGroup>
                 <InputGroupButton
                     variant="default"

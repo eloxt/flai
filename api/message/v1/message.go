@@ -45,6 +45,7 @@ type DeleteReq struct {
 	ConversationId string   `json:"conversation_id"`
 	ParentId       string   `json:"parent_id"`
 	Children       []string `json:"children"`
+	Ids            []string `json:"ids"`
 }
 
 type DeleteRes struct{}

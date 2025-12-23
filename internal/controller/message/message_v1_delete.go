@@ -35,25 +35,37 @@ func (c *ControllerV1) Delete(ctx context.Context, req *v1.DeleteReq) (res *v1.D
 	}
 
 	// Delete message
-	_, err = dao.Message.Ctx(ctx).Delete(do.Message{
-		Id:             req.Id,
-		ConversationId: req.ConversationId,
-	})
-	if err != nil {
-		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
-	}
-
-	// Change children's parent
-	if len(req.Children) > 0 {
-		_, err = dao.Message.Ctx(ctx).Data(do.Message{
-			ParentId:       req.ParentId,
+	if req.Id != "" {
+		_, err = dao.Message.Ctx(ctx).Delete(do.Message{
+			Id:             req.Id,
 			ConversationId: req.ConversationId,
-		}).Where(do.Message{
-			Id: req.Children,
-		}).Update()
+		})
 		if err != nil {
 			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
 		}
+		// Change children's parent
+		if len(req.Children) > 0 {
+			_, err = dao.Message.Ctx(ctx).Data(do.Message{
+				ParentId:       req.ParentId,
+				ConversationId: req.ConversationId,
+			}).Where(do.Message{
+				Id: req.Children,
+			}).Update()
+			if err != nil {
+				return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
+			}
+		}
+		return nil, nil
+	} else if len(req.Ids) > 0 {
+		_, err = dao.Message.Ctx(ctx).Delete(do.Message{
+			Id:             req.Ids,
+			ConversationId: req.ConversationId,
+		})
+		if err != nil {
+			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
+		}
+		return nil, nil
 	}
-	return nil, nil
+
+	return nil, gerror.NewCode(gcode.CodeInternalError, "Ids and id cannot be both empty")
 }

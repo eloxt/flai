@@ -1,3 +1,4 @@
+
 import {
     LogOut,
     PanelLeft,
@@ -7,6 +8,7 @@ import {
     RefreshCw,
     Trash,
     EllipsisVertical,
+    Construction,
 } from "lucide-react";
 import { NavLink } from "react-router";
 import { useEffect } from "react";
@@ -19,6 +21,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+    Empty,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from "@/components/ui/empty";
 
 export default function Sidebar() {
     const { t } = useTranslation();
@@ -71,10 +88,6 @@ export default function Sidebar() {
         to: string;
     }
 
-    const userPrimaryMenu = [
-        { label: t("sidebar.settings"), icon: <Settings className="size-4" /> },
-        { label: t("sidebar.logout"), icon: <LogOut className="size-4" />, onClick: logout },
-    ];
 
     return (
         <aside
@@ -160,39 +173,48 @@ export default function Sidebar() {
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button
-                                                    className="p-1 hover:bg-[var(--color-active)] rounded-md outline-none"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                    }}
+                                                <button className="p-1 hover:bg-[var(--color-active)] rounded-md outline-none"
+                                                    onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <EllipsisVertical className="size-4 text-[var(--muted-foreground)]" />
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="start">
                                                 <DropdownMenuItem
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        generateTitle(chat.id);
-                                                    }}
+                                                    onClick={() => generateTitle(chat.id)}
                                                 >
                                                     <RefreshCw className="mr-2 size-4" />
                                                     {t("sidebar.regenerateTitle")}
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-950/20"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        deleteConversation(chat.id);
-                                                        navigate("/");
-                                                    }}
-                                                >
-                                                    <Trash className="mr-2 size-4" />
-                                                    {t("sidebar.delete")}
-                                                </DropdownMenuItem>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem
+                                                            className="text-destructive focus:text-destructive focus:bg-red-50 dark:focus:bg-red-950"
+                                                            onSelect={(e) => e.preventDefault()}
+                                                        >
+                                                            <Trash className="mr-2 size-4" />
+                                                            {t("sidebar.delete")}
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                className="bg-destructive hover:bg-destructive/80"
+                                                                onClick={() => {
+                                                                    deleteConversation(chat.id);
+                                                                    navigate("/");
+                                                                }}
+                                                            >Confirm</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -202,47 +224,66 @@ export default function Sidebar() {
                     ))
                 )}
             </div>
-
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <div
-                        className={`flex mx-2 mb-2 items-center gap-2 rounded-xl pl-2 py-2 transition hover:bg-[var(--color-hover)]`}
-                        style={{ color: "var(--primary)" }}
-                    >
-                        <div className="flex items-center gap-2 min-w-0">
-                            <Avatar className="size-6">
-                                <AvatarImage>
-                                </AvatarImage>
-                                <AvatarFallback className="text-[0.6rem]">
-                                    {getInitials(user?.username)}
-                                </AvatarFallback>
-                            </Avatar>
-                            <span className={`flex-1 text-sm text-start font-medium truncate transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-                                {user?.username || "User"}
-                            </span>
+            <Dialog>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <div
+                            className={`flex mx-2 mb-2 items-center gap-2 rounded-xl pl-2 py-2 transition hover:bg-[var(--color-hover)]`}
+                            style={{ color: "var(--primary)" }}
+                        >
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Avatar className="size-6">
+                                    <AvatarImage>
+                                    </AvatarImage>
+                                    <AvatarFallback className="text-[0.6rem]">
+                                        {getInitials(user?.username)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className={`flex-1 text-sm text-start font-medium truncate transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+                                    {user?.username || "User"}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="start">
-                    <DropdownMenuLabel>
-                        {user?.email || "user@example.com"}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                        {userPrimaryMenu.map(({ label, icon, onClick }) => (
-                            <DropdownMenuItem
-                                key={label}
-                                onClick={() => {
-                                    onClick?.();
-                                }}
-                            >
-                                {icon}
-                                <span>{label}</span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="start">
+                        <DropdownMenuLabel>
+                            {user?.email || "user@example.com"}
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                            <DialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <Settings className="size-4" />
+                                    <span>{t("sidebar.settings")}</span>
+                                </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>{t("sidebar.settings")}</DialogTitle>
+                                </DialogHeader>
+                                <div className="flex h-full w-full items-center justify-center p-4">
+                                    <Empty>
+                                        <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                                <Construction className="size-6" />
+                                            </EmptyMedia>
+                                            <EmptyTitle>Settings Under Construction</EmptyTitle>
+                                            <EmptyDescription>
+                                                We are working hard to bring you the best settings experience. Please
+                                                check back later.
+                                            </EmptyDescription>
+                                        </EmptyHeader>
+                                    </Empty>
+                                </div>
+                            </DialogContent>
+                            <DropdownMenuItem onClick={logout}>
+                                <LogOut className="size-4" />
+                                <span>{t("sidebar.logout")}</span>
                             </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </Dialog>
         </aside>
     );
 }
