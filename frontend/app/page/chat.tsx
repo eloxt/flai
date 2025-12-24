@@ -280,6 +280,23 @@ export default function Chat() {
             setNodeMap(newMap);
             setInput("");
         }
+        const newAssistantMessage: TreeNode = {
+            id: "",
+            parent_id: userMsgId,
+            role: "assistant",
+            content: [
+                {
+                    type: useModelStore.getState().currentModel?.reasoning ? "reasoning" : "message",
+                    data: {
+                        content: ""
+                    }
+                }
+            ],
+            created_at: new Date(),
+            children: []
+        }
+        newPath.push(newAssistantMessage);
+        setPath(newPath);
 
         try {
             const messageRequest: MessageRequest = {
@@ -287,7 +304,7 @@ export default function Chat() {
                 conversation_id: conversationId,
                 provider_id: providerId,
                 model_name: modelName,
-                messagePath: newPath.filter(msg => msg.id !== userMsgId).map(msg => msg.id),
+                messagePath: newPath.filter(msg => msg.id !== userMsgId && msg.id !== "").map(msg => msg.id),
                 prompt: text
             };
 
@@ -346,7 +363,8 @@ export default function Chat() {
                                         }
                                     ];
                                 }
-                                const assistantNode: TreeNode = {
+                                let assistantNode: TreeNode = newPath.pop()!;
+                                assistantNode = {
                                     id: streamResponse.message_id,
                                     parent_id: userMsgId,
                                     role: "assistant",
@@ -525,8 +543,9 @@ export default function Chat() {
                                                     ) : (
                                                         <ChevronRight className="size-3" />
                                                     )}
-                                                    <span>{t("reasoning.process")}</span>
-                                                    {isInterference && messageIndex === path.length - 1 && index === message.content.length - 1 && <Spinner />}
+                                                    <span className={isInterference && messageIndex === path.length - 1 && index === message.content.length - 1 ? "shimmer" : ""}>
+                                                        {t("reasoning.process")}
+                                                    </span>
                                                 </Button>
                                                 <div
                                                     className={`grid transition-all duration-300 ease-in-out ${expandedReasoning.has(message.id)
