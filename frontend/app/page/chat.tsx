@@ -116,11 +116,12 @@ export default function Chat() {
     useEffect(() => {
         const init = async () => {
             if (sendMainInput && mainInput && conversationId && !hasInitialized.current) {
+                setIsLoading(false);
                 hasInitialized.current = true;
                 setSendMainInput(false);
                 setMainInput("");
                 addConversation(conversationId);
-                sendMessage({
+                await sendMessage({
                     text: mainInput,
                 });
                 generateTitle(conversationId);
