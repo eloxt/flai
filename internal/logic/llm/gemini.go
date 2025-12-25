@@ -82,17 +82,21 @@ func (geminiClient GeminiClient) StreamChat(ctx context.Context, response *ghttp
 	// Send the last message
 	iter := chat.SendMessageStream(ctx, genai.Part{Text: newMessage.Content})
 
-	messageId := uuid.New().String()
-	conversationId := newMessage.ConversationId
 	var currentMessageType string
 	var currentContentBuilder strings.Builder
+	var contentList []Content
+	messageId := uuid.New().String()
+	conversationId := newMessage.ConversationId
 	message := entity.Message{
 		Id:             messageId,
 		ConversationId: conversationId,
 		ParentId:       newMessage.Id,
 		Role:           consts.MessageRole.Assistant,
 	}
-	var contentList []Content
+	messageMetaInfo := MessageMetaInfo{
+		ProviderName: providerInfo.Name,
+		ModelName:    modelConfig.Name,
+	}
 
 	for resp, err := range iter {
 		if err != nil {
@@ -135,6 +139,22 @@ func (geminiClient GeminiClient) StreamChat(ctx context.Context, response *ghttp
 				}
 			}
 		}
+
+		if resp.UsageMetadata.PromptTokenCount != 0 {
+			messageMetaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
+			messageMetaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
+			messageMetaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
+			messageMetaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
+			streamResponse := StreamResponse{
+				MessageId: messageId,
+				Type:      consts.MessageType.MetaInfo,
+				Data:      messageMetaInfo,
+			}
+			err := StreamToClient(response, streamResponse)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// Save the last block
@@ -146,6 +166,11 @@ func (geminiClient GeminiClient) StreamChat(ctx context.Context, response *ghttp
 		return err
 	}
 	message.Content = string(contentListByte)
+	messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
+	if err != nil {
+		return err
+	}
+	message.MetaInfo = string(messageMetaInfoByte)
 	_, err = dao.Message.Ctx(ctx).Data(message).Insert()
 	if err != nil {
 		g.Log().Errorf(ctx, "Failed to save message: %v", err)

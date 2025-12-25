@@ -19,4 +19,5 @@ type Message struct {
 	CreatedAt      *gtime.Time //
 	DeletedAt      *gtime.Time //
 	Role           any         //
+	MetaInfo       any         //
 }

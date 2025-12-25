@@ -6,11 +6,13 @@ var MessageType = struct {
 	Reasoning    string
 	Image        string
 	FunctionCall string
+	MetaInfo     string
 }{
 	Message:      "message",
 	Reasoning:    "reasoning",
 	Image:        "image",
 	FunctionCall: "function_call",
+	MetaInfo:     "meta_info",
 }
 
 // User roles

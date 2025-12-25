@@ -159,7 +159,7 @@
   background-clip: text;
   color: transparent;
   background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
+  animation: shimmer 4s linear infinite;
 }
 
 @keyframes shimmer {

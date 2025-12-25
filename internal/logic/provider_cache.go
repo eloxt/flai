@@ -49,6 +49,7 @@ type Modalities struct {
 
 type SimpleProviderInfo struct {
 	ProviderType string
+	Name         string
 	BaseUrl      string
 	ApiKey       string
 	ModelIdMap   map[string]*ModelConfig
@@ -70,6 +71,7 @@ func UpdateProviderCache(ctx context.Context) {
 		if _, ok := ProviderMap[provider.Id]; !ok {
 			modelInfo := SimpleProviderInfo{
 				ProviderType: provider.ProviderType,
+				Name:         provider.Name,
 				ApiKey:       provider.ApiKey,
 				BaseUrl:      provider.BaseUrl,
 				ModelIdMap:   make(map[string]*ModelConfig),

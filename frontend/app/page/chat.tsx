@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy, Trash2, ArrowDown, Info } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
 import { useModelStore } from "../store/model-store";
 import { api, ApiError } from "../lib/api";
@@ -14,12 +14,14 @@ import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Message {
     id: string;
     parent_id: string;
     role: string;
     content: Content[];
+    meta_info?: MessageMetaInfo;
     created_at: Date;
 }
 
@@ -48,11 +50,20 @@ interface MessageRequest {
 interface StreamResponse {
     message_id: string;
     type: string;
-    data: ContentMessage | ContentReasoning;
+    data: ContentMessage | ContentReasoning | MessageMetaInfo;
 }
 
 interface TreeNode extends Message {
     children: TreeNode[];
+}
+
+interface MessageMetaInfo {
+    provider_name: string;
+    model_name: string;
+    prompt_token_count: number;
+    reasoning_token_count: number;
+    response_token_count: number;
+    cached_token_count: number;
 }
 
 function ChatSkeleton() {
@@ -108,6 +119,8 @@ export default function Chat() {
     const addConversation = useConversationStore((state) => state.addConversation);
     const generateTitle = useConversationStore((state) => state.generateTitle);
     const hasInitialized = useRef(false);
+    const [inputHeight, setInputHeight] = useState(0);
+    const [showScrollButton, setShowScrollButton] = useState(false);
 
     useEffect(() => {
         scrollToBottom();
@@ -134,6 +147,12 @@ export default function Chat() {
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        const isBottom = scrollHeight - scrollTop - clientHeight < 100;
+        setShowScrollButton(!isBottom);
     };
 
     const toggleReasoning = (messageId: string) => {
@@ -339,12 +358,12 @@ export default function Chat() {
 
                         try {
                             const streamResponse: StreamResponse = JSON.parse(dataStr);
-                            assistantContent = streamResponse.data.content || "";
                             const streamContentType = streamResponse.type;
 
                             if (assistantMessageId !== streamResponse.message_id) {
                                 let content: Content[] = [];
                                 if (streamContentType === "message") {
+                                    assistantContent = (streamResponse.data as ContentMessage).content;
                                     content = [
                                         {
                                             type: "message",
@@ -354,6 +373,7 @@ export default function Chat() {
                                         }
                                     ];
                                 } else if (streamContentType === "reasoning") {
+                                    assistantContent = (streamResponse.data as ContentMessage).content;
                                     content = [
                                         {
                                             type: "reasoning",
@@ -384,6 +404,15 @@ export default function Chat() {
                                 }
                                 assistantMessageId = streamResponse.message_id;
                                 lastMessageType = streamContentType;
+                            } else if (streamContentType === "meta_info") {
+                                const messageMetaInfo = (streamResponse.data as MessageMetaInfo);
+                                newPath = newPath.map(msg => {
+                                    if (msg.id === assistantMessageId) {
+                                        msg.meta_info = messageMetaInfo;
+                                    }
+                                    return msg;
+                                });
+                                setPath(newPath);
                             } else if (lastMessageType !== streamContentType) {
                                 newPath = newPath.map(msg => {
                                     if (msg.id === assistantMessageId) {
@@ -508,8 +537,10 @@ export default function Chat() {
     }
 
     return (
-        <ScrollArea className="flex-1 flex flex-col p-4 pb-0 overflow-hidden">
-            <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full flex-1">
+        <ScrollArea className="flex flex-col flex-1 p-4 pb-0 overflow-hidden" onScroll={handleScroll}>
+            <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full min-h-full"
+                style={{ paddingBottom: `${inputHeight + 50}px` }}
+            >
                 {isLoading ? (
                     <ChatSkeleton />
                 ) : (
@@ -543,9 +574,11 @@ export default function Chat() {
                                                     ) : (
                                                         <ChevronRight className="size-3" />
                                                     )}
-                                                    <span className={isInterference && messageIndex === path.length - 1 && index === message.content.length - 1 ? "shimmer" : ""}>
-                                                        {t("reasoning.process")}
-                                                    </span>
+                                                    {messageIndex === path.length - 1 && index === message.content.length - 1 ? (
+                                                        <span className="shimmer">{t("reasoning.process")}</span>
+                                                    ) : (
+                                                        <span>{t("reasoning.done")}</span>
+                                                    )}
                                                 </Button>
                                                 <div
                                                     className={`grid transition-all duration-300 ease-in-out ${expandedReasoning.has(message.id)
@@ -561,7 +594,7 @@ export default function Chat() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
+                                            message.id === "" ? <span className="shimmer">{t("generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
                                         )}
                                     </div>
 
@@ -600,6 +633,45 @@ export default function Chat() {
                                 >
                                     <Copy className="size-4 text-muted-foreground" />
                                 </Button>
+                                {message.meta_info && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon-sm">
+                                                <Info className="size-4 text-muted-foreground" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-2xs">
+                                            <div className="grid gap-4">
+                                                <div className="grid gap-2">
+                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                        <span className="text-sm font-medium">{t("model.provider")}</span>
+                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.provider_name}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                        <span className="text-sm font-medium">{t("model.name")}</span>
+                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.model_name}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                        <span className="text-sm font-medium">{t("model.input")}</span>
+                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                        <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
+                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                        <span className="text-sm font-medium">{t("model.output")}</span>
+                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                        <span className="text-sm font-medium">{t("model.cached")}</span>
+                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
                                 {messageIndex === path.length - 1 && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -628,13 +700,33 @@ export default function Chat() {
                                 >
                                     <RefreshCcw className="size-4 text-muted-foreground" />
                                 </Button>
+                                {/* creat time */}
+                                <span className="ml-2 text-sm text-muted-foreground">
+                                    {message.created_at.toLocaleString()}
+                                </span>
                             </div>
                         </div>
                     ))
                 )}
                 <div ref={messagesEndRef} />
             </div>
-            <div className="sticky bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
+            <div className="absolute bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
+                <div
+                    className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-all duration-300 ease-in-out ${showScrollButton
+                        ? "opacity-100 translate-y-0 pointer-events-auto"
+                        : "opacity-0 translate-y-4 pointer-events-none"
+                        }`}
+                    style={{ bottom: `${inputHeight + 60}px` }}
+                >
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-full shadow-lg bg-background/80 backdrop-blur-sm hover:bg-background"
+                        onClick={scrollToBottom}
+                    >
+                        <ArrowDown className="size-4" />
+                    </Button>
+                </div>
                 <div className="h-8 bg-gradient-to-t from-background to-transparent" />
                 <div className="mx-auto max-w-5xl pointer-events-auto bg-background">
                     <ChatInput
@@ -642,6 +734,7 @@ export default function Chat() {
                         onChange={setInput}
                         onSend={handleSend}
                         placeholder={t("placeholder")}
+                        onHeightChange={setInputHeight}
                     />
                 </div>
                 <div className="h-4 bg-background" />

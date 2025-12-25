@@ -23,3 +23,12 @@ type TitleGenerationResponse struct {
 	Icon  string `json:"icon"`
 	Title string `json:"title"`
 }
+
+type MessageMetaInfo struct {
+	ProviderName        string `json:"provider_name"`
+	ModelName           string `json:"model_name"`
+	PromptTokenCount    int    `json:"prompt_token_count"`
+	ReasoningTokenCount int    `json:"reasoning_token_count"`
+	ResponseTokenCount  int    `json:"response_token_count"`
+	CachedTokenCount    int    `json:"cached_token_count"`
+}

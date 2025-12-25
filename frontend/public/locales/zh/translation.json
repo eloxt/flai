@@ -16,10 +16,11 @@
         "conversationDeleted": "聊天删除成功"
     },
     "reasoning": {
-        "process": "思考过程",
-        "done": "已思考"
+        "process": "思考中",
+        "done": "思考过程"
     },
     "loading": "加载中...",
+    "generating": "生成中...",
     "sidebar": {
         "newChat": "新聊天",
         "searchChat": "搜索聊天",
@@ -35,14 +36,19 @@
         "contextWindow": "上下文窗口",
         "maxOutput": "最大输出",
         "pricing": "价格 (每1M tokens)",
+        "provider": "提供商",
+        "name": "模型",
         "input": "输入",
         "output": "输出",
+        "cached": "缓存",
         "inputModalities": "输入模态",
         "badge": {
             "attachment": "附件",
             "reasoning": "推理",
             "toolCall": "工具调用",
-            "structuredOutput": "结构化输出"
+            "structuredOutput": "结构化输出",
+            "info": "元数据",
+            "info_desc": "此消息的执行详情"
         }
     }
 }

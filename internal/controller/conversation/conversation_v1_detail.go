@@ -69,11 +69,18 @@ func (c *ControllerV1) Detail(ctx context.Context, req *v1.DetailReq) (res *v1.D
 			}
 		}
 
+		var metaInfo llm.MessageMetaInfo
+		err = json.Unmarshal([]byte(msg.MetaInfo), &metaInfo)
+		if err != nil {
+			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to unmarshal message meta info")
+		}
+
 		*res = append(*res, v1.MessageResponse{
 			ID:        msg.Id,
 			ParentID:  msg.ParentId,
 			Role:      msg.Role,
 			Content:   contents,
+			MetaInfo:  metaInfo,
 			CreatedAt: msg.CreatedAt,
 		})
 	}

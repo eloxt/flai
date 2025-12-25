@@ -74,7 +74,7 @@ func GenerateTitle(ctx context.Context, messages []*entity.Message) (*TitleGener
 	return client.GenerateTitle(ctx, providerInfo, modelConfig, template, xmlContent)
 }
 
-func StreamToClient(response *ghttp.Response, content StreamResponse) error {
+func StreamToClient(response *ghttp.Response, content any) error {
 	data, err := json.Marshal(content)
 	if err != nil {
 		return err

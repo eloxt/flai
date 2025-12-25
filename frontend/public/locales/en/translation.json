@@ -16,10 +16,11 @@
         "conversationDeleted": "Conversation deleted successfully"
     },
     "reasoning": {
-        "process": "Reasoning Process",
+        "process": "Reasoning",
         "done": "Reasoned"
     },
     "loading": "Loading...",
+    "generating": "Generating...",
     "sidebar": {
         "newChat": "New Chat",
         "searchChat": "Search Chat",
@@ -35,14 +36,19 @@
         "contextWindow": "Context Window",
         "maxOutput": "Max Output",
         "pricing": "Pricing (per 1M tokens)",
+        "provider": "Provider",
+        "name": "Model",
         "input": "Input",
         "output": "Output",
+        "cached": "Cached",
         "inputModalities": "Input Modalities",
         "badge": {
             "attachment": "Attachment",
             "reasoning": "Reasoning",
             "toolCall": "Tool Call",
-            "structuredOutput": "Structured Output"
+            "structuredOutput": "Structured Output",
+            "info": "Metadata",
+            "info_desc": "Execution details for this message"
         }
     }
 }

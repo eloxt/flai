@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"flai/internal/logic/llm"
 	"flai/internal/model/entity"
 	"flai/utility"
 
@@ -42,11 +43,12 @@ type DetailReq struct {
 type DetailRes []MessageResponse
 
 type MessageResponse struct {
-	ID        string      `json:"id"`
-	ParentID  string      `json:"parent_id"`
-	Role      string      `json:"role"`
-	Content   any         `json:"content"`
-	CreatedAt *gtime.Time `json:"created_at"`
+	ID        string              `json:"id"`
+	ParentID  string              `json:"parent_id"`
+	Role      string              `json:"role"`
+	Content   any                 `json:"content"`
+	MetaInfo  llm.MessageMetaInfo `json:"meta_info"`
+	CreatedAt *gtime.Time         `json:"created_at"`
 }
 
 type GenerateTitleReq struct {

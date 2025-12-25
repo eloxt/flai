@@ -74,6 +74,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		ParentId:       parentId,
 		Role:           consts.UserRole.User,
 		Content:        string(contentByte),
+		MetaInfo:       "{}",
 	}
 	_, err = dao.Message.Ctx(ctx).Insert(newMessage)
 	if err != nil {
