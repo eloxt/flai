@@ -9,11 +9,11 @@ import { Streamdown } from "streamdown";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat-input";
-import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Message {
     id: string;
@@ -508,7 +508,7 @@ export default function Chat() {
     }
 
     return (
-        <div className="flex-1 overflow-y-scroll p-4 pb-0 flex flex-col">
+        <ScrollArea className="flex-1 flex flex-col p-4 pb-0 overflow-hidden">
             <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full flex-1">
                 {isLoading ? (
                     <ChatSkeleton />
@@ -646,6 +646,6 @@ export default function Chat() {
                 </div>
                 <div className="h-4 bg-background" />
             </div>
-        </div>
+        </ScrollArea>
     );
 }

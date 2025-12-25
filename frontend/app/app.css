@@ -27,7 +27,6 @@
 
   --color-hover: rgba(15, 23, 42, 0.08);
   --color-active: #eeeeee;
-  --color-scrollbar: rgba(0, 0, 0, 0.2);
   --color-user-msg-bg: #e5f3ff;
   --shadow-card: 0 0px 15px rgba(15, 23, 42, 0.08);
   --radius: 0.625rem;
@@ -111,7 +110,6 @@
   --color-hover: rgba(241, 245, 249, 0.1);
   --color-active: #333333;
   --color-user-msg-bg: #003f7a;
-  --color-scrollbar: rgba(255, 255, 255, 0.3);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

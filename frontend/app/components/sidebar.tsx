@@ -35,6 +35,7 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from "@/components/ui/empty";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Sidebar() {
     const { t } = useTranslation();
@@ -145,9 +146,8 @@ export default function Sidebar() {
                 {t("sidebar.chats")}
             </div>
 
-            <div
-                className={`flex grow min-h-0 flex-col pl-3 overflow-y-auto pr-1 transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-                style={{ scrollbarColor: "var(--color-scrollbar) transparent" }}
+            <ScrollArea
+                className={`flex grow min-h-0 flex-col pl-3 overflow-hidden pr-1 transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
             >
                 {isLoading ? (
                     <div className="px-2 py-2 text-sm text-[var(--muted-foreground)]">{t("loading")}</div>
@@ -200,7 +200,7 @@ export default function Sidebar() {
                         </NavLink>
                     ))
                 )}
-            </div>
+            </ScrollArea>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <div
