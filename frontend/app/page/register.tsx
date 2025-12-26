@@ -38,7 +38,7 @@ export default function Register() {
             const data = await api.post<{ user: AuthUser; token: TokenPair }>("/auth/register", form, { auth: false });
 
             if (data.user.is_active !== 1) {
-                toast.info("注册成功，用户未激活，请联系管理员。")
+                navigate("/activation-pending", { replace: true });
                 return;
             }
 

@@ -1,5 +1,11 @@
 package consts
 
+import "github.com/gogf/gf/v2/errors/gcode"
+
+var (
+	NotActivated = gcode.New(1001, "User not activated.", nil)
+)
+
 // Message types
 var MessageType = struct {
 	Message      string

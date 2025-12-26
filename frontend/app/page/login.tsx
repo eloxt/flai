@@ -26,7 +26,12 @@ export default function Login() {
             navigate("/", { replace: true });
         } catch (error) {
             if (error instanceof ApiError) {
-                toast.error(error.message);
+                if (error.code === 1001) {
+                    navigate("/activation-pending", { replace: true });
+                    return;
+                } else {
+                    toast.error(error.message);
+                }
             } else {
                 toast.error("网络异常，请稍后重试。");
             }

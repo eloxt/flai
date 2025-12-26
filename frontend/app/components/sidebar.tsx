@@ -9,6 +9,7 @@ import {
     Trash,
     EllipsisVertical,
     Construction,
+    UserCog,
 } from "lucide-react";
 import { NavLink } from "react-router";
 import { useEffect, useState } from "react";
@@ -53,6 +54,7 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+    const [showAdminDialog, setShowAdminDialog] = useState(false);
 
     useEffect(() => {
         if (tokens?.access_token) {
@@ -228,6 +230,12 @@ export default function Sidebar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
+                        {user?.role === "admin" && (
+                            <DropdownMenuItem onClick={() => setShowAdminDialog(true)}>
+                                <UserCog className="size-4" />
+                                <span>{t("sidebar.adminSettings")}</span>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
                             <Settings className="size-4" />
                             <span>{t("sidebar.settings")}</span>
@@ -244,6 +252,28 @@ export default function Sidebar() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{t("sidebar.settings")}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex h-full w-full items-center justify-center p-4">
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Construction className="size-6" />
+                                </EmptyMedia>
+                                <EmptyTitle>Settings Under Construction</EmptyTitle>
+                                <EmptyDescription>
+                                    We are working hard to bring you the best settings experience. Please
+                                    check back later.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("sidebar.adminSettings")}</DialogTitle>
                     </DialogHeader>
                     <div className="flex h-full w-full items-center justify-center p-4">
                         <Empty>

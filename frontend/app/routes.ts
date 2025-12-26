@@ -5,6 +5,7 @@ export default [
     layout("./layout/auth-layout.tsx", [
       route("/login", "./page/login.tsx"),
       route("/register", "./page/register.tsx"),
+      route("/activation-pending", "./page/activation-pending.tsx"),
     ]),
   ]),
   layout("./layout/protected-route.tsx", [

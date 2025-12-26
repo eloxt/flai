@@ -3,6 +3,11 @@
     "placeholder": "Ask anything...",
     "attachment": "Attachment",
     "search": "Search",
+    "activationPending": {
+        "title": "Waiting for Admin Activation",
+        "description": "Your account has been successfully registered. Please wait for the administrator to activate your account to continue.",
+        "backToLogin": "Back to Login"
+    },
     "login": {
         "expired": "Login expired, please login again"
     },
@@ -24,6 +29,7 @@
     "sidebar": {
         "newChat": "New Chat",
         "searchChat": "Search Chat",
+        "adminSettings": "Admin Settings",
         "settings": "Settings",
         "logout": "Logout",
         "chats": "Chats",

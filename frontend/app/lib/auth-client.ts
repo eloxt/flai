@@ -3,6 +3,7 @@ export interface AuthUser {
   email: string;
   username: string;
   is_active: number;
+  role: string;
 }
 
 export interface TokenPair {

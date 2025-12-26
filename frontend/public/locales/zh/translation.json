@@ -3,6 +3,11 @@
     "placeholder": "问点什么...",
     "attachment": "附件",
     "search": "搜索",
+    "activationPending": {
+        "title": "等待管理员激活",
+        "description": "您的账号已经注册成功。请等待管理员激活您的账号以继续使用。",
+        "backToLogin": "返回登录"
+    },
     "login": {
         "expired": "登录状态已过期，请重新登录"
     },
@@ -24,6 +29,7 @@
     "sidebar": {
         "newChat": "新聊天",
         "searchChat": "搜索聊天",
+        "adminSettings": "管理员设置",
         "settings": "设置",
         "logout": "注销",
         "chats": "聊天",

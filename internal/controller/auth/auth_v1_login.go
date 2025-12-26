@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"flai/internal/consts"
 	"flai/internal/dao"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
@@ -29,7 +30,7 @@ func (c *ControllerV1) Login(ctx context.Context, req *v1.LoginReq) (res *v1.Log
 	}
 
 	if user.IsActive != 1 {
-		return nil, gerror.New("User is not active")
+		return nil, gerror.NewCode(consts.NotActivated, "User is not active")
 	}
 
 	token, err := utility.TokenManagerInstance.GenerateTokenPair(user)
