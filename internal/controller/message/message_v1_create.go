@@ -103,7 +103,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	response.Header().Set("Connection", "keep-alive")
 	response.Header().Set("Access-Control-Allow-Origin", "*")
 
-	err = llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage)
+	err = llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools)
 	if err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
 	}

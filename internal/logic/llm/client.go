@@ -15,11 +15,11 @@ import (
 )
 
 type Client interface {
-	StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message) error
+	StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string) error
 	GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error)
 }
 
-func StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message) error {
+func StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string) error {
 	var client Client
 	switch providerInfo.ProviderType {
 	case consts.ProviderType.OpenAI:
@@ -29,7 +29,7 @@ func StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *log
 	default:
 		return gerror.Newf("unsupported provider type: %s", providerInfo.ProviderType)
 	}
-	return client.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage)
+	return client.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, tools)
 }
 
 func GenerateTitle(ctx context.Context, messages []*entity.Message) (*TitleGenerationResponse, error) {

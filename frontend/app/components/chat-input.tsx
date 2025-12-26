@@ -1,8 +1,9 @@
-import { ArrowUpIcon } from "lucide-react";
+import { ArrowUpIcon, Globe } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
-import { ToggleGroup } from "@/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
+import { useInputStore } from "@/store/input-store";
 
 interface ChatInputProps {
     value: string;
@@ -24,6 +25,8 @@ export function ChatInput({
     onHeightChange
 }: ChatInputProps) {
     const { t } = useTranslation();
+    const selectedTools = useInputStore((state) => state.selectedTools);
+    const setSelectedTools = useInputStore((state) => state.setSelectedTools);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -47,7 +50,7 @@ export function ChatInput({
                 className="flex field-sizing-content w-full resize-none rounded-md bg-transparent px-3 py-2.5 text-base transition-all outline-none md:text-sm"
             />
             <InputGroupAddon align="block-end">
-                <ToggleGroup type="multiple" spacing={2} >
+                <ToggleGroup type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
                     {/* <ToggleGroupItem
                         value="attachment"
                         variant="outline"
@@ -56,14 +59,15 @@ export function ChatInput({
                         <Paperclip />
                         {t("attachment")}
                     </ToggleGroupItem>
+                     */}
                     <ToggleGroupItem
-                        value="search"
+                        value="internal_web_search"
                         variant="outline"
                         className="rounded-xl"
                     >
                         <Globe />
                         {t("search")}
-                    </ToggleGroupItem> */}
+                    </ToggleGroupItem>
                 </ToggleGroup>
                 <InputGroupButton
                     variant="default"

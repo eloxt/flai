@@ -4,6 +4,7 @@ export interface AuthUser {
   username: string;
   is_active: number;
   role: string;
+  avatar?: string;
 }
 
 export interface TokenPair {

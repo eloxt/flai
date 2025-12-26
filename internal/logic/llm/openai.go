@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flai/internal/consts"
 	"flai/internal/dao"
 	"flai/internal/logic"
@@ -31,7 +32,7 @@ func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.Simple
 	return openai.NewClient(opts...)
 }
 
-func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message) error {
+func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string) error {
 	client := c.getClient(ctx, providerInfo)
 
 	var inputItems []responses.ResponseInputItemUnionParam
@@ -65,12 +66,24 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	input := responses.ResponseNewParamsInputUnion{
 		OfInputItemList: inputItems,
 	}
+
+	openaiTools := []responses.ToolUnionParam{}
+	for _, tool := range tools {
+		if tool == consts.InternalTools.InternalWebSearch {
+			openaiTools = append(openaiTools, responses.ToolUnionParam{
+				OfWebSearch: &responses.WebSearchToolParam{
+					Type: responses.WebSearchToolTypeWebSearch,
+				},
+			})
+		}
+	}
 	params := responses.ResponseNewParams{
 		Model: modelConfig.ID,
 		Input: input,
 		Reasoning: shared.ReasoningParam{
 			Summary: shared.ReasoningSummaryAuto,
 		},
+		Tools: openaiTools,
 	}
 	stream := client.Responses.NewStreaming(ctx, params)
 
@@ -88,6 +101,26 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	messageMetaInfo := MessageMetaInfo{
 		ProviderName: providerInfo.Name,
 		ModelName:    modelConfig.Name,
+	}
+
+	saveMessage := func(ctx context.Context) {
+		appendContent(&currentContentBuilder, contentType, &contentList)
+		contentListByte, err := json.Marshal(contentList)
+		if err != nil {
+			g.Log().Errorf(ctx, "Failed to marshal content list: %v", err)
+			return
+		}
+		message.Content = string(contentListByte)
+		messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
+		if err != nil {
+			g.Log().Errorf(ctx, "Failed to marshal meta info: %v", err)
+			return
+		}
+		message.MetaInfo = string(messageMetaInfoByte)
+		_, err = dao.Message.Ctx(ctx).Data(message).Insert()
+		if err != nil {
+			g.Log().Errorf(ctx, "Failed to save message: %v", err)
+		}
 	}
 
 	for stream.Next() {
@@ -108,17 +141,18 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 			contentType = consts.MessageType.Reasoning
 			streamResponse.Data = ContentReasoning{"\n\n"}
 			streamResponse.Type = contentType
+		case responses.ResponseOutputItemDoneEvent:
 			appendContent(&currentContentBuilder, contentType, &contentList)
 			currentContentBuilder.Reset()
+			continue
 		case responses.ResponseTextDeltaEvent:
 			if e.Delta != "" {
 				contentType = consts.MessageType.Message
+				currentContentBuilder.WriteString(e.Delta)
 				streamResponse.Data = ContentMessage{Content: e.Delta}
 				streamResponse.Type = contentType
-				currentContentBuilder.WriteString(e.Delta)
 			}
 		case responses.ResponseCompletedEvent:
-			appendContent(&currentContentBuilder, contentType, &contentList)
 			messageMetaInfo.CachedTokenCount = int(e.Response.Usage.InputTokensDetails.CachedTokens)
 			messageMetaInfo.PromptTokenCount = int(e.Response.Usage.InputTokens)
 			messageMetaInfo.ReasoningTokenCount = int(e.Response.Usage.OutputTokensDetails.ReasoningTokens)
@@ -131,28 +165,23 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 
 		err := StreamToClient(response, streamResponse)
 		if err != nil {
+			if errors.Is(ctx.Err(), context.Canceled) {
+				saveMessage(context.WithoutCancel(ctx))
+				return nil
+			}
 			return err
 		}
 	}
 
 	if err := stream.Err(); err != nil {
+		if errors.Is(ctx.Err(), context.Canceled) {
+			saveMessage(context.WithoutCancel(ctx))
+			return nil
+		}
 		return err
 	}
 
-	contentListByte, err := json.Marshal(contentList)
-	if err != nil {
-		return err
-	}
-	message.Content = string(contentListByte)
-	messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
-	if err != nil {
-		return err
-	}
-	message.MetaInfo = string(messageMetaInfoByte)
-	_, err = dao.Message.Ctx(ctx).Data(message).Insert()
-	if err != nil {
-		g.Log().Errorf(ctx, "Failed to save message: %v", err)
-	}
+	saveMessage(ctx)
 	response.Writef("data: [DONE]\n\n")
 	response.Flush()
 	return nil

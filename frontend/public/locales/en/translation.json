@@ -47,6 +47,7 @@
         "input": "Input",
         "output": "Output",
         "cached": "Cached",
+        "toolUse": "Tool Use",
         "inputModalities": "Input Modalities",
         "badge": {
             "attachment": "Attachment",
@@ -55,6 +56,38 @@
             "structuredOutput": "Structured Output",
             "info": "Metadata",
             "info_desc": "Execution details for this message"
+        }
+    },
+    "settingsPage": {
+        "title": "Settings",
+        "tabs": {
+            "account": "Account & Security"
+        },
+        "account": {
+            "title": "Profile",
+            "description": "Update your public profile information.",
+            "username": "Username",
+            "usernamePlaceholder": "Your username",
+            "avatar": "Avatar URL",
+            "avatarPlaceholder": "https://example.com/avatar.png",
+            "save": "Save Changes",
+            "saving": "Saving...",
+            "success": "Profile updated successfully",
+            "error": "Failed to update profile",
+            "usernameRequired": "Username is required"
+        },
+        "security": {
+            "title": "Security",
+            "description": "Manage your password and account security.",
+            "currentPassword": "Current Password",
+            "currentPasswordPlaceholder": "Enter current password",
+            "newPassword": "New Password",
+            "newPasswordPlaceholder": "Enter new password",
+            "update": "Update Password",
+            "updating": "Updating...",
+            "success": "Password updated successfully",
+            "error": "Failed to update password",
+            "fillAll": "Please fill in both password fields"
         }
     }
 }

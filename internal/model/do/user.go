@@ -21,4 +21,5 @@ type User struct {
 	CreatedAt *gtime.Time //
 	UpdatedAt *gtime.Time //
 	DeletedAt *gtime.Time //
+	Avatar    any         //
 }

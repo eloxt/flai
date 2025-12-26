@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flai/internal/consts"
 	"flai/internal/dao"
 	"flai/internal/logic"
@@ -36,7 +37,7 @@ func (geminiClient *GeminiClient) getClient(ctx context.Context, providerInfo *l
 		})
 	}
 }
-func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message) error {
+func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string) error {
 	client, err := geminiClient.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
@@ -68,11 +69,21 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 			}
 		}
 	}
-
+	var genaiTools = []*genai.Tool{}
+	if tools != nil {
+		for _, tool := range tools {
+			if tool == consts.InternalTools.InternalWebSearch {
+				genaiTools = append(genaiTools, &genai.Tool{
+					GoogleSearch: &genai.GoogleSearch{},
+				})
+			}
+		}
+	}
 	var config = &genai.GenerateContentConfig{
 		ThinkingConfig: &genai.ThinkingConfig{
 			IncludeThoughts: true,
 		},
+		Tools: genaiTools,
 	}
 
 	chat, err := client.Chats.Create(ctx, modelConfig.ID, config, history)
@@ -99,8 +110,34 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 		ModelName:    modelConfig.Name,
 	}
 
+	saveMessage := func(ctx context.Context) {
+		if currentMessageType != "" && currentContentBuilder.Len() > 0 {
+			appendContent(&currentContentBuilder, currentMessageType, &contentList)
+		}
+		contentListByte, err := json.Marshal(contentList)
+		if err != nil {
+			g.Log().Errorf(ctx, "Failed to marshal content list: %v", err)
+			return
+		}
+		message.Content = string(contentListByte)
+		messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
+		if err != nil {
+			g.Log().Errorf(ctx, "Failed to marshal meta info: %v", err)
+			return
+		}
+		message.MetaInfo = string(messageMetaInfoByte)
+		_, err = dao.Message.Ctx(ctx).Data(message).Insert()
+		if err != nil {
+			g.Log().Errorf(ctx, "Failed to save message: %v", err)
+		}
+	}
+
 	for resp, err := range iter {
 		if err != nil {
+			if errors.Is(ctx.Err(), context.Canceled) {
+				saveMessage(context.WithoutCancel(ctx))
+				return nil
+			}
 			return err
 		}
 
@@ -113,6 +150,12 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 						if part.Thought {
 							partType = consts.MessageType.Reasoning
 						}
+
+						messageMetaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
+						messageMetaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
+						messageMetaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
+						messageMetaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
+						messageMetaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
 
 						// If type switched, save previous block
 						if currentMessageType != "" && currentMessageType != partType {
@@ -135,6 +178,10 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 
 						err := StreamToClient(response, streamResponse)
 						if err != nil {
+							if errors.Is(ctx.Err(), context.Canceled) {
+								saveMessage(context.WithoutCancel(ctx))
+								return nil
+							}
 							return err
 						}
 					}
@@ -144,11 +191,6 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 				}
 			}
 			if candidate.FinishReason == genai.FinishReasonStop {
-				messageMetaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
-				messageMetaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
-				messageMetaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
-				messageMetaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
-				messageMetaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
 				messageMetaInfo.ThoughtSignature = base64.StdEncoding.EncodeToString(thoughtSignature)
 				streamResponse := StreamResponse{
 					MessageId: messageId,
@@ -157,6 +199,10 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 				}
 				err := StreamToClient(response, streamResponse)
 				if err != nil {
+					if errors.Is(ctx.Err(), context.Canceled) {
+						saveMessage(context.WithoutCancel(ctx))
+						return nil
+					}
 					return err
 				}
 			}
@@ -164,24 +210,7 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 
 	}
 
-	// Save the last block
-	if currentMessageType != "" && currentContentBuilder.Len() > 0 {
-		appendContent(&currentContentBuilder, currentMessageType, &contentList)
-	}
-	contentListByte, err := json.Marshal(contentList)
-	if err != nil {
-		return err
-	}
-	message.Content = string(contentListByte)
-	messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
-	if err != nil {
-		return err
-	}
-	message.MetaInfo = string(messageMetaInfoByte)
-	_, err = dao.Message.Ctx(ctx).Data(message).Insert()
-	if err != nil {
-		g.Log().Errorf(ctx, "Failed to save message: %v", err)
-	}
+	saveMessage(context.WithoutCancel(ctx))
 	response.Writef("data: [DONE]\n\n")
 	response.Flush()
 	return err

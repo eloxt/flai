@@ -46,6 +46,7 @@
         "name": "模型",
         "input": "输入",
         "output": "输出",
+        "toolUse": "工具使用",
         "cached": "缓存",
         "inputModalities": "输入模态",
         "badge": {
@@ -55,6 +56,38 @@
             "structuredOutput": "结构化输出",
             "info": "元数据",
             "info_desc": "此消息的执行详情"
+        }
+    },
+    "settingsPage": {
+        "title": "设置",
+        "tabs": {
+            "account": "账户与安全"
+        },
+        "account": {
+            "title": "个人资料",
+            "description": "更新您的公开个人资料信息。",
+            "username": "用户名",
+            "usernamePlaceholder": "您的用户名",
+            "avatar": "头像链接",
+            "avatarPlaceholder": "https://example.com/avatar.png",
+            "save": "保存更改",
+            "saving": "保存中...",
+            "success": "个人资料更新成功",
+            "error": "更新个人资料失败",
+            "usernameRequired": "用户名为必填项"
+        },
+        "security": {
+            "title": "安全",
+            "description": "管理您的密码和账户安全。",
+            "currentPassword": "当前密码",
+            "currentPasswordPlaceholder": "输入当前密码",
+            "newPassword": "新密码",
+            "newPasswordPlaceholder": "输入新密码",
+            "update": "更新密码",
+            "updating": "更新中...",
+            "success": "密码更新成功",
+            "error": "更新密码失败",
+            "fillAll": "请填写所有密码字段"
         }
     }
 }

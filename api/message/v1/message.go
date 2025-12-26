@@ -12,6 +12,7 @@ type CreateReq struct {
 	ModelName      string   `json:"model_name" v:"required"`
 	MessagePath    []string `json:"message_path"`
 	Prompt         string   `json:"prompt" v:"required"`
+	Tools          []string `json:"tools"`
 }
 
 type CreateRes struct {

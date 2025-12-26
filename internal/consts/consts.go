@@ -56,3 +56,10 @@ var SystemConfig = struct {
 }{
 	TitleGeneration: "title_generation",
 }
+
+// Internal tools
+var InternalTools = struct {
+	InternalWebSearch string
+}{
+	InternalWebSearch: "internal_web_search",
+}

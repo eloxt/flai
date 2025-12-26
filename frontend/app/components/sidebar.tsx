@@ -37,6 +37,7 @@ import {
     EmptyTitle,
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import SettingsPanel from "./settings-panel";
 
 export default function Sidebar() {
     const { t } = useTranslation();
@@ -249,24 +250,8 @@ export default function Sidebar() {
             </DropdownMenu>
 
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{t("sidebar.settings")}</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex h-full w-full items-center justify-center p-4">
-                        <Empty>
-                            <EmptyHeader>
-                                <EmptyMedia variant="icon">
-                                    <Construction className="size-6" />
-                                </EmptyMedia>
-                                <EmptyTitle>Settings Under Construction</EmptyTitle>
-                                <EmptyDescription>
-                                    We are working hard to bring you the best settings experience. Please
-                                    check back later.
-                                </EmptyDescription>
-                            </EmptyHeader>
-                        </Empty>
-                    </div>
+                <DialogContent className="sm:max-w-5xl w-full p-0 gap-0 overflow-hidden outline-none">
+                    <SettingsPanel />
                 </DialogContent>
             </Dialog>
 

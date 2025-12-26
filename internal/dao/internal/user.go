@@ -30,6 +30,7 @@ type UserColumns struct {
 	CreatedAt string //
 	UpdatedAt string //
 	DeletedAt string //
+	Avatar    string //
 }
 
 // userColumns holds the columns for the table user.
@@ -43,6 +44,7 @@ var userColumns = UserColumns{
 	CreatedAt: "created_at",
 	UpdatedAt: "updated_at",
 	DeletedAt: "deleted_at",
+	Avatar:    "avatar",
 }
 
 // NewUserDao creates and returns a new DAO object for table data access.

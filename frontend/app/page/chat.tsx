@@ -45,6 +45,7 @@ interface MessageRequest {
     model_name: string;
     messagePath: string[];
     prompt: string;
+    tools: string[];
 }
 
 interface StreamResponse {
@@ -64,6 +65,7 @@ interface MessageMetaInfo {
     reasoning_token_count: number;
     response_token_count: number;
     cached_token_count: number;
+    tool_use_token_count: number;
 }
 
 function ChatSkeleton() {
@@ -121,6 +123,7 @@ export default function Chat() {
     const hasInitialized = useRef(false);
     const [inputHeight, setInputHeight] = useState(0);
     const [showScrollButton, setShowScrollButton] = useState(false);
+    const selectedTools = useInputStore((state) => state.selectedTools);
 
     useEffect(() => {
         if (!showScrollButton) {
@@ -326,7 +329,8 @@ export default function Chat() {
                 provider_id: providerId,
                 model_name: modelName,
                 messagePath: newPath.filter(msg => msg.id !== userMsgId && msg.id !== "").map(msg => msg.id),
-                prompt: text
+                prompt: text,
+                tools: selectedTools
             };
 
             const response = await api.stream(`/api/messages`, {
@@ -534,7 +538,7 @@ export default function Chat() {
     }
 
     return (
-        <ScrollArea className="flex flex-col flex-1 p-4 pb-0 overflow-hidden" onScroll={handleScroll}>
+        <ScrollArea className="flex flex-col flex-1 p-4 pb-0 overflow-y-hidden overflow-x-auto" onScroll={handleScroll}>
             <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full min-h-full"
                 style={{ paddingBottom: `${inputHeight + 50}px` }}
             >
@@ -631,14 +635,14 @@ export default function Chat() {
                                     >
                                         <Copy className="size-4 text-muted-foreground" />
                                     </Button>
-                                    {message.meta_info && (
+                                    {(message.meta_info && message.meta_info?.model_name !== "") && (
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <Button variant="ghost" size="icon-sm">
                                                     <Info className="size-4 text-muted-foreground" />
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-2xs">
+                                            <PopoverContent className="max-w-2xs">
                                                 <div className="grid gap-4">
                                                     <div className="grid gap-2">
                                                         <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
@@ -653,18 +657,28 @@ export default function Chat() {
                                                             <span className="text-sm font-medium">{t("model.input")}</span>
                                                             <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
                                                         </div>
-                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                            <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
-                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
-                                                        </div>
+                                                        {message.meta_info.reasoning_token_count > 0 && (
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
+                                                            </div>
+                                                        )}
                                                         <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
                                                             <span className="text-sm font-medium">{t("model.output")}</span>
                                                             <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
                                                         </div>
-                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                            <span className="text-sm font-medium">{t("model.cached")}</span>
-                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
-                                                        </div>
+                                                        {message.meta_info.cached_token_count > 0 && (
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.cached")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
+                                                            </div>
+                                                        )}
+                                                        {message.meta_info.tool_use_token_count > 0 && (
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.tool_use")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.tool_use_token_count}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </PopoverContent>
