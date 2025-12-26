@@ -157,10 +157,11 @@ export default function Sidebar() {
                             key={chat.id}
                             to={`/chat/${chat.id}`}
                             className={({ isActive }) =>
-                                `group flex w-full items-center rounded-xl px-2 py-2 text-sm text-left transition hover:bg-[var(--color-hover)] ${isActive ? "bg-[var(--color-active)]" : ""
+                                `group flex max-w-58 items-center rounded-xl px-2 py-2 text-sm text-left transition hover:bg-[var(--color-hover)] ${isActive ? "bg-[var(--color-active)]" : ""
                                 }`
                             }
                             style={{ color: "var(--primary)" }}
+                            title={chat.title}
                         >
                             {chat.generating ? (
                                 <Skeleton className="h-7 w-full bg-[var(--border)]" />

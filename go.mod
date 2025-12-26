@@ -3,10 +3,12 @@ module flai
 go 1.24.0
 
 require (
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/gogf/gf/contrib/drivers/pgsql/v2 v2.9.5
 	github.com/gogf/gf/v2 v2.9.5
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
+	github.com/openai/openai-go/v3 v3.15.0
 	golang.org/x/crypto v0.45.0
 	google.golang.org/genai v1.38.0
 )
@@ -25,7 +27,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
@@ -41,6 +42,10 @@ require (
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.1.3 // indirect
 	github.com/olekukonko/tablewriter v1.1.2 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect

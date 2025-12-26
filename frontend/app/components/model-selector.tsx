@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
 import { useModelStore, Model, Provider } from "../store/model-store";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -63,13 +63,13 @@ export default function ModelSelector() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-3xs" align="start">
                     {providers.map((provider, index) => (
-                        <>
+                        <DropdownMenuGroup key={provider.id}>
                             <DropdownMenuLabel
                                 className="font-normal text-neutral-500"
                                 key={provider.id}>{provider.name}
                             </DropdownMenuLabel>
                             {provider.model.map((model) => (
-                                <HoverCard openDelay={150} closeDelay={150}>
+                                <HoverCard key={model.id} openDelay={150} closeDelay={150}>
                                     <HoverCardTrigger>
                                         <DropdownMenuCheckboxItem
                                             className="font-normal"
@@ -85,7 +85,7 @@ export default function ModelSelector() {
                                 </HoverCard>
                             ))}
                             {index < providers.length - 1 && <DropdownMenuSeparator />}
-                        </>
+                        </DropdownMenuGroup>
                     ))}
                 </DropdownMenuContent>
             </DropdownMenu>

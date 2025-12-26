@@ -23,8 +23,9 @@ func StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *log
 	var client Client
 	switch providerInfo.ProviderType {
 	case consts.ProviderType.OpenAI:
+		client = &OpenAIClient{}
 	case consts.ProviderType.Gemini:
-		client = GeminiClient{}
+		client = &GeminiClient{}
 	default:
 		return gerror.Newf("unsupported provider type: %s", providerInfo.ProviderType)
 	}
@@ -57,16 +58,18 @@ func GenerateTitle(ctx context.Context, messages []*entity.Message) (*TitleGener
 		sb.WriteString(fmt.Sprintf("<message role=\"%s\">%s</message>\n", msg.Role, msg.Content))
 	}
 	sb.WriteString("</chat_history>")
-	sb.WriteString("<output_format>\n")
-	sb.WriteString("<icon>{icon}</icon>\n")
-	sb.WriteString("<title>title</title>\n")
-	sb.WriteString("</output_format>")
+	//sb.WriteString("<output_format>\n")
+	//sb.WriteString("<icon>{icon}</icon>\n")
+	//sb.WriteString("<title>title</title>\n")
+	//sb.WriteString("</output_format>")
 	xmlContent := sb.String()
 
 	var client Client
 	switch providerInfo.ProviderType {
+	case consts.ProviderType.OpenAI:
+		client = &OpenAIClient{}
 	case consts.ProviderType.Gemini:
-		client = GeminiClient{}
+		client = &GeminiClient{}
 	default:
 		return nil, gerror.Newf("unsupported provider type: %s", providerInfo.ProviderType)
 	}
@@ -82,4 +85,20 @@ func StreamToClient(response *ghttp.Response, content any) error {
 	response.Writef("data: %s\n\n", data)
 	response.Flush()
 	return nil
+}
+
+func appendContent(contentBuilder *strings.Builder, messageType string, contentList *[]Content) {
+	if contentBuilder.Len() == 0 {
+		return
+	}
+	val := contentBuilder.String()
+	if messageType == consts.MessageType.Reasoning {
+		data := ContentReasoning{Content: val}
+		content := Content{Type: consts.MessageType.Reasoning, Data: data}
+		*contentList = append(*contentList, content)
+	} else {
+		data := ContentMessage{Content: val}
+		content := Content{Type: consts.MessageType.Message, Data: data}
+		*contentList = append(*contentList, content)
+	}
 }

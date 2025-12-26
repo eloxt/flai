@@ -123,7 +123,9 @@ export default function Chat() {
     const [showScrollButton, setShowScrollButton] = useState(false);
 
     useEffect(() => {
-        scrollToBottom();
+        if (!showScrollButton) {
+            scrollToBottom();
+        }
     }, [path]);
 
     useEffect(() => {
@@ -359,30 +361,25 @@ export default function Chat() {
                         try {
                             const streamResponse: StreamResponse = JSON.parse(dataStr);
                             const streamContentType = streamResponse.type;
+                            switch (streamContentType) {
+                                case "message":
+                                    assistantContent = (streamResponse.data as ContentMessage).content;
+                                    break;
+                                case "reasoning":
+                                    assistantContent = (streamResponse.data as ContentReasoning).content;
+                                    break;
+                            }
 
                             if (assistantMessageId !== streamResponse.message_id) {
                                 let content: Content[] = [];
-                                if (streamContentType === "message") {
-                                    assistantContent = (streamResponse.data as ContentMessage).content;
-                                    content = [
-                                        {
-                                            type: "message",
-                                            data: {
-                                                content: assistantContent
-                                            }
+                                content = [
+                                    {
+                                        type: streamContentType,
+                                        data: {
+                                            content: assistantContent
                                         }
-                                    ];
-                                } else if (streamContentType === "reasoning") {
-                                    assistantContent = (streamResponse.data as ContentMessage).content;
-                                    content = [
-                                        {
-                                            type: "reasoning",
-                                            data: {
-                                                content: assistantContent
-                                            }
-                                        }
-                                    ];
-                                }
+                                    }
+                                ];
                                 let assistantNode: TreeNode = newPath.pop()!;
                                 assistantNode = {
                                     id: streamResponse.message_id,
@@ -600,111 +597,112 @@ export default function Chat() {
 
                                 </div>
                             ))}
-                            <div className={`flex items-center gap-0 px-3 py-1 ${message.role === "user" ? "self-end opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
-                                {message.parent_id &&
-                                    (nodeMap.get(message.parent_id)?.children?.length ?? 0) > 1 && (
-                                        <>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                onClick={() => switchNode(message, false)}
-                                            >
-                                                <ChevronLeft className="size-4 text-muted-foreground" />
-                                            </Button>
-                                            <div className="text-sm font-medium text-muted-foreground">
-                                                {(nodeMap.get(message.parent_id)?.children?.indexOf(message) ?? 0) + 1}/
-                                                {nodeMap.get(message.parent_id)?.children?.length}
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                onClick={() => switchNode(message, true)}
-                                            >
-                                                <ChevronRight className="size-4 text-muted-foreground" />
-                                            </Button>
-                                        </>
-                                    )}
-                                <Button variant="ghost" size="icon-sm"
-                                    onClick={() => {
-                                        const content = message.content
-                                        const lastContent = content[content.length - 1]
-                                        navigator.clipboard.writeText(lastContent.data.content);
-                                    }}
-                                >
-                                    <Copy className="size-4 text-muted-foreground" />
-                                </Button>
-                                {message.meta_info && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon-sm">
-                                                <Info className="size-4 text-muted-foreground" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-2xs">
-                                            <div className="grid gap-4">
-                                                <div className="grid gap-2">
-                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                        <span className="text-sm font-medium">{t("model.provider")}</span>
-                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.provider_name}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                        <span className="text-sm font-medium">{t("model.name")}</span>
-                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.model_name}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                        <span className="text-sm font-medium">{t("model.input")}</span>
-                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                        <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
-                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                        <span className="text-sm font-medium">{t("model.output")}</span>
-                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                        <span className="text-sm font-medium">{t("model.cached")}</span>
-                                                        <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
+                            {(messageIndex !== path.length - 1 || !isInterference) && (
+                                <div className={`flex items-center gap-0 px-3 py-1 ${message.role === "user" ? "self-end opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
+                                    {message.parent_id &&
+                                        (nodeMap.get(message.parent_id)?.children?.length ?? 0) > 1 && (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    onClick={() => switchNode(message, false)}
+                                                >
+                                                    <ChevronLeft className="size-4 text-muted-foreground" />
+                                                </Button>
+                                                <div className="text-sm font-medium text-muted-foreground">
+                                                    {(nodeMap.get(message.parent_id)?.children?.indexOf(message) ?? 0) + 1}/
+                                                    {nodeMap.get(message.parent_id)?.children?.length}
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    onClick={() => switchNode(message, true)}
+                                                >
+                                                    <ChevronRight className="size-4 text-muted-foreground" />
+                                                </Button>
+                                            </>
+                                        )}
+                                    <Button variant="ghost" size="icon-sm"
+                                        onClick={() => {
+                                            const content = message.content
+                                            const lastContent = content[content.length - 1]
+                                            navigator.clipboard.writeText(lastContent.data.content);
+                                        }}
+                                    >
+                                        <Copy className="size-4 text-muted-foreground" />
+                                    </Button>
+                                    {message.meta_info && (
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="ghost" size="icon-sm">
+                                                    <Info className="size-4 text-muted-foreground" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-2xs">
+                                                <div className="grid gap-4">
+                                                    <div className="grid gap-2">
+                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                            <span className="text-sm font-medium">{t("model.provider")}</span>
+                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.provider_name}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                            <span className="text-sm font-medium">{t("model.name")}</span>
+                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.model_name}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                            <span className="text-sm font-medium">{t("model.input")}</span>
+                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                            <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
+                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                            <span className="text-sm font-medium">{t("model.output")}</span>
+                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                            <span className="text-sm font-medium">{t("model.cached")}</span>
+                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                                {messageIndex === path.length - 1 && (
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon-sm">
-                                                <Trash2 className="size-4 text-muted-foreground" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action will delete the latest message pair.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    onClick={() => deleteMessage()}
-                                                >Confirm</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                )}
-                                <Button variant="ghost" size="icon-sm"
-                                    onClick={() => retryMessage(message)}
-                                >
-                                    <RefreshCcw className="size-4 text-muted-foreground" />
-                                </Button>
-                                {/* creat time */}
-                                <span className="ml-2 text-sm text-muted-foreground">
-                                    {message.created_at.toLocaleString()}
-                                </span>
-                            </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
+                                    {messageIndex === path.length - 1 && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon-sm">
+                                                    <Trash2 className="size-4 text-muted-foreground" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will delete the latest message pair.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => deleteMessage()}
+                                                    >Confirm</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                    <Button variant="ghost" size="icon-sm"
+                                        onClick={() => retryMessage(message)}
+                                    >
+                                        <RefreshCcw className="size-4 text-muted-foreground" />
+                                    </Button>
+                                    <span className="ml-2 text-sm text-muted-foreground">
+                                        {message.created_at.toLocaleString()}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     ))
                 )}
