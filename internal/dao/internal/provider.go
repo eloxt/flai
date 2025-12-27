@@ -31,6 +31,7 @@ type ProviderColumns struct {
 	CreatedAt    string //
 	UpdatedAt    string //
 	DeletedAt    string //
+	Logo         string //
 }
 
 // providerColumns holds the columns for the table provider.
@@ -45,6 +46,7 @@ var providerColumns = ProviderColumns{
 	CreatedAt:    "created_at",
 	UpdatedAt:    "updated_at",
 	DeletedAt:    "deleted_at",
+	Logo:         "logo",
 }
 
 // NewProviderDao creates and returns a new DAO object for table data access.

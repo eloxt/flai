@@ -23,17 +23,31 @@ func (c *ControllerV1) Detail(ctx context.Context, req *v1.DetailReq) (res *v1.D
 	}
 
 	var conversation entity.Conversation
-	err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
-		Id:     req.Id,
-		UserId: user.Id,
-	}).
-		WhereNull("deleted_at").
-		Scan(&conversation)
-	if err != nil {
-		return nil, nil
-	}
-	if conversation.Id == "" {
-		return nil, gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
+	if user.Role != consts.UserRole.Admin {
+		err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
+			Id:     req.Id,
+			UserId: user.Id,
+		}).
+			WhereNull("deleted_at").
+			Scan(&conversation)
+		if err != nil {
+			return nil, nil
+		}
+		if conversation.Id == "" {
+			return nil, gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
+		}
+	} else {
+		err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
+			Id: req.Id,
+		}).
+			WhereNull("deleted_at").
+			Scan(&conversation)
+		if err != nil {
+			return nil, nil
+		}
+		if conversation.Id == "" {
+			return nil, gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
+		}
 	}
 
 	var messages []*entity.Message

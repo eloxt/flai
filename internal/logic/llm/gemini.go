@@ -205,9 +205,25 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 					}
 					return err
 				}
+
+				if candidate.GroundingMetadata != nil && len(candidate.GroundingMetadata.GroundingChunks) > 0 {
+					messageMetaInfo.GoogleGroundingData = candidate.GroundingMetadata
+					streamResponse := StreamResponse{
+						MessageId: messageId,
+						Type:      consts.MessageType.GoogleGroundingData,
+						Data:      candidate.GroundingMetadata,
+					}
+					err := StreamToClient(response, streamResponse)
+					if err != nil {
+						if errors.Is(ctx.Err(), context.Canceled) {
+							saveMessage(context.WithoutCancel(ctx))
+							return nil
+						}
+						return err
+					}
+				}
 			}
 		}
-
 	}
 
 	saveMessage(context.WithoutCancel(ctx))

@@ -13,8 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Message {
     id: string;
@@ -51,7 +52,7 @@ interface MessageRequest {
 interface StreamResponse {
     message_id: string;
     type: string;
-    data: ContentMessage | ContentReasoning | MessageMetaInfo;
+    data: ContentMessage | ContentReasoning | MessageMetaInfo | GoogleGroundingData;
 }
 
 interface TreeNode extends Message {
@@ -66,6 +67,56 @@ interface MessageMetaInfo {
     response_token_count: number;
     cached_token_count: number;
     tool_use_token_count: number;
+    google_grounding_data?: GoogleGroundingData;
+}
+
+interface GoogleGroundingData {
+    searchEntryPoint?: {
+        renderedContent: string;
+    };
+    groundingChunks: GoogleGroundingChunk[];
+    groundingSupports: GoogleGroundingSupport[];
+    webSearchQueries: string[];
+}
+
+interface GoogleGroundingChunk {
+    web?: {
+        uri: string;
+        title: string;
+    };
+}
+
+interface GoogleGroundingSupport {
+    segment: {
+        startIndex?: number;
+        endIndex: number;
+        text: string;
+    };
+    groundingChunkIndices: number[];
+}
+
+function applyCitations(text: string, supports: GoogleGroundingSupport[], chunks: GoogleGroundingChunk[]): string {
+    if (!supports || supports.length === 0) return text;
+
+    let newText = text;
+
+    supports.forEach((support) => {
+        const segmentText = support.segment.text;
+        if (segmentText) {
+            const indices = support.groundingChunkIndices.map((i) => {
+                const chunk = chunks[i];
+                if (chunk?.web?.uri) {
+                    return `[[${i + 1}]](${chunk.web.uri})`;
+                }
+                return `[${i + 1}]`;
+            }).join("");
+            if (indices) {
+                newText = newText.replace(segmentText, `${segmentText} ${indices}`);
+            }
+        }
+    });
+
+    return newText;
 }
 
 function ChatSkeleton() {
@@ -221,6 +272,15 @@ export default function Chat() {
 
         messages.forEach((message) => {
             const node = { ...message, children: [] };
+            if (node.meta_info?.google_grounding_data) {
+                const groundingData = node.meta_info.google_grounding_data;
+                if (node.content && node.content.length > 0) {
+                    const lastContent = node.content[node.content.length - 1];
+                    if (lastContent.type === "message") {
+                        lastContent.data.content = applyCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks);
+                    }
+                }
+            }
             map.set(message.id, node);
             if (lastMessage != null) {
                 if (message.created_at >= lastMessage.created_at) {
@@ -404,12 +464,40 @@ export default function Chat() {
                                     setExpandedReasoning(prev => new Set(prev).add(streamResponse.message_id));
                                 }
                                 assistantMessageId = streamResponse.message_id;
-                                lastMessageType = streamContentType;
                             } else if (streamContentType === "meta_info") {
                                 const messageMetaInfo = (streamResponse.data as MessageMetaInfo);
                                 newPath = newPath.map(msg => {
                                     if (msg.id === assistantMessageId) {
                                         msg.meta_info = messageMetaInfo;
+                                    }
+                                    return msg;
+                                });
+                                setPath(newPath);
+                            } else if (streamContentType === "google_grounding_data") {
+                                newPath = newPath.map(msg => {
+                                    if (msg.id === assistantMessageId) {
+                                        const groundingData = (streamResponse.data as GoogleGroundingData);
+                                        const currentMeta = msg.meta_info || {
+                                            provider_name: "",
+                                            model_name: "",
+                                            prompt_token_count: 0,
+                                            reasoning_token_count: 0,
+                                            response_token_count: 0,
+                                            cached_token_count: 0,
+                                            tool_use_token_count: 0,
+                                        };
+                                        msg.meta_info = {
+                                            ...currentMeta,
+                                            google_grounding_data: groundingData,
+                                        };
+
+                                        // Apply citations to the last content chunk
+                                        if (msg.content.length > 0) {
+                                            const lastContent = msg.content[msg.content.length - 1];
+                                            if (lastContent.type === "message") {
+                                                lastContent.data.content = applyCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks);
+                                            }
+                                        }
                                     }
                                     return msg;
                                 });
@@ -431,7 +519,6 @@ export default function Chat() {
                                     return msg;
                                 });
                                 setPath(newPath);
-                                lastMessageType = streamContentType;
                             } else {
                                 newPath = newPath.map(msg => {
                                     if (msg.id === assistantMessageId) {
@@ -449,6 +536,7 @@ export default function Chat() {
                                     setExpandedReasoning(newSet);
                                 }
                             }
+                            lastMessageType = streamContentType;
                         } catch (e) {
                             console.error("Error parsing SSE", e);
                         }
@@ -538,10 +626,8 @@ export default function Chat() {
     }
 
     return (
-        <ScrollArea className="flex flex-col flex-1 p-4 pb-0 overflow-y-hidden overflow-x-auto" onScroll={handleScroll}>
-            <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full min-h-full"
-                style={{ paddingBottom: `${inputHeight + 50}px` }}
-            >
+        <ScrollArea className="flex-1 p-4 pb-0 overflow-y-auto" onScroll={handleScroll}>
+            <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full">
                 {isLoading ? (
                     <ChatSkeleton />
                 ) : (
@@ -549,7 +635,7 @@ export default function Chat() {
                         <div key={message.id}
                             className="flex flex-col gap-1 group"
                         >
-                            {message.content.map((content, index) => (
+                            {message.content !== null && message.content.map((content, index) => (
                                 <div
                                     key={index}
                                     className={`flex flex-col ${message.role === "user" ? "self-end items-end" : "self-start items-start "
@@ -597,10 +683,41 @@ export default function Chat() {
                                         ) : (
                                             message.id === "" ? <span className="shimmer">{t("generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
                                         )}
+
                                     </div>
 
                                 </div>
                             ))}
+
+
+                            {message.meta_info?.google_grounding_data?.groundingChunks && message.meta_info.google_grounding_data.groundingChunks.length > 0 && (
+                                <div className="mt-2 mx-4 flex flex-col gap-4">
+                                    <Separator />
+                                    <div className="flex flex-wrap gap-2">
+                                        {message.meta_info.google_grounding_data.groundingChunks.map((chunk, i) => (
+                                            chunk.web && (
+                                                <a
+                                                    key={i}
+                                                    href={chunk.web.uri}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs bg-secondary/50 hover:bg-secondary px-2 py-1 rounded-md transition-colors flex items-center gap-1 max-w-full truncate"
+                                                    title={chunk.web.title}
+                                                >
+                                                    <span className="opacity-70">[{i + 1}]</span>
+                                                    <span className="truncate max-w-[150px]">{chunk.web.title}</span>
+                                                </a>
+                                            )
+                                        ))}
+                                    </div>
+                                    {message.meta_info?.google_grounding_data?.searchEntryPoint && (
+                                        <div
+                                            dangerouslySetInnerHTML={{ __html: message.meta_info.google_grounding_data.searchEntryPoint.renderedContent }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+
                             {(messageIndex !== path.length - 1 || !isInterference) && (
                                 <div className={`flex items-center gap-0 px-3 py-1 ${message.role === "user" ? "self-end opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
                                     {message.parent_id &&
@@ -712,9 +829,11 @@ export default function Chat() {
                                     >
                                         <RefreshCcw className="size-4 text-muted-foreground" />
                                     </Button>
-                                    <span className="ml-2 text-sm text-muted-foreground">
-                                        {message.created_at.toLocaleString()}
-                                    </span>
+                                    {message.role === "assistant" && (
+                                        <span className="ml-2 text-sm text-muted-foreground">
+                                            {message.created_at.toLocaleString()}
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -722,13 +841,13 @@ export default function Chat() {
                 )}
                 <div ref={messagesEndRef} />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
+            <div className="sticky bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
                 <div
                     className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-all duration-300 ease-in-out ${showScrollButton
                         ? "opacity-100 translate-y-0 pointer-events-auto"
                         : "opacity-0 translate-y-4 pointer-events-none"
                         }`}
-                    style={{ bottom: `${inputHeight + 60}px` }}
+                    style={{ bottom: `${inputHeight + 70}px` }}
                 >
                     <Button
                         variant="outline"

@@ -35,6 +35,7 @@ export interface Provider {
     name: string;
     provider_type: string;
     model: Model[];
+    logo: string;
 }
 
 interface ModelState {

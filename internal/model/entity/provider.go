@@ -20,4 +20,5 @@ type Provider struct {
 	CreatedAt    *gtime.Time `json:"created_at"    orm:"created_at"    description:""` //
 	UpdatedAt    *gtime.Time `json:"updated_at"    orm:"updated_at"    description:""` //
 	DeletedAt    *gtime.Time `json:"deleted_at"    orm:"deleted_at"    description:""` //
+	Logo         string      `json:"logo"          orm:"logo"          description:""` //
 }

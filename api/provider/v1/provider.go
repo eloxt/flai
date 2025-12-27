@@ -17,4 +17,5 @@ type SimpleProvider struct {
 	Name         string              `json:"name"`
 	ProviderType string              `json:"provider_type"`
 	Model        []logic.ModelConfig `json:"model"`
+	Logo         string              `json:"logo"`
 }

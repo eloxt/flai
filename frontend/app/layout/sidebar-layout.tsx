@@ -1,15 +1,20 @@
 import { Outlet } from "react-router";
 import Sidebar from "../components/sidebar";
 import ModelSelector from "../components/model-selector";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useAppStore } from "../store/app-store";
 
 export default function SidebarLayout() {
+    const isSidebarCollapsed = useAppStore((state) => state.isSidebarCollapsed);
+    const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
+
     return (
-        <div className="flex h-dvh w-full overflow-hidden">
+        <SidebarProvider defaultOpen={!isSidebarCollapsed} open={!isSidebarCollapsed} onOpenChange={(open) => setSidebarCollapsed(!open)}>
             <Sidebar />
-            <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+            <SidebarInset className="h-svh overflow-hidden">
                 <ModelSelector />
                 <Outlet />
-            </main>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

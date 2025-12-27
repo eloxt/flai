@@ -9,6 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "./ui/badge";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface ModelCardDetailProps {
     model: Model;
@@ -20,7 +21,6 @@ export default function ModelSelector() {
     const [providers, setProviders] = useState<Provider[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showModelMenu, setShowModelMenu] = useState(false);
-
     const tokens = useAuthStore((state) => state.tokens);
 
     useEffect(() => {
@@ -46,8 +46,9 @@ export default function ModelSelector() {
 
     return (
         <header
-            className="flex items-center justify-between px-4 py-2"
+            className="sticky top-0 z-50 bg-background flex items-center justify-start px-4 py-2 gap-2"
         >
+            <SidebarTrigger className="md:hidden"/>
             <DropdownMenu onOpenChange={setShowModelMenu}>
                 <DropdownMenuTrigger asChild>
                     <Button
@@ -65,8 +66,23 @@ export default function ModelSelector() {
                     {providers.map((provider, index) => (
                         <DropdownMenuGroup key={provider.id}>
                             <DropdownMenuLabel
-                                className="font-normal text-neutral-500"
-                                key={provider.id}>{provider.name}
+                                className="font-normal text-neutral-500 flex items-center"
+                                key={provider.id}>
+                                {provider.logo && (
+                                    provider.logo.startsWith("<svg") ? (
+                                        <div
+                                            className="size-4 mr-2 [&>svg]:w-full [&>svg]:h-full"
+                                            dangerouslySetInnerHTML={{ __html: provider.logo }}
+                                        />
+                                    ) : (
+                                        <img
+                                            src={provider.logo}
+                                            alt={provider.name}
+                                            className="size-4 mr-2 object-contain"
+                                        />
+                                    )
+                                )}
+                                {provider.name}
                             </DropdownMenuLabel>
                             {provider.model.map((model) => (
                                 <HoverCard key={model.id} openDelay={150} closeDelay={150}>

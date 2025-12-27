@@ -63,10 +63,11 @@ export function ChatInput({
                     <ToggleGroupItem
                         value="internal_web_search"
                         variant="outline"
-                        className="rounded-xl"
+                        className=""
                     >
-                        <Globe />
-                        {t("search")}
+                        {/* <Globe fill={selectedTools.includes("internal_web_search") ? "" : "transparent"} /> */}
+                        <Globe className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`} />
+                        <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("search")}</p>
                     </ToggleGroupItem>
                 </ToggleGroup>
                 <InputGroupButton

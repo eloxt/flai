@@ -8,17 +8,19 @@ var (
 
 // Message types
 var MessageType = struct {
-	Message      string
-	Reasoning    string
-	Image        string
-	FunctionCall string
-	MetaInfo     string
+	Message             string
+	Reasoning           string
+	Image               string
+	FunctionCall        string
+	MetaInfo            string
+	GoogleGroundingData string
 }{
-	Message:      "message",
-	Reasoning:    "reasoning",
-	Image:        "image",
-	FunctionCall: "function_call",
-	MetaInfo:     "meta_info",
+	Message:             "message",
+	Reasoning:           "reasoning",
+	Image:               "image",
+	FunctionCall:        "function_call",
+	MetaInfo:            "meta_info",
+	GoogleGroundingData: "google_grounding_data",
 }
 
 // User roles

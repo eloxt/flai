@@ -38,6 +38,7 @@ func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListR
 			Name:         provider.Name,
 			ProviderType: provider.ProviderType,
 			Model:        modelConfigList,
+			Logo:         provider.Logo,
 		})
 	}
 	return res, nil

@@ -1,27 +1,25 @@
 
 import {
     LogOut,
-    PanelLeft,
     Plus,
     Search,
-    Settings,
     RefreshCw,
     Trash,
     EllipsisVertical,
     Construction,
     UserCog,
+    Settings,
+    TentTree,
+    PanelLeft,
 } from "lucide-react";
-import { NavLink } from "react-router";
+import { NavLink, useNavigate, useLocation } from "react-router";
 import { useEffect, useState } from "react";
 import { useConversationStore } from "../store/conversation-store";
 import { getInitials } from "../lib/auth-client";
-import { useAppStore } from "../store/app-store";
 import { useAuthStore } from "../store/auth-store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTranslation } from "react-i18next";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
     Dialog,
@@ -36,14 +34,27 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from "@/components/ui/empty";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuAction,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSkeleton,
+    SidebarTrigger,
+    useSidebar,
+} from "@/components/ui/sidebar"
 import SettingsPanel from "./settings-panel";
+import { Button } from "./ui/button";
 
-export default function Sidebar() {
+export default function AppSidebar() {
     const { t } = useTranslation();
-    const isCollapsed = useAppStore((state) => state.isSidebarCollapsed);
-    const toggleSidebar = useAppStore((state) => state.toggleSidebar);
-    const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
+    const location = useLocation();
     const user = useAuthStore((state) => state.user);
     const tokens = useAuthStore((state) => state.tokens);
     const logout = useAuthStore((state) => state.logout);
@@ -56,198 +67,187 @@ export default function Sidebar() {
     const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
     const [showAdminDialog, setShowAdminDialog] = useState(false);
+    const { toggleSidebar } = useSidebar()
 
     useEffect(() => {
         if (tokens?.access_token) {
             fetchConversations();
         }
-    }, [tokens?.access_token, fetchConversations]);
+    }, [tokens?.access_token]);
 
-    useEffect(() => {
-        const mediaQuery = window.matchMedia("(max-width: 768px)");
 
-        if (mediaQuery.matches) {
-            setSidebarCollapsed(true);
-        }
-
-        const handleChange = (e: MediaQueryListEvent) => {
-            if (e.matches) {
-                setSidebarCollapsed(true);
-            } else {
-                setSidebarCollapsed(false);
-            }
-        };
-
-        mediaQuery.addEventListener("change", handleChange);
-        return () => mediaQuery.removeEventListener("change", handleChange);
-    }, [setSidebarCollapsed]);
-
-    const quickActions: quickAction[] = [
-        { label: t("sidebar.newChat"), icon: <Plus />, to: "/" },
-        { label: t("sidebar.searchChat"), icon: <Search />, to: "/search" },
+    const quickActions = [
+        { label: t("sidebar.newChat"), icon: Plus, to: "/" },
+        { label: t("sidebar.searchChat"), icon: Search, to: "/search" },
     ];
 
-    interface quickAction {
-        label: string;
-        icon: React.ReactNode;
-        to: string;
+    const handleDelete = (id: string) => {
+        setConversationToDelete(id);
     }
 
     return (
-        <aside
-            className={`flex h-full min-h-0 flex-col gap-1 overflow-visible border-r transition-all duration-300 ${isCollapsed ? "w-14" : "w-64"}`}
-            style={{
-                backgroundColor: isCollapsed
-                    ? "var(--background)"
-                    : "var(--secondary)",
-                borderColor: "var(--border)",
-                color: "var(--primary)",
-            }}
-        >
-            <div className="px-2 pt-2 flex justify-between items-center text-lg">
-                <div
-                    className={`flex-1 overflow-hidden whitespace-nowrap font-semibold transition-all duration-300 ${isCollapsed ? "max-w-0 opacity-0" : "pl-2 max-w-[160px] opacity-100"}`}
-                >
-                    FlaiChat
-                </div>
-                <button
-                    onClick={toggleSidebar}
-                    className="p-3 flex justify-center items-center rounded-xl transition hover:bg-[var(--color-hover)]"
-                    style={{ color: "var(--primary)" }}
-                >
-                    <PanelLeft className={"size-4"} />
-                </button>
-            </div>
-
-            <nav className="px-2 mt-3 flex flex-col items-start gap-1">
-                {quickActions.map(({ icon, label, to }) => (
-                    <NavLink
-                        key={label}
-                        to={to}
-                        className={({ isActive }) =>
-                            `px-3 py-2 w-full flex items-center gap-2 rounded-xl transition-colors hover:bg-[var(--color-hover)] ${isActive ? "bg-[var(--color-active)]" : ""
-                            }`
-                        }
-                        style={{ color: "var(--primary)" }}
-                    >
-                        <div className="size-4 flex items-center justify-center">
-                            {icon}
-                        </div>
-                        <span
-                            className={`text-sm truncate transition-all duration-300 ${isCollapsed ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100"}`}
-                        >
-                            {label}
-                        </span>
-                    </NavLink>
-                ))}
-            </nav>
-
-            <div
-                className={`px-5 mt-6 text-xs font-semibold tracking-wide transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-                style={{ color: "var(--muted-foreground)" }}
-            >
-                {t("sidebar.chats")}
-            </div>
-
-            <ScrollArea
-                className={`flex grow min-h-0 flex-col pl-3 overflow-hidden pr-1 transition-opacity duration-300 ${isCollapsed ? "opacity-0" : "opacity-100"}`}
-            >
-                {isLoading ? (
-                    <div className="px-2 py-2 text-sm text-[var(--muted-foreground)]">{t("loading")}</div>
-                ) : (
-                    conversations.map((chat) => (
-                        <NavLink
-                            key={chat.id}
-                            to={`/chat/${chat.id}`}
-                            className={({ isActive }) =>
-                                `group flex max-w-58 items-center rounded-xl px-2 py-2 text-sm text-left transition hover:bg-[var(--color-hover)] ${isActive ? "bg-[var(--color-active)]" : ""
-                                }`
-                            }
-                            style={{ color: "var(--primary)" }}
-                            title={chat.title}
-                        >
-                            {chat.generating ? (
-                                <Skeleton className="h-7 w-full bg-[var(--border)]" />
-                            ) : (
-                                <>
-                                    <span className="truncate flex-1">
-                                        {chat.icon && chat.icon !== "" && <span className="mr-2 text-lg">{chat.icon}</span>}
-                                        {chat.title}
-                                    </span>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="p-1 hover:bg-[var(--color-active)] rounded-md outline-none"
-                                                >
-                                                    <EllipsisVertical className="size-4 text-[var(--muted-foreground)]" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start">
-                                                <DropdownMenuItem
-                                                    onClick={() => generateTitle(chat.id)}
-                                                >
-                                                    <RefreshCw className="mr-2 size-4" />
-                                                    {t("sidebar.regenerateTitle")}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    onClick={() => setConversationToDelete(chat.id)}
-                                                >
-                                                    <Trash className="mr-2 size-4" />
-                                                    {t("sidebar.delete")}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </>
-                            )}
-                        </NavLink>
-                    ))
-                )}
-            </ScrollArea>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+        <>
+            <Sidebar collapsible="icon" variant="sidebar">
+                <SidebarHeader>
                     <div
-                        className={`flex mx-2 mb-2 items-center gap-2 rounded-xl pl-2 py-2 transition hover:bg-[var(--color-hover)]`}
-                        style={{ color: "var(--primary)" }}
+                        className="flex items-center justify-between overflow-hidden w-full gap-2 transition-[width,height,padding] x text-sm"
                     >
-                        <div className="flex items-center gap-2 min-w-0">
-                            <Avatar className="size-6">
-                                <AvatarImage>
-                                </AvatarImage>
-                                <AvatarFallback className="text-[0.6rem]">
-                                    {getInitials(user?.username)}
-                                </AvatarFallback>
-                            </Avatar>
-                            <span className={`flex-1 text-sm text-start font-medium truncate transition-opacity ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-                                {user?.username || "User"}
-                            </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md p-2 group-data-[collapsible=icon]:hidden">
+                            <TentTree className="size-4" />
                         </div>
+                        <Button variant="ghost" onClick={toggleSidebar} className="hidden group-data-[collapsible=icon]:flex rounded-md p-2! h-8! group/toggle">
+                            <TentTree className="size-4 group-hover/toggle:hidden" />
+                            <PanelLeft className="size-4 hidden group-hover/toggle:block" />
+                        </Button>
+                        <span className="text-base font-semibold w-full group-data-[collapsible=icon]:opacity-0 transition-[width,opacity] duration-200">
+                            FlaiChat
+                        </span>
+
+                        <Button variant="ghost" onClick={toggleSidebar} className="hidden p-2! md:block group-data-[collapsible=icon]:opacity-0 transition-[width,opacity] duration-200">
+                            <PanelLeft className="size-4" />
+                        </Button>
                     </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="start">
-                    <DropdownMenuLabel>
-                        {user?.email || "user@example.com"}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                        {user?.role === "admin" && (
-                            <DropdownMenuItem onClick={() => setShowAdminDialog(true)}>
-                                <UserCog className="size-4" />
-                                <span>{t("sidebar.adminSettings")}</span>
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
-                            <Settings className="size-4" />
-                            <span>{t("sidebar.settings")}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={logout}>
-                            <LogOut className="size-4" />
-                            <span>{t("sidebar.logout")}</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                </SidebarHeader>
+                <SidebarContent>
+
+                    <SidebarGroup>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {quickActions.map((action) => (
+                                    <SidebarMenuItem key={action.label}>
+                                        <SidebarMenuButton asChild tooltip={action.label} isActive={location.pathname === action.to}>
+                                            <NavLink to={action.to} >
+                                                <action.icon />
+                                                <span>{action.label}</span>
+                                            </NavLink>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+
+                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 transition-opacity opacity-100 duration-200">
+                        <div className="px-2 py-2 text-xs font-semibold text-muted-foreground">
+                            {t("sidebar.chats")}
+                        </div>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {isLoading ? (
+                                    <div className="px-4 py-2 text-sm text-muted-foreground">{t("loading")}</div>
+                                ) : (
+                                    conversations.map((chat) => (
+                                        <SidebarMenuItem key={chat.id}>
+                                            <SidebarMenuButton asChild className="group/item pr-12" isActive={location.pathname === `/chat/${chat.id}`}>
+                                                <NavLink to={`/chat/${chat.id}`} title={chat.title}>
+                                                    {chat.generating ? (
+                                                        <SidebarMenuSkeleton />
+                                                    ) : (
+                                                        <>
+                                                            {chat.icon && <span className="mr-2">{chat.icon}</span>}
+                                                            <span className="truncate">{chat.title}</span>
+                                                        </>
+                                                    )}
+                                                </NavLink>
+                                            </SidebarMenuButton>
+                                            {!chat.generating && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <SidebarMenuAction showOnHover>
+                                                            <EllipsisVertical />
+                                                            <span className="sr-only">More</span>
+                                                        </SidebarMenuAction>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="start">
+                                                        <DropdownMenuItem onClick={() => generateTitle(chat.id)}>
+                                                            <RefreshCw className="mr-2 size-4" />
+                                                            {t("sidebar.regenerateTitle")}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            onClick={() => handleDelete(chat.id)}
+                                                        >
+                                                            <Trash className="mr-2 size-4" />
+                                                            {t("sidebar.delete")}
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                        </SidebarMenuItem>
+                                    ))
+                                )}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                </SidebarContent>
+
+                <SidebarFooter>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <SidebarMenuButton
+                                        size="lg"
+                                        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                    >
+                                        <Avatar className="h-8 w-8 rounded-lg">
+                                            <AvatarImage src="" alt={user?.username || "User"} />
+                                            <AvatarFallback className="rounded-lg">
+                                                {getInitials(user?.username)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="grid flex-1 text-left text-sm leading-tight">
+                                            <span className="truncate font-semibold">{user?.username || "User"}</span>
+                                            <span className="truncate text-xs">{user?.email || "user@example.com"}</span>
+                                        </div>
+                                        <EllipsisVertical className="ml-auto size-4" />
+                                    </SidebarMenuButton>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                                    side="bottom"
+                                    align="end"
+                                    sideOffset={4}
+                                >
+                                    <DropdownMenuLabel className="p-0 font-normal">
+                                        <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                            <Avatar className="h-8 w-8 rounded-lg">
+                                                <AvatarImage src="" alt={user?.username || "User"} />
+                                                <AvatarFallback className="rounded-lg">
+                                                    {getInitials(user?.username)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                                <span className="truncate font-semibold">{user?.username || "User"}</span>
+                                                <span className="truncate text-xs">{user?.email || "user@example.com"}</span>
+                                            </div>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuGroup>
+                                        {user?.role === "admin" && (
+                                            <DropdownMenuItem onClick={() => setShowAdminDialog(true)}>
+                                                <UserCog className="mr-2 size-4" />
+                                                <span>{t("sidebar.adminSettings")}</span>
+                                            </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                                            <Settings className="mr-2 size-4" />
+                                            <span>{t("sidebar.settings")}</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem onClick={logout}>
+                                        <LogOut className="mr-2 size-4" />
+                                        {t("sidebar.logout")}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarFooter>
+            </Sidebar>
 
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
                 <DialogContent className="sm:max-w-5xl w-full p-0 gap-0 overflow-hidden outline-none">
@@ -291,7 +291,9 @@ export default function Sidebar() {
                             onClick={() => {
                                 if (conversationToDelete) {
                                     deleteConversation(conversationToDelete);
-                                    navigate("/");
+                                    if (location.pathname === `/chat/${conversationToDelete}`) {
+                                        navigate("/");
+                                    }
                                 }
                                 setConversationToDelete(null);
                             }}
@@ -299,6 +301,6 @@ export default function Sidebar() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </aside>
+        </>
     );
 }
