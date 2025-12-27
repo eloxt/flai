@@ -627,7 +627,7 @@ export default function Chat() {
 
     return (
         <>
-            <ScrollArea className="flex-1 p-4 pb-0 overflow-y-auto h-full" onScroll={handleScroll}
+            <ScrollArea className="flex-1 p-4 pb-0 overflow-y-hidden h-full" onScroll={handleScroll}
                 style={{ paddingBottom: `${inputHeight + 66}px` }}
             >
                 <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full">
