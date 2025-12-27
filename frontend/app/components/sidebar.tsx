@@ -46,7 +46,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarMenuSkeleton,
-    SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar"
 import SettingsPanel from "./settings-panel";

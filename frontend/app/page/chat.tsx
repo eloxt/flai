@@ -626,222 +626,228 @@ export default function Chat() {
     }
 
     return (
-        <ScrollArea className="flex-1 p-4 pb-0 overflow-y-auto" onScroll={handleScroll}>
-            <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full">
-                {isLoading ? (
-                    <ChatSkeleton />
-                ) : (
-                    path.map((message, messageIndex) => (
-                        <div key={message.id}
-                            className="flex flex-col gap-1 group"
-                        >
-                            {message.content !== null && message.content.map((content, index) => (
-                                <div
-                                    key={index}
-                                    className={`flex flex-col ${message.role === "user" ? "self-end items-end" : "self-start items-start "
-                                        }`}
-                                    style={{
-                                        maxWidth: message.role === "user" ? "80%" : "100%",
-                                    }}
-                                >
+        <>
+            <ScrollArea className="flex-1 p-4 pb-0 overflow-y-auto h-full" onScroll={handleScroll}
+                style={{ paddingBottom: `${inputHeight + 66}px` }}
+            >
+                <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full">
+                    {isLoading ? (
+                        <ChatSkeleton />
+                    ) : (
+                        path.map((message, messageIndex) => (
+                            <div key={message.id}
+                                className="flex flex-col gap-1 group"
+                            >
+                                {message.content !== null && message.content.map((content, index) => (
                                     <div
-                                        className={`px-4 rounded-2xl w-full ${message.role === "user"
-                                            ? "bg-[var(--color-user-msg-bg)] py-2 "
-                                            : ""
+                                        key={index}
+                                        className={`flex flex-col ${message.role === "user" ? "self-end items-end" : "self-start items-start "
                                             }`}
-                                    >
-                                        {content.type === "reasoning" ? (
-                                            <div className="">
-                                                <Button
-                                                    variant="ghost"
-                                                    onClick={() => toggleReasoning(message.id)}
-                                                >
-                                                    {expandedReasoning.has(message.id) ? (
-                                                        <ChevronDown className="size-3" />
-                                                    ) : (
-                                                        <ChevronRight className="size-3" />
-                                                    )}
-                                                    {messageIndex === path.length - 1 && index === message.content.length - 1 ? (
-                                                        <span className="shimmer">{t("reasoning.process")}</span>
-                                                    ) : (
-                                                        <span>{t("reasoning.done")}</span>
-                                                    )}
-                                                </Button>
-                                                <div
-                                                    className={`grid transition-all duration-300 ease-in-out ${expandedReasoning.has(message.id)
-                                                        ? "grid-rows-[1fr] opacity-100"
-                                                        : "grid-rows-[0fr] opacity-0"
-                                                        }`}
-                                                >
-                                                    <div className="overflow-hidden border-l-1 border-[var(--border)] pl-4">
-                                                        <div className="markdown-body pb-2">
-                                                            <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            message.id === "" ? <span className="shimmer">{t("generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
-                                        )}
-
-                                    </div>
-
-                                </div>
-                            ))}
-
-
-                            {message.meta_info?.google_grounding_data?.groundingChunks && message.meta_info.google_grounding_data.groundingChunks.length > 0 && (
-                                <div className="mt-2 mx-4 flex flex-col gap-4">
-                                    <Separator />
-                                    <div className="flex flex-wrap gap-2">
-                                        {message.meta_info.google_grounding_data.groundingChunks.map((chunk, i) => (
-                                            chunk.web && (
-                                                <a
-                                                    key={i}
-                                                    href={chunk.web.uri}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs bg-secondary/50 hover:bg-secondary px-2 py-1 rounded-md transition-colors flex items-center gap-1 max-w-full truncate"
-                                                    title={chunk.web.title}
-                                                >
-                                                    <span className="opacity-70">[{i + 1}]</span>
-                                                    <span className="truncate max-w-[150px]">{chunk.web.title}</span>
-                                                </a>
-                                            )
-                                        ))}
-                                    </div>
-                                    {message.meta_info?.google_grounding_data?.searchEntryPoint && (
-                                        <div
-                                            dangerouslySetInnerHTML={{ __html: message.meta_info.google_grounding_data.searchEntryPoint.renderedContent }}
-                                        />
-                                    )}
-                                </div>
-                            )}
-
-                            {(messageIndex !== path.length - 1 || !isInterference) && (
-                                <div className={`flex items-center gap-0 px-3 py-1 ${message.role === "user" ? "self-end opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
-                                    {message.parent_id &&
-                                        (nodeMap.get(message.parent_id)?.children?.length ?? 0) > 1 && (
-                                            <>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    onClick={() => switchNode(message, false)}
-                                                >
-                                                    <ChevronLeft className="size-4 text-muted-foreground" />
-                                                </Button>
-                                                <div className="text-sm font-medium text-muted-foreground">
-                                                    {(nodeMap.get(message.parent_id)?.children?.indexOf(message) ?? 0) + 1}/
-                                                    {nodeMap.get(message.parent_id)?.children?.length}
-                                                </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    onClick={() => switchNode(message, true)}
-                                                >
-                                                    <ChevronRight className="size-4 text-muted-foreground" />
-                                                </Button>
-                                            </>
-                                        )}
-                                    <Button variant="ghost" size="icon-sm"
-                                        onClick={() => {
-                                            const content = message.content
-                                            const lastContent = content[content.length - 1]
-                                            navigator.clipboard.writeText(lastContent.data.content);
+                                        style={{
+                                            maxWidth: message.role === "user" ? "80%" : "100%",
                                         }}
                                     >
-                                        <Copy className="size-4 text-muted-foreground" />
-                                    </Button>
-                                    {(message.meta_info && message.meta_info?.model_name !== "") && (
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="ghost" size="icon-sm">
-                                                    <Info className="size-4 text-muted-foreground" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="max-w-2xs">
-                                                <div className="grid gap-4">
-                                                    <div className="grid gap-2">
-                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                            <span className="text-sm font-medium">{t("model.provider")}</span>
-                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.provider_name}</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                            <span className="text-sm font-medium">{t("model.name")}</span>
-                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.model_name}</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                            <span className="text-sm font-medium">{t("model.input")}</span>
-                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
-                                                        </div>
-                                                        {message.meta_info.reasoning_token_count > 0 && (
-                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
-                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
-                                                            </div>
+                                        <div
+                                            className={`px-4 rounded-2xl w-full ${message.role === "user"
+                                                ? "bg-[var(--color-user-msg-bg)] py-2 "
+                                                : ""
+                                                }`}
+                                        >
+                                            {content.type === "reasoning" ? (
+                                                <div className="">
+                                                    <Button
+                                                        variant="ghost"
+                                                        onClick={() => toggleReasoning(message.id)}
+                                                    >
+                                                        {expandedReasoning.has(message.id) ? (
+                                                            <ChevronDown className="size-3" />
+                                                        ) : (
+                                                            <ChevronRight className="size-3" />
                                                         )}
-                                                        <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                            <span className="text-sm font-medium">{t("model.output")}</span>
-                                                            <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
+                                                        {messageIndex === path.length - 1 && index === message.content.length - 1 ? (
+                                                            <span className="shimmer">{t("reasoning.process")}</span>
+                                                        ) : (
+                                                            <span>{t("reasoning.done")}</span>
+                                                        )}
+                                                    </Button>
+                                                    <div
+                                                        className={`grid transition-all duration-300 ease-in-out ${expandedReasoning.has(message.id)
+                                                            ? "grid-rows-[1fr] opacity-100"
+                                                            : "grid-rows-[0fr] opacity-0"
+                                                            }`}
+                                                    >
+                                                        <div className="overflow-hidden border-l-1 border-[var(--border)] pl-4">
+                                                            <div className="markdown-body pb-2">
+                                                                <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
+                                                            </div>
                                                         </div>
-                                                        {message.meta_info.cached_token_count > 0 && (
-                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.cached")}</span>
-                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
-                                                            </div>
-                                                        )}
-                                                        {message.meta_info.tool_use_token_count > 0 && (
-                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.tool_use")}</span>
-                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.tool_use_token_count}</span>
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 </div>
-                                            </PopoverContent>
-                                        </Popover>
-                                    )}
-                                    {messageIndex === path.length - 1 && (
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon-sm">
-                                                    <Trash2 className="size-4 text-muted-foreground" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action will delete the latest message pair.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                        onClick={() => deleteMessage()}
-                                                    >Confirm</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    )}
-                                    <Button variant="ghost" size="icon-sm"
-                                        onClick={() => retryMessage(message)}
-                                    >
-                                        <RefreshCcw className="size-4 text-muted-foreground" />
-                                    </Button>
-                                    {message.role === "assistant" && (
-                                        <span className="ml-2 text-sm text-muted-foreground">
-                                            {message.created_at.toLocaleString()}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ))
-                )}
-                <div ref={messagesEndRef} />
-            </div>
-            <div className="sticky bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
+                                            ) : (
+                                                message.id === "" ? <span className="shimmer">{t("generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
+                                            )}
+
+                                        </div>
+
+                                    </div>
+                                ))}
+
+
+                                {message.meta_info?.google_grounding_data?.groundingChunks && message.meta_info.google_grounding_data.groundingChunks.length > 0 && (
+                                    <div className="mt-2 mx-4 flex flex-col gap-4">
+                                        <Separator />
+                                        <div className="flex flex-wrap gap-2">
+                                            {message.meta_info.google_grounding_data.groundingChunks.map((chunk, i) => (
+                                                chunk.web && (
+                                                    <a
+                                                        key={i}
+                                                        href={chunk.web.uri}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs bg-secondary/50 hover:bg-secondary px-2 py-1 rounded-md transition-colors flex items-center gap-1 max-w-full truncate"
+                                                        title={chunk.web.title}
+                                                    >
+                                                        <span className="opacity-70">[{i + 1}]</span>
+                                                        <span className="truncate max-w-[150px]">{chunk.web.title}</span>
+                                                    </a>
+                                                )
+                                            ))}
+                                        </div>
+                                        {message.meta_info?.google_grounding_data?.searchEntryPoint && (
+                                            <div
+                                                dangerouslySetInnerHTML={{ __html: message.meta_info.google_grounding_data.searchEntryPoint.renderedContent }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+
+                                {(messageIndex !== path.length - 1 || !isInterference) && (
+                                    <div className={`flex items-center gap-0 px-3 py-1 ${message.role === "user" ? "self-end opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
+                                        {message.parent_id &&
+                                            (nodeMap.get(message.parent_id)?.children?.length ?? 0) > 1 && (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon-sm"
+                                                        onClick={() => switchNode(message, false)}
+                                                    >
+                                                        <ChevronLeft className="size-4 text-muted-foreground" />
+                                                    </Button>
+                                                    <div className="text-sm font-medium text-muted-foreground">
+                                                        {(nodeMap.get(message.parent_id)?.children?.indexOf(message) ?? 0) + 1}/
+                                                        {nodeMap.get(message.parent_id)?.children?.length}
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon-sm"
+                                                        onClick={() => switchNode(message, true)}
+                                                    >
+                                                        <ChevronRight className="size-4 text-muted-foreground" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        <Button variant="ghost" size="icon-sm"
+                                            onClick={() => {
+                                                const content = message.content
+                                                const lastContent = content[content.length - 1]
+                                                navigator.clipboard.writeText(lastContent.data.content);
+                                            }}
+                                        >
+                                            <Copy className="size-4 text-muted-foreground" />
+                                        </Button>
+                                        {(message.meta_info && message.meta_info?.model_name !== "") && (
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="ghost" size="icon-sm">
+                                                        <Info className="size-4 text-muted-foreground" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="max-w-2xs">
+                                                    <div className="grid gap-4">
+                                                        <div className="grid gap-2">
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.provider")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.provider_name}</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.name")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.model_name}</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.input")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
+                                                            </div>
+                                                            {message.meta_info.reasoning_token_count > 0 && (
+                                                                <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                    <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
+                                                                    <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                <span className="text-sm font-medium">{t("model.output")}</span>
+                                                                <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
+                                                            </div>
+                                                            {message.meta_info.cached_token_count > 0 && (
+                                                                <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                    <span className="text-sm font-medium">{t("model.cached")}</span>
+                                                                    <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
+                                                                </div>
+                                                            )}
+                                                            {message.meta_info.tool_use_token_count > 0 && (
+                                                                <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
+                                                                    <span className="text-sm font-medium">{t("model.tool_use")}</span>
+                                                                    <span className="text-sm text-right text-muted-foreground">{message.meta_info.tool_use_token_count}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
+                                        {messageIndex === path.length - 1 && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon-sm">
+                                                        <Trash2 className="size-4 text-muted-foreground" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action will delete the latest message pair.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={() => deleteMessage()}
+                                                        >Confirm</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
+                                        <Button variant="ghost" size="icon-sm"
+                                            onClick={() => retryMessage(message)}
+                                        >
+                                            <RefreshCcw className="size-4 text-muted-foreground" />
+                                        </Button>
+                                        {message.role === "assistant" && (
+                                            <span className="ml-2 text-sm text-muted-foreground">
+                                                {message.created_at.toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+
+            </ScrollArea>
+
+            <div className="absolute bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
                 <div
                     className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-all duration-300 ease-in-out ${showScrollButton
                         ? "opacity-100 translate-y-0 pointer-events-auto"
@@ -870,6 +876,6 @@ export default function Chat() {
                 </div>
                 <div className="h-4 bg-background" />
             </div>
-        </ScrollArea>
+        </>
     );
 }

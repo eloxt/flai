@@ -6,7 +6,6 @@ import {
     EmptyMedia,
     EmptyTitle,
 } from "@/components/ui/empty";
-import { Streamdown } from "streamdown";
 
 export default function Search() {
     return (
