@@ -190,7 +190,7 @@ export default function AppSidebar() {
                                         className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                                     >
                                         <Avatar className="h-8 w-8 rounded-lg">
-                                            <AvatarImage src="" alt={user?.username || "User"} />
+                                            <AvatarImage src={user?.avatar} alt={user?.username || "User"} />
                                             <AvatarFallback className="rounded-lg">
                                                 {getInitials(user?.username)}
                                             </AvatarFallback>
@@ -210,7 +210,7 @@ export default function AppSidebar() {
                                     <DropdownMenuLabel className="p-0 font-normal">
                                         <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                                             <Avatar className="h-8 w-8 rounded-lg">
-                                                <AvatarImage src="" alt={user?.username || "User"} />
+                                                <AvatarImage src={user?.avatar} alt={user?.username || "User"} />
                                                 <AvatarFallback className="rounded-lg">
                                                     {getInitials(user?.username)}
                                                 </AvatarFallback>

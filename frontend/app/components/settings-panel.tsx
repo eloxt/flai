@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function SettingsPanel() {
     const { t } = useTranslation();
@@ -77,6 +78,17 @@ function AccountSettings() {
             setAvatar(user.avatar || "");
         }
     }, [user]);
+
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatar(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleUpdateProfile = async () => {
         if (!username) {
@@ -147,12 +159,19 @@ function AccountSettings() {
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="avatar">{t("settingsPage.account.avatar")}</Label>
-                        <Input
-                            id="avatar"
-                            value={avatar}
-                            onChange={(e) => setAvatar(e.target.value)}
-                            placeholder={t("settingsPage.account.avatarPlaceholder")}
-                        />
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-16 w-16">
+                                <AvatarImage src={avatar} />
+                                <AvatarFallback>{username ? username.substring(0, 2).toUpperCase() : "U"}</AvatarFallback>
+                            </Avatar>
+                            <Input
+                                id="avatar"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarUpload}
+                                className="cursor-pointer"
+                            />
+                        </div>
                     </div>
                     <Button
                         onClick={handleUpdateProfile}
