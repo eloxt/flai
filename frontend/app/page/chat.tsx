@@ -795,7 +795,7 @@ export default function Chat() {
                                                             )}
                                                             {message.meta_info.tool_use_token_count > 0 && (
                                                                 <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                    <span className="text-sm font-medium">{t("model.tool_use")}</span>
+                                                                    <span className="text-sm font-medium">{t("model.toolUse")}</span>
                                                                     <span className="text-sm text-right text-muted-foreground">{message.meta_info.tool_use_token_count}</span>
                                                                 </div>
                                                             )}
