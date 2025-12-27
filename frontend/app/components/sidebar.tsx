@@ -87,7 +87,7 @@ export default function AppSidebar() {
     return (
         <>
             <Sidebar collapsible="icon" variant="sidebar">
-                <SidebarHeader>
+                <SidebarHeader className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
                     <div
                         className="flex items-center justify-between overflow-hidden w-full transition-[width,height,padding] x text-sm"
                     >
@@ -107,8 +107,8 @@ export default function AppSidebar() {
                         </Button>
                     </div>
                 </SidebarHeader>
-                <SidebarContent>
 
+                <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
                     <SidebarGroup>
                         <SidebarGroupContent>
                             <SidebarMenu>
@@ -180,7 +180,7 @@ export default function AppSidebar() {
                     </SidebarGroup>
                 </SidebarContent>
 
-                <SidebarFooter>
+                <SidebarFooter className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <DropdownMenu>
@@ -199,7 +199,6 @@ export default function AppSidebar() {
                                             <span className="truncate font-semibold">{user?.username || "User"}</span>
                                             <span className="truncate text-xs">{user?.email || "user@example.com"}</span>
                                         </div>
-                                        <EllipsisVertical className="ml-auto size-4" />
                                     </SidebarMenuButton>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent

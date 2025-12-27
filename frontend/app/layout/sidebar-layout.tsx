@@ -9,7 +9,11 @@ export default function SidebarLayout() {
     const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
 
     return (
-        <SidebarProvider defaultOpen={!isSidebarCollapsed} open={!isSidebarCollapsed} onOpenChange={(open) => setSidebarCollapsed(!open)}>
+        <SidebarProvider
+            defaultOpen={!isSidebarCollapsed}
+            open={!isSidebarCollapsed}
+            onOpenChange={(open) => setSidebarCollapsed(!open)}
+        >
             <Sidebar />
             <SidebarInset className="h-svh overflow-hidden">
                 <ModelSelector />
