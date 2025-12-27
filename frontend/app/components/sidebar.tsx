@@ -89,7 +89,7 @@ export default function AppSidebar() {
             <Sidebar collapsible="icon" variant="sidebar">
                 <SidebarHeader>
                     <div
-                        className="flex items-center justify-between overflow-hidden w-full gap-2 transition-[width,height,padding] x text-sm"
+                        className="flex items-center justify-between overflow-hidden w-full transition-[width,height,padding] x text-sm"
                     >
                         <div className="flex h-8 w-8 items-center justify-center rounded-md p-2 group-data-[collapsible=icon]:hidden">
                             <TentTree className="size-4" />
@@ -98,7 +98,7 @@ export default function AppSidebar() {
                             <TentTree className="size-4 group-hover/toggle:hidden" />
                             <PanelLeft className="size-4 hidden group-hover/toggle:block" />
                         </Button>
-                        <span className="text-base font-semibold w-full group-data-[collapsible=icon]:opacity-0 transition-[width,opacity] duration-200">
+                        <span className="text-base font-semibold w-full pl-2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pl-0 transition-[width,opacity,padding] duration-200">
                             FlaiChat
                         </span>
 
