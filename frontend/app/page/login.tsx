@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth-store";
 import { api, ApiError } from "../lib/api";
 import type { AuthUser, TokenPair } from "../lib/auth-client";
@@ -8,8 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
+import { TentTree } from "lucide-react";
 
-export default function Login() {
+export default function Login({
+    className,
+    ...props
+}: React.ComponentProps<"div">) {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const login = useAuthStore((state) => state.login);
     const [email, setEmail] = useState("");
@@ -21,7 +29,7 @@ export default function Login() {
         setIsSubmitting(true);
 
         try {
-            const data = await api.post<{ user: AuthUser; token: TokenPair }>("/auth/login", { email, password }, {auth: false});
+            const data = await api.post<{ user: AuthUser; token: TokenPair }>("/auth/login", { email, password }, { auth: false });
             login(data);
             navigate("/", { replace: true });
         } catch (error) {
@@ -33,7 +41,7 @@ export default function Login() {
                     toast.error(error.message);
                 }
             } else {
-                toast.error("网络异常，请稍后重试。");
+                toast.error(t("common.error.network"));
             }
         } finally {
             setIsSubmitting(false);
@@ -41,57 +49,60 @@ export default function Login() {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>登录 FlaiChat</CardTitle>
-                <CardDescription>欢迎回来</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit}>
-                    <div className="flex flex-col gap-6" >
-                        <div className="grid gap-2">
-                            <Label>邮箱</Label>
-                            <Input
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(event) => setEmail(event.target.value)}
-                                placeholder="you@example.com"
-                            />
+        <div className={cn("flex flex-col gap-6", className)} {...props}>
+            <form className="p-6 md:p-8" onSubmit={handleSubmit}>
+                <FieldGroup>
+                    <div className="flex flex-col items-center gap-2 text-center">
+                        <div className="flex size-8 items-center justify-center rounded-md">
+                            <TentTree className="size-6" />
                         </div>
-                        <div className="grid gap-2">
-                            <Label>密码</Label>
-                            <Input
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(event) => setPassword(event.target.value)}
-                                placeholder="至少 8 位密码"
-                            />
-                        </div>
+                        <h1 className="text-xl font-bold">{t("pages.login.welcome")}</h1>
                     </div>
-                    <div className="mt-6 flex flex-col gap-4">
+                    <Field>
+                        <Label htmlFor="email">{t("pages.login.email")}</Label>
+                        <Input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                            placeholder={t("pages.login.placeholder.email")}
+                        />
+                    </Field>
+                    <Field>
+                        <Label htmlFor="password">{t("pages.login.password")}</Label>
+                        <Input
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            placeholder={t("pages.login.placeholder.password")}
+                            autoComplete="on"
+                        />
+                    </Field>
+                    <Field>
                         <Button
                             type="submit"
                             className="w-full"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "登录中..." : "登录"}
+                            {isSubmitting ? t("pages.login.submitting") : t("pages.login.submit")}
                         </Button>
-                    </div>
-                </form>
-            </CardContent>
-            <CardFooter className="flex justify-center">
-                <div className="text-sm text-center text-muted-foreground">
-                    还没有账号？{" "}
-                    <Link
-                        to="/register"
-                        className="font-semibold text-primary hover:underline"
-                    >
-                        立即注册
-                    </Link>
-                </div>
-            </CardFooter>
-        </Card>
+                    </Field>
+                    <FieldSeparator>
+                        {t("pages.login.noAccount")}
+                    </FieldSeparator>
+                    <Field>
+                        <Button
+                            variant="outline"
+                            type="button"
+                            className="w-full"
+                            onClick={() => navigate("/register")}
+                        >
+                            {t("pages.login.register")}
+                        </Button>
+                    </Field>
+                </FieldGroup>
+            </form>
+        </div>
     );
 }

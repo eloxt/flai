@@ -39,7 +39,7 @@ export function ChatInput({
         <InputGroup className={`${className || ""}`}>
             <TextareaAutosize
                 data-slot="input-group-control"
-                placeholder={placeholder || t("placeholder")}
+                placeholder={placeholder || t("pages.chat.placeholder")}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 onHeightChange={onHeightChange}
@@ -67,7 +67,7 @@ export function ChatInput({
                     >
                         {/* <Globe fill={selectedTools.includes("internal_web_search") ? "" : "transparent"} /> */}
                         <Globe className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`} />
-                        <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("search")}</p>
+                        <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("common.search")}</p>
                     </ToggleGroupItem>
                 </ToggleGroup>
                 <InputGroupButton

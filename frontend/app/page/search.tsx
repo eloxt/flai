@@ -1,4 +1,5 @@
 import { Construction } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
     Empty,
     EmptyDescription,
@@ -8,6 +9,7 @@ import {
 } from "@/components/ui/empty";
 
 export default function Search() {
+    const { t } = useTranslation();
     return (
         <div className="flex h-full w-full items-center justify-center p-4">
             <Empty>
@@ -15,10 +17,9 @@ export default function Search() {
                     <EmptyMedia variant="icon">
                         <Construction className="size-6" />
                     </EmptyMedia>
-                    <EmptyTitle>Search Under Construction</EmptyTitle>
+                    <EmptyTitle>{t("pages.search.title")}</EmptyTitle>
                     <EmptyDescription>
-                        We are working hard to bring you the best search experience. Please
-                        check back later.
+                        {t("pages.search.description")}
                     </EmptyDescription>
                 </EmptyHeader>
             </Empty>

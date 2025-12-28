@@ -37,7 +37,7 @@ export default function ModelSelector() {
                 toast.error(error.message);
             } else {
                 console.log(error);
-                toast.error(t("error.network"));
+                toast.error(t("common.error.network"));
             }
         } finally {
             setIsLoading(false);
@@ -48,7 +48,7 @@ export default function ModelSelector() {
         <header
             className="sticky top-0 z-50 bg-background flex items-center justify-start px-4 py-2 gap-2"
         >
-            <SidebarTrigger className="md:hidden"/>
+            <SidebarTrigger className="md:hidden" />
             <DropdownMenu onOpenChange={setShowModelMenu}>
                 <DropdownMenuTrigger asChild>
                     <Button
@@ -56,7 +56,7 @@ export default function ModelSelector() {
                         disabled={isLoading}
                         className="text-lg font-normal"
                     >
-                        {currentModel ? currentModel.name : t("model.select")}
+                        {currentModel ? currentModel.name : t("components.modelSelector.select")}
                         <ChevronDown
                             className={`size-4 text-muted-foreground transition-transform duration-200 ${showModelMenu ? "rotate-180" : ""}`}
                         />
@@ -122,37 +122,37 @@ function ModelCardDetail({ model }: ModelCardDetailProps) {
                 </div>
                 {model.knowledge && (
                     <div className="text-muted-foreground">
-                        {t("model.trainingUntil")}: {model.knowledge}
+                        {t("components.modelSelector.trainingUntil")}: {model.knowledge}
                     </div>
                 )}
             </div>
 
             <div className="flex flex-wrap gap-2">
-                {model.attachment && <Badge variant="secondary">{t("model.badge.attachment")}</Badge>}
-                {model.reasoning && <Badge variant="secondary">{t("model.badge.reasoning")}</Badge>}
-                {model.tool_call && <Badge variant="secondary">{t("model.badge.toolCall")}</Badge>}
-                {model.structured_output && <Badge variant="secondary">{t("model.badge.structuredOutput")}</Badge>}
+                {model.attachment && <Badge variant="secondary">{t("components.modelSelector.badge.attachment")}</Badge>}
+                {model.reasoning && <Badge variant="secondary">{t("components.modelSelector.badge.reasoning")}</Badge>}
+                {model.tool_call && <Badge variant="secondary">{t("components.modelSelector.badge.toolCall")}</Badge>}
+                {model.structured_output && <Badge variant="secondary">{t("components.modelSelector.badge.structuredOutput")}</Badge>}
             </div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {model.limit?.context && (
                     <div className="flex flex-col">
-                        <span className="text-muted-foreground">{t("model.contextWindow")}</span>
+                        <span className="text-muted-foreground">{t("components.modelSelector.contextWindow")}</span>
                         <span>{model.limit.context.toLocaleString()}</span>
                     </div>
                 )}
                 {model.limit?.output && (
                     <div className="flex flex-col">
-                        <span className="text-muted-foreground">{t("model.maxOutput")}</span>
+                        <span className="text-muted-foreground">{t("components.modelSelector.maxOutput")}</span>
                         <span>{model.limit.output.toLocaleString()}</span>
                     </div>
                 )}
                 {model.cost && (
                     <div className="flex flex-col col-span-2 mt-2">
-                        <span className="text-muted-foreground mb-1">{t("model.pricing")}</span>
+                        <span className="text-muted-foreground mb-1">{t("components.modelSelector.pricing")}</span>
                         <div className="grid grid-cols-2 gap-x-4">
-                            <div>{t("model.input")}: ${model.cost.input}</div>
-                            <div>{t("model.output")}: ${model.cost.output}</div>
+                            <div>{t("components.modelSelector.input")}: ${model.cost.input}</div>
+                            <div>{t("components.modelSelector.output")}: ${model.cost.output}</div>
                         </div>
                     </div>
                 )}
@@ -160,7 +160,7 @@ function ModelCardDetail({ model }: ModelCardDetailProps) {
 
             {model.modalities && (
                 <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">{t("model.inputModalities")}</span>
+                    <span className="text-muted-foreground">{t("components.modelSelector.inputModalities")}</span>
                     <div className="flex gap-1 flex-wrap">
                         {model.modalities.input.map(m => (
                             <Badge key={m} variant="outline" className="capitalize">{m}</Badge>

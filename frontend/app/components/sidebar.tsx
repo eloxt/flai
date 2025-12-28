@@ -76,8 +76,8 @@ export default function AppSidebar() {
 
 
     const quickActions = [
-        { label: t("sidebar.newChat"), icon: Plus, to: "/" },
-        { label: t("sidebar.searchChat"), icon: Search, to: "/search" },
+        { label: t("components.sidebar.newChat"), icon: Plus, to: "/" },
+        { label: t("components.sidebar.searchChat"), icon: Search, to: "/search" },
     ];
 
     const handleDelete = (id: string) => {
@@ -128,12 +128,12 @@ export default function AppSidebar() {
 
                     <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 transition-opacity opacity-100 duration-200">
                         <div className="px-2 py-2 text-xs font-semibold text-muted-foreground">
-                            {t("sidebar.chats")}
+                            {t("components.sidebar.chats")}
                         </div>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {isLoading ? (
-                                    <div className="px-4 py-2 text-sm text-muted-foreground">{t("loading")}</div>
+                                    <div className="px-4 py-2 text-sm text-muted-foreground">{t("common.loading")}</div>
                                 ) : (
                                     conversations.map((chat) => (
                                         <SidebarMenuItem key={chat.id}>
@@ -160,14 +160,14 @@ export default function AppSidebar() {
                                                     <DropdownMenuContent align="start">
                                                         <DropdownMenuItem onClick={() => generateTitle(chat.id)}>
                                                             <RefreshCw className="mr-2 size-4" />
-                                                            {t("sidebar.regenerateTitle")}
+                                                            {t("components.sidebar.regenerateTitle")}
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             variant="destructive"
                                                             onClick={() => handleDelete(chat.id)}
                                                         >
                                                             <Trash className="mr-2 size-4" />
-                                                            {t("sidebar.delete")}
+                                                            {t("components.sidebar.delete")}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -226,19 +226,19 @@ export default function AppSidebar() {
                                         {user?.role === "admin" && (
                                             <DropdownMenuItem onClick={() => setShowAdminDialog(true)}>
                                                 <UserCog className="mr-2 size-4" />
-                                                <span>{t("sidebar.adminSettings")}</span>
+                                                <span>{t("components.sidebar.adminSettings")}</span>
                                             </DropdownMenuItem>
                                         )}
                                         <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
                                             <Settings className="mr-2 size-4" />
-                                            <span>{t("sidebar.settings")}</span>
+                                            <span>{t("components.sidebar.settings")}</span>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
                                     <DropdownMenuSeparator />
 
                                     <DropdownMenuItem onClick={logout}>
                                         <LogOut className="mr-2 size-4" />
-                                        {t("sidebar.logout")}
+                                        {t("components.sidebar.logout")}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -249,6 +249,7 @@ export default function AppSidebar() {
 
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
                 <DialogContent className="sm:max-w-5xl w-full p-0 gap-0 overflow-hidden outline-none">
+                    <DialogTitle className="hidden">Settings</DialogTitle>
                     <SettingsPanel />
                 </DialogContent>
             </Dialog>
@@ -256,7 +257,7 @@ export default function AppSidebar() {
             <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{t("sidebar.adminSettings")}</DialogTitle>
+                        <DialogTitle>{t("components.sidebar.adminSettings")}</DialogTitle>
                     </DialogHeader>
                     <div className="flex h-full w-full items-center justify-center p-4">
                         <Empty>
@@ -264,10 +265,9 @@ export default function AppSidebar() {
                                 <EmptyMedia variant="icon">
                                     <Construction className="size-6" />
                                 </EmptyMedia>
-                                <EmptyTitle>Settings Under Construction</EmptyTitle>
+                                <EmptyTitle>{t("components.sidebar.dialog.adminConstructionTitle")}</EmptyTitle>
                                 <EmptyDescription>
-                                    We are working hard to bring you the best settings experience. Please
-                                    check back later.
+                                    {t("components.sidebar.dialog.adminConstructionDesc")}
                                 </EmptyDescription>
                             </EmptyHeader>
                         </Empty>
@@ -278,13 +278,13 @@ export default function AppSidebar() {
             <AlertDialog open={!!conversationToDelete} onOpenChange={(open) => !open && setConversationToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("components.sidebar.dialog.deleteTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your conversation and remove it from our servers.
+                            {t("components.sidebar.dialog.deleteDescription")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => {
                                 if (conversationToDelete) {
@@ -295,7 +295,7 @@ export default function AppSidebar() {
                                 }
                                 setConversationToDelete(null);
                             }}
-                        >Confirm</AlertDialogAction>
+                        >{t("common.actions.confirm")}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -258,7 +258,7 @@ export default function Chat() {
             if (error instanceof ApiError) {
                 toast.error(error.message);
             } else {
-                toast.error(t("error.network"));
+                toast.error(t("common.error.network"));
             }
         } finally {
             setIsLoading(false);
@@ -327,7 +327,7 @@ export default function Chat() {
         const modelName = useModelStore.getState().currentModel?.id;
 
         if (!providerId || !modelName) {
-            toast.error(t("error.modelProviderNotFound"));
+            toast.error(t("common.error.modelProviderNotFound"));
             return;
         }
 
@@ -545,7 +545,7 @@ export default function Chat() {
             }
         } catch (error) {
             console.error(error);
-            toast.error(t("error.sendMessage"));
+            toast.error(t("common.error.sendMessage"));
         } finally {
             setIsInterference(false);
         }
@@ -665,9 +665,9 @@ export default function Chat() {
                                                             <ChevronRight className="size-3" />
                                                         )}
                                                         {messageIndex === path.length - 1 && index === message.content.length - 1 ? (
-                                                            <span className="shimmer">{t("reasoning.process")}</span>
+                                                            <span className="shimmer">{t("pages.chat.reasoning.process")}</span>
                                                         ) : (
-                                                            <span>{t("reasoning.done")}</span>
+                                                            <span>{t("pages.chat.reasoning.done")}</span>
                                                         )}
                                                     </Button>
                                                     <div
@@ -684,7 +684,7 @@ export default function Chat() {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                message.id === "" ? <span className="shimmer">{t("generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
+                                                message.id === "" ? <span className="shimmer">{t("common.generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
                                             )}
 
                                         </div>
@@ -766,36 +766,36 @@ export default function Chat() {
                                                     <div className="grid gap-4">
                                                         <div className="grid gap-2">
                                                             <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.provider")}</span>
+                                                                <span className="text-sm font-medium">{t("components.modelSelector.provider")}</span>
                                                                 <span className="text-sm text-right text-muted-foreground">{message.meta_info.provider_name}</span>
                                                             </div>
                                                             <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.name")}</span>
+                                                                <span className="text-sm font-medium">{t("components.modelSelector.name")}</span>
                                                                 <span className="text-sm text-right text-muted-foreground">{message.meta_info.model_name}</span>
                                                             </div>
                                                             <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.input")}</span>
+                                                                <span className="text-sm font-medium">{t("components.modelSelector.input")}</span>
                                                                 <span className="text-sm text-right text-muted-foreground">{message.meta_info.prompt_token_count}</span>
                                                             </div>
                                                             {message.meta_info.reasoning_token_count > 0 && (
                                                                 <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                    <span className="text-sm font-medium">{t("model.badge.reasoning")}</span>
+                                                                    <span className="text-sm font-medium">{t("components.modelSelector.badge.reasoning")}</span>
                                                                     <span className="text-sm text-right text-muted-foreground">{message.meta_info.reasoning_token_count}</span>
                                                                 </div>
                                                             )}
                                                             <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                <span className="text-sm font-medium">{t("model.output")}</span>
+                                                                <span className="text-sm font-medium">{t("components.modelSelector.output")}</span>
                                                                 <span className="text-sm text-right text-muted-foreground">{message.meta_info.response_token_count}</span>
                                                             </div>
                                                             {message.meta_info.cached_token_count > 0 && (
                                                                 <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                    <span className="text-sm font-medium">{t("model.cached")}</span>
+                                                                    <span className="text-sm font-medium">{t("components.modelSelector.cached")}</span>
                                                                     <span className="text-sm text-right text-muted-foreground">{message.meta_info.cached_token_count}</span>
                                                                 </div>
                                                             )}
                                                             {message.meta_info.tool_use_token_count > 0 && (
                                                                 <div className="grid grid-cols-[3fr_7fr] items-center gap-4">
-                                                                    <span className="text-sm font-medium">{t("model.toolUse")}</span>
+                                                                    <span className="text-sm font-medium">{t("components.modelSelector.toolUse")}</span>
                                                                     <span className="text-sm text-right text-muted-foreground">{message.meta_info.tool_use_token_count}</span>
                                                                 </div>
                                                             )}

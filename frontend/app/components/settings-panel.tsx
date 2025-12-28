@@ -17,7 +17,7 @@ export default function SettingsPanel() {
     const [activeTab, setActiveTab] = useState("account");
 
     const tabs = [
-        { id: "account", label: t("settingsPage.tabs.account"), icon: <User className="size-4" /> },
+        { id: "account", label: t("pages.settings.tabs.account"), icon: <User className="size-4" /> },
     ];
 
     return (
@@ -25,7 +25,7 @@ export default function SettingsPanel() {
             {/* Left Sidebar */}
             <aside className="w-64 flex-shrink-0 border-r bg-muted/30">
                 <div className="p-4 pt-6">
-                    <h2 className="text-lg font-semibold tracking-tight px-2 mb-4">{t("settingsPage.title")}</h2>
+                    <h2 className="text-lg font-semibold tracking-tight px-2 mb-4">{t("pages.settings.title")}</h2>
                     <nav className="flex flex-col gap-1">
                         {tabs.map((tab) => (
                             <Button
@@ -92,7 +92,7 @@ function AccountSettings() {
 
     const handleUpdateProfile = async () => {
         if (!username) {
-            toast.error(t("settingsPage.account.usernameRequired"));
+            toast.error(t("pages.settings.account.usernameRequired"));
             return;
         }
 
@@ -103,9 +103,9 @@ function AccountSettings() {
                 avatar,
             });
             updateUser({ username, avatar });
-            toast.success(t("settingsPage.account.success"));
+            toast.success(t("pages.settings.account.success"));
         } catch (error: any) {
-            toast.error(error.message || t("settingsPage.account.error"));
+            toast.error(error.message || t("pages.settings.account.error"));
         } finally {
             setIsLoading(false);
         }
@@ -113,7 +113,7 @@ function AccountSettings() {
 
     const handleUpdatePassword = async () => {
         if (!oldPassword || !newPassword) {
-            toast.error(t("settingsPage.security.fillAll"));
+            toast.error(t("pages.settings.security.fillAll"));
             return;
         }
 
@@ -123,11 +123,11 @@ function AccountSettings() {
                 old_password: oldPassword,
                 password: newPassword,
             });
-            toast.success(t("settingsPage.security.success"));
+            toast.success(t("pages.settings.security.success"));
             setOldPassword("");
             setNewPassword("");
         } catch (error: any) {
-            toast.error(error.message || t("settingsPage.security.error"));
+            toast.error(error.message || t("pages.settings.security.error"));
         } finally {
             setIsPasswordLoading(false);
         }
@@ -139,26 +139,26 @@ function AccountSettings() {
                 <div>
                     <h3 className="text-xl font-medium flex items-center gap-2">
                         <User className="size-4" />
-                        {t("settingsPage.account.title")}
+                        {t("pages.settings.account.title")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {t("settingsPage.account.description")}
+                        {t("pages.settings.account.description")}
                     </p>
                 </div>
                 <Separator />
 
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="username">{t("settingsPage.account.username")}</Label>
+                        <Label htmlFor="username">{t("pages.settings.account.username")}</Label>
                         <Input
                             id="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder={t("settingsPage.account.usernamePlaceholder")}
+                            placeholder={t("pages.settings.account.usernamePlaceholder")}
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="avatar">{t("settingsPage.account.avatar")}</Label>
+                        <Label htmlFor="avatar">{t("pages.settings.account.avatar")}</Label>
                         <div className="flex items-center gap-4">
                             <Avatar className="h-16 w-16">
                                 <AvatarImage src={avatar} />
@@ -178,7 +178,7 @@ function AccountSettings() {
                         disabled={isLoading}
                         className="w-fit"
                     >
-                        {isLoading ? t("settingsPage.account.saving") : t("settingsPage.account.save")}
+                        {isLoading ? t("pages.settings.account.saving") : t("pages.settings.account.save")}
                     </Button>
                 </div>
             </div>
@@ -187,33 +187,33 @@ function AccountSettings() {
                 <div>
                     <h3 className="text-xl font-medium flex items-center gap-2">
                         <Lock className="size-5" />
-                        {t("settingsPage.security.title")}
+                        {t("pages.settings.security.title")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {t("settingsPage.security.description")}
+                        {t("pages.settings.security.description")}
                     </p>
                 </div>
                 <Separator />
 
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="old-password">{t("settingsPage.security.currentPassword")}</Label>
+                        <Label htmlFor="old-password">{t("pages.settings.security.currentPassword")}</Label>
                         <Input
                             id="old-password"
                             type="password"
                             value={oldPassword}
                             onChange={(e) => setOldPassword(e.target.value)}
-                            placeholder={t("settingsPage.security.currentPasswordPlaceholder")}
+                            placeholder={t("pages.settings.security.currentPasswordPlaceholder")}
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="new-password">{t("settingsPage.security.newPassword")}</Label>
+                        <Label htmlFor="new-password">{t("pages.settings.security.newPassword")}</Label>
                         <Input
                             id="new-password"
                             type="password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder={t("settingsPage.security.newPasswordPlaceholder")}
+                            placeholder={t("pages.settings.security.newPasswordPlaceholder")}
                         />
                     </div>
                     <Button
@@ -222,7 +222,7 @@ function AccountSettings() {
                         variant="secondary"
                         className="w-fit"
                     >
-                        {isPasswordLoading ? t("settingsPage.security.updating") : t("settingsPage.security.update")}
+                        {isPasswordLoading ? t("pages.settings.security.updating") : t("pages.settings.security.update")}
                     </Button>
                 </div>
             </div>

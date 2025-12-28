@@ -21,9 +21,9 @@ export default function ActivationPending() {
                     <UserCheck className="size-10" />
                 </EmptyMedia>
                 <EmptyHeader>
-                    <EmptyTitle>{t("activationPending.title")}</EmptyTitle>
+                    <EmptyTitle>{t("pages.activationPending.title")}</EmptyTitle>
                     <EmptyDescription>
-                        {t("activationPending.description")}
+                        {t("pages.activationPending.description")}
                     </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
@@ -31,7 +31,7 @@ export default function ActivationPending() {
                         className="w-full"
                         onClick={() => navigate("/login")}
                     >
-                        {t("activationPending.backToLogin")}
+                        {t("pages.activationPending.backToLogin")}
                     </Button>
                 </EmptyContent>
             </Empty>

@@ -1,93 +1,150 @@
 {
-    "greeting": "How can I help you?",
-    "placeholder": "Ask anything...",
-    "attachment": "Attachment",
-    "search": "Search",
-    "activationPending": {
-        "title": "Waiting for Admin Activation",
-        "description": "Your account has been successfully registered. Please wait for the administrator to activate your account to continue.",
-        "backToLogin": "Back to Login"
-    },
-    "login": {
-        "expired": "Login expired, please login again"
-    },
-    "error": {
-        "fetchMessages": "Failed to fetch messages",
-        "sendMessage": "Failed to send message",
-        "modelProviderNotFound": "Model provider not found. Please select a model.",
-        "network": "Network error, please try again later."
-    },
-    "success": {
-        "conversationDeleted": "Conversation deleted successfully"
-    },
-    "reasoning": {
-        "process": "Reasoning",
-        "done": "Reasoned"
-    },
-    "loading": "Loading...",
-    "generating": "Generating...",
-    "sidebar": {
-        "newChat": "New Chat",
-        "searchChat": "Search Chat",
-        "adminSettings": "Admin Settings",
-        "settings": "Settings",
-        "logout": "Logout",
-        "chats": "Chats",
-        "regenerateTitle": "Regenerate Title",
-        "delete": "Delete"
-    },
-    "model": {
-        "select": "Select Model",
-        "trainingUntil": "Training until",
-        "contextWindow": "Context Window",
-        "maxOutput": "Max Output",
-        "pricing": "Pricing (per 1M tokens)",
-        "provider": "Provider",
-        "name": "Model",
-        "input": "Input",
-        "output": "Output",
-        "cached": "Cached",
-        "toolUse": "Tool Use",
-        "inputModalities": "Input Modalities",
-        "badge": {
-            "attachment": "Attachment",
-            "reasoning": "Reasoning",
-            "toolCall": "Tool Call",
-            "structuredOutput": "Structured Output",
-            "info": "Metadata",
-            "info_desc": "Execution details for this message"
+    "common": {
+        "loading": "Loading...",
+        "generating": "Generating...",
+        "search": "Search",
+        "attachment": "Attachment",
+        "actions": {
+            "save": "Save",
+            "cancel": "Cancel",
+            "confirm": "Confirm",
+            "delete": "Delete",
+            "update": "Update",
+            "back": "Back"
+        },
+        "error": {
+            "network": "Network error, please try again later.",
+            "fetchMessages": "Failed to fetch messages",
+            "sendMessage": "Failed to send message",
+            "modelProviderNotFound": "Model provider not found. Please select a model.",
+            "generic": "Something went wrong"
+        },
+        "success": {
+            "saved": "Saved successfully",
+            "deleted": "Deleted successfully",
+            "updated": "Updated successfully"
         }
     },
-    "settingsPage": {
-        "title": "Settings",
-        "tabs": {
-            "account": "Account & Security"
+    "pages": {
+        "login": {
+            "welcome": "Welcome to FlaiChat.",
+            "email": "Email",
+            "password": "Password",
+            "submit": "Login",
+            "submitting": "Logging in...",
+            "noAccount": "No account yet?",
+            "register": "Register",
+            "expired": "Login expired, please login again",
+            "placeholder": {
+                "email": "you@example.com",
+                "password": "At least 8 characters"
+            }
         },
-        "account": {
-            "title": "Profile",
-            "description": "Update your public profile information.",
+        "register": {
+            "title": "Create an account",
             "username": "Username",
-            "usernamePlaceholder": "Your username",
-            "avatar": "Avatar URL",
-            "avatarPlaceholder": "https://example.com/avatar.png",
-            "save": "Save Changes",
-            "saving": "Saving...",
-            "success": "Profile updated successfully",
-            "error": "Failed to update profile",
-            "usernameRequired": "Username is required"
+            "email": "Email",
+            "password": "Password",
+            "submit": "Register",
+            "submitting": "Creating...",
+            "hasAccount": "Already have an account?",
+            "login": "Login directly",
+            "success": "Registration successful, redirecting...",
+            "placeholder": {
+                "username": "username",
+                "email": "you@example.com",
+                "password": "At least 8 characters"
+            }
         },
-        "security": {
-            "title": "Security",
-            "description": "Manage your password and account security.",
-            "currentPassword": "Current Password",
-            "currentPasswordPlaceholder": "Enter current password",
-            "newPassword": "New Password",
-            "newPasswordPlaceholder": "Enter new password",
-            "update": "Update Password",
-            "updating": "Updating...",
-            "success": "Password updated successfully",
-            "error": "Failed to update password",
-            "fillAll": "Please fill in both password fields"
+        "activationPending": {
+            "title": "Waiting for Admin Activation",
+            "description": "Your account has been successfully registered. Please wait for the administrator to activate your account to continue.",
+            "backToLogin": "Back to Login"
+        },
+        "chat": {
+            "greeting": "How can I help you?",
+            "placeholder": "Ask anything...",
+            "reasoning": {
+                "process": "Reasoning",
+                "done": "Reasoned"
+            },
+            "newChat": "New Chat"
+        },
+        "search": {
+            "title": "Search Under Construction",
+            "description": "We are working hard to bring you the best search experience. Please check back later."
+        },
+        "settings": {
+            "title": "Settings",
+            "tabs": {
+                "account": "Account & Security"
+            },
+            "account": {
+                "title": "Profile",
+                "description": "Update your public profile information.",
+                "username": "Username",
+                "usernamePlaceholder": "Your username",
+                "avatar": "Avatar URL",
+                "avatarPlaceholder": "https://example.com/avatar.png",
+                "save": "Save Changes",
+                "saving": "Saving...",
+                "success": "Profile updated successfully",
+                "error": "Failed to update profile",
+                "usernameRequired": "Username is required"
+            },
+            "security": {
+                "title": "Security",
+                "description": "Manage your password and account security.",
+                "currentPassword": "Current Password",
+                "currentPasswordPlaceholder": "Enter current password",
+                "newPassword": "New Password",
+                "newPasswordPlaceholder": "Enter new password",
+                "update": "Update Password",
+                "updating": "Updating...",
+                "success": "Password updated successfully",
+                "error": "Failed to update password",
+                "fillAll": "Please fill in both password fields"
+            }
+        }
+    },
+    "components": {
+        "sidebar": {
+            "newChat": "New Chat",
+            "searchChat": "Search Chat",
+            "chats": "Chats",
+            "adminSettings": "Admin Settings",
+            "settings": "Settings",
+            "logout": "Logout",
+            "regenerateTitle": "Regenerate Title",
+            "delete": "Delete",
+            "dialog": {
+                "deleteTitle": "Are you absolutely sure?",
+                "deleteDescription": "This action cannot be undone. This will permanently delete your conversation and remove it from our servers.",
+                "adminConstructionTitle": "Settings Under Construction",
+                "adminConstructionDesc": "We are working hard to bring you the best settings experience. Please check back later."
+            }
+        },
+        "modelSelector": {
+            "select": "Select Model",
+            "trainingUntil": "Training until",
+            "contextWindow": "Context Window",
+            "maxOutput": "Max Output",
+            "pricing": "Pricing (per 1M tokens)",
+            "provider": "Provider",
+            "name": "Model",
+            "input": "Input",
+            "output": "Output",
+            "cached": "Cached",
+            "toolUse": "Tool Use",
+            "inputModalities": "Input Modalities",
+            "badge": {
+                "attachment": "Attachment",
+                "reasoning": "Reasoning",
+                "toolCall": "Tool Call",
+                "structuredOutput": "Structured Output",
+                "info": "Metadata",
+                "info_desc": "Execution details for this message"
+            }
         }
     }
 }
