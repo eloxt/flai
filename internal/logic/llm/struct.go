@@ -1,6 +1,10 @@
 package llm
 
-import "google.golang.org/genai"
+import (
+	"flai/internal/model/entity"
+
+	"google.golang.org/genai"
+)
 
 type StreamResponse struct {
 	MessageId string `json:"message_id"`
@@ -13,7 +17,8 @@ type ContentReasoning struct {
 }
 
 type ContentMessage struct {
-	Content string `json:"content"`
+	Content string         `json:"content"`
+	Files   []*entity.File `json:"files"`
 }
 
 type Content struct {

@@ -5,6 +5,7 @@ import (
 	"flai/internal/controller/admin"
 	"flai/internal/controller/auth"
 	"flai/internal/controller/conversation"
+	"flai/internal/controller/file"
 	"flai/internal/controller/message"
 	"flai/internal/controller/provider"
 	"flai/internal/controller/user"
@@ -47,6 +48,7 @@ func RegisterRouter(s *ghttp.Server) {
 			message.NewV1(),
 			provider.NewV1(),
 			user.NewV1(),
+			file.NewV1(),
 		)
 	})
 	s.Group("/auth", func(group *ghttp.RouterGroup) {

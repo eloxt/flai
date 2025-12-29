@@ -3,7 +3,7 @@ package message
 import (
 	"context"
 	"encoding/json"
-	"flai/api/message/v1"
+	v1 "flai/api/message/v1"
 	"flai/internal/consts"
 	"flai/internal/dao"
 	"flai/internal/logic"
@@ -48,6 +48,14 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "Invalid message path")
 	}
 
+	var files []*entity.File
+	if len(req.Files) > 0 {
+		err := dao.File.Ctx(ctx).WhereIn(dao.File.Columns().Id, req.Files).Scan(&files)
+		if err != nil {
+			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch files")
+		}
+	}
+
 	// Save prompt to new message
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
@@ -55,6 +63,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	}
 	data := llm.ContentMessage{
 		Content: prompt,
+		Files:   files,
 	}
 	content := llm.Content{
 		Type: consts.MessageType.Message,
@@ -103,7 +112,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	response.Header().Set("Connection", "keep-alive")
 	response.Header().Set("Access-Control-Allow-Origin", "*")
 
-	err = llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools)
+	err = llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, files)
 	if err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
 	}

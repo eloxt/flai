@@ -1,3 +1,4 @@
+import { File } from '@/page/chat';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -10,6 +11,10 @@ interface InputState {
     setSelectedTools: (value: string[]) => void;
     chatInputs: Record<string, string>;
     setChatInput: (conversationId: string, value: string) => void;
+    attachments: File[];
+    addAttachment: (file: File) => void;
+    removeAttachment: (id: string) => void;
+    clearAttachments: () => void;
 }
 
 export const useInputStore = create<InputState>()(
@@ -29,6 +34,10 @@ export const useInputStore = create<InputState>()(
                         [conversationId]: value
                     }
                 })),
+            attachments: [],
+            addAttachment: (file) => set((state) => ({ attachments: [...state.attachments, file] })),
+            removeAttachment: (id) => set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) })),
+            clearAttachments: () => set({ attachments: [] }),
         }),
         {
             name: 'input-store',

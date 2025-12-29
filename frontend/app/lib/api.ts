@@ -36,6 +36,10 @@ export async function request<T>(url: string, options?: ApiRequestInit): Promise
         'Content-Type': 'application/json',
     };
 
+    if (options?.body instanceof FormData) {
+        delete defaultHeaders['Content-Type'];
+    }
+
     if (auth) {
         const token = useAuthStore.getState().tokens?.access_token;
         if (token) {
@@ -89,10 +93,11 @@ export const api = {
         });
     },
     post: <T>(url: string, data?: any, options?: ApiRequestInit) => {
+        const isFormData = data instanceof FormData;
         return request<T>(url, {
             ...options,
             method: 'POST',
-            body: JSON.stringify(data),
+            body: isFormData ? data : JSON.stringify(data),
         });
     },
     put: <T>(url: string, data?: any, options?: ApiRequestInit) => {

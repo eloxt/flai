@@ -15,6 +15,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gcfg"
 	"github.com/google/uuid"
 	"google.golang.org/genai"
 )
@@ -37,7 +38,7 @@ func (geminiClient *GeminiClient) getClient(ctx context.Context, providerInfo *l
 		})
 	}
 }
-func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string) error {
+func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, files []*entity.File) error {
 	client, err := geminiClient.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
@@ -65,6 +66,11 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 						return err
 					}
 					history = append(history, genai.NewContentFromText(data.Content, role))
+					if data.Files != nil {
+						for _, file := range data.Files {
+							history = append(history, genai.NewContentFromURI(file.Path, file.MimeType, role))
+						}
+					}
 				}
 			}
 		}
@@ -92,7 +98,21 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 	}
 
 	// Send the last message
-	iter := chat.SendMessageStream(ctx, genai.Part{Text: newMessage.Content})
+	var parts []genai.Part
+	publicUrl := gcfg.Instance().MustGet(ctx, "s3.publicUrl").String()
+	if !strings.HasSuffix(publicUrl, "/") {
+		publicUrl += "/"
+	}
+	for _, file := range files {
+		parts = append(parts, *genai.NewPartFromURI(publicUrl+file.Path, file.MimeType))
+	}
+	var contents []Content
+	err = json.Unmarshal([]byte(newMessage.Content), &contents)
+	if err != nil {
+		return err
+	}
+	parts = append(parts, *genai.NewPartFromText(contents[0].Data.(map[string]any)["content"].(string)))
+	iter := chat.SendMessageStream(ctx, parts...)
 
 	var currentMessageType string
 	var currentContentBuilder strings.Builder

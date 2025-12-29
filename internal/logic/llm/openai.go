@@ -32,7 +32,7 @@ func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.Simple
 	return openai.NewClient(opts...)
 }
 
-func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string) error {
+func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, files []*entity.File) error {
 	client := c.getClient(ctx, providerInfo)
 
 	var inputItems []responses.ResponseInputItemUnionParam
@@ -56,12 +56,61 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 						return err
 					}
 					inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(data.Content, role))
+					if len(data.Files) > 0 {
+						for _, file := range data.Files {
+							if strings.HasPrefix(file.MimeType, "image") {
+								var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
+									{
+										OfInputImage: &responses.ResponseInputImageParam{
+											ImageURL: openai.String(file.PublicUrl),
+										},
+									},
+								}
+								inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, role))
+							} else {
+								var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
+									{
+										OfInputFile: &responses.ResponseInputFileParam{
+											FileURL: openai.String(file.PublicUrl),
+										},
+									},
+								}
+								inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, role))
+							}
+						}
+					}
 				}
 			}
 		}
 	}
 
-	inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(newMessage.Content, responses.EasyInputMessageRoleUser))
+	var contents []Content
+	err := json.Unmarshal([]byte(newMessage.Content), &contents)
+	if err != nil {
+		return err
+	}
+	inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(contents[0].Data.(map[string]any)["content"].(string), responses.EasyInputMessageRoleUser))
+	for _, file := range files {
+		if strings.HasPrefix(file.MimeType, "image") {
+			var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
+				{
+					OfInputImage: &responses.ResponseInputImageParam{
+						ImageURL: openai.String(file.PublicUrl),
+					},
+				},
+			}
+			inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, responses.EasyInputMessageRoleUser))
+		} else {
+			var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
+				{
+					OfInputFile: &responses.ResponseInputFileParam{
+						FileURL: openai.String(file.PublicUrl),
+					},
+				},
+			}
+			inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, responses.EasyInputMessageRoleUser))
+		}
+	}
 
 	input := responses.ResponseNewParamsInputUnion{
 		OfInputItemList: inputItems,

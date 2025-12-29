@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy, Trash2, ArrowDown, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, RefreshCcw, Copy, Trash2, ArrowDown, Info, FileIcon } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
 import { useModelStore } from "../store/model-store";
 import { api, ApiError } from "../lib/api";
@@ -15,7 +15,8 @@ import { useConversationStore } from "@/store/conversation-store";
 import { AlertDialogHeader, AlertDialogFooter, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { formatBytes } from "@/lib/utils";
 
 interface Message {
     id: string;
@@ -33,6 +34,7 @@ interface Content {
 
 interface ContentMessage {
     content: string;
+    files: File[];
 }
 
 interface ContentReasoning {
@@ -47,6 +49,7 @@ interface MessageRequest {
     messagePath: string[];
     prompt: string;
     tools: string[];
+    files: string[];
 }
 
 interface StreamResponse {
@@ -93,6 +96,16 @@ interface GoogleGroundingSupport {
         text: string;
     };
     groundingChunkIndices: number[];
+}
+
+export interface File {
+    id: string;
+    file_name: string;
+    mime_type: string;
+    size: number;
+    path: string;
+    public_url: string
+    created_at: Date;
 }
 
 function applyCitations(text: string, supports: GoogleGroundingSupport[], chunks: GoogleGroundingChunk[]): string {
@@ -175,6 +188,8 @@ export default function Chat() {
     const [inputHeight, setInputHeight] = useState(0);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const selectedTools = useInputStore((state) => state.selectedTools);
+    const attachments = useInputStore((state) => state.attachments);
+    const clearAttachments = useInputStore((state) => state.clearAttachments);
 
     useEffect(() => {
         if (!showScrollButton) {
@@ -345,7 +360,8 @@ export default function Chat() {
                     {
                         type: "message",
                         data: {
-                            content: text
+                            content: text,
+                            files: attachments
                         }
                     }
                 ],
@@ -390,8 +406,10 @@ export default function Chat() {
                 model_name: modelName,
                 messagePath: newPath.filter(msg => msg.id !== userMsgId && msg.id !== "").map(msg => msg.id),
                 prompt: text,
-                tools: selectedTools
+                tools: selectedTools,
+                files: retry ? (nodeMap.get(userMsgId)?.content?.[0]?.data as ContentMessage)?.files?.map((file) => file.id) : attachments.map((attachment) => attachment.id),
             };
+            clearAttachments();
 
             const response = await api.stream(`/api/messages`, {
                 method: "POST",
@@ -628,7 +646,7 @@ export default function Chat() {
     return (
         <>
             <ScrollArea className="flex-1 p-4 pb-0 overflow-y-hidden h-full" onScroll={handleScroll}
-                style={{ paddingBottom: `${inputHeight + 66}px` }}
+                style={{ paddingBottom: `${inputHeight + 66 + (attachments.length > 0 ? 36 : 0)}px` }}
             >
                 <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full">
                     {isLoading ? (
@@ -647,8 +665,55 @@ export default function Chat() {
                                             maxWidth: message.role === "user" ? "80%" : "100%",
                                         }}
                                     >
+                                        {/* Files */}
+                                        {content.type === "message" && (content.data as ContentMessage).files?.length > 0 && (() => {
+                                            const files = (content.data as ContentMessage).files;
+                                            const images = files.filter(f => f.mime_type.startsWith("image/"));
+                                            const others = files.filter(f => !f.mime_type.startsWith("image/"));
+                                            return (
+                                                <div className="flex flex-col gap-2 w-full my-2">
+                                                    {images.length > 0 && (
+                                                        <ScrollArea className="w-full whitespace-nowrap">
+                                                            <div className="flex gap-2 pb-3">
+                                                                {images.map((file, fileIndex) => (
+                                                                    <img
+                                                                        key={fileIndex}
+                                                                        src={file.public_url}
+                                                                        alt={file.file_name}
+                                                                        className="h-48 w-auto rounded-lg border border-border object-contain bg-muted"
+                                                                        loading="lazy"
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                            <ScrollBar orientation="horizontal" />
+                                                        </ScrollArea>
+                                                    )}
+                                                    {others.length > 0 && (
+                                                        <div className="flex flex-col gap-2">
+                                                            {others.map((file, fileIndex) => (
+                                                                <a
+                                                                    key={fileIndex}
+                                                                    href={file.public_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-accent/50 transition-colors group/file text-sm"
+                                                                >
+                                                                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                                                        <FileIcon className="size-4" />
+                                                                    </div>
+                                                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                                                        <span className="font-medium truncate">{file.file_name}</span>
+                                                                        <span className="text-xs text-muted-foreground">{formatBytes(file.size)}</span>
+                                                                    </div>
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                         <div
-                                            className={`px-4 rounded-2xl w-full ${message.role === "user"
+                                            className={`px-4 rounded-2xl ${message.role === "user"
                                                 ? "bg-[var(--color-user-msg-bg)] py-2 "
                                                 : ""
                                                 }`}
@@ -686,12 +751,9 @@ export default function Chat() {
                                             ) : (
                                                 message.id === "" ? <span className="shimmer">{t("common.generating")}</span> : <Streamdown isAnimating={isInterference}>{content.data.content}</Streamdown>
                                             )}
-
                                         </div>
-
                                     </div>
                                 ))}
-
 
                                 {message.meta_info?.google_grounding_data?.groundingChunks && message.meta_info.google_grounding_data.groundingChunks.length > 0 && (
                                     <div className="mt-2 mx-4 flex flex-col gap-4">
@@ -853,7 +915,7 @@ export default function Chat() {
                         ? "opacity-100 translate-y-0 pointer-events-auto"
                         : "opacity-0 translate-y-4 pointer-events-none"
                         }`}
-                    style={{ bottom: `${inputHeight + 70}px` }}
+                    style={{ bottom: `${inputHeight + 70 + (attachments.length > 0 ? 48 : 0)}px` }}
                 >
                     <Button
                         variant="outline"
@@ -870,7 +932,6 @@ export default function Chat() {
                         value={input}
                         onChange={setInput}
                         onSend={handleSend}
-                        placeholder={t("placeholder")}
                         onHeightChange={setInputHeight}
                     />
                 </div>

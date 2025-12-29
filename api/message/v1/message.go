@@ -13,6 +13,7 @@ type CreateReq struct {
 	MessagePath    []string `json:"message_path"`
 	Prompt         string   `json:"prompt" v:"required"`
 	Tools          []string `json:"tools"`
+	Files          []string `json:"files"`
 }
 
 type CreateRes struct {
