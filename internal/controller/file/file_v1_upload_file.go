@@ -74,7 +74,7 @@ func (c *ControllerV1) UploadFile(ctx context.Context, req *v1.UploadFileReq) (r
 
 	// Save to DB
 	publicUrl := gcfg.Instance().MustGet(ctx, "s3.publicUrl").String()
-	if !strings.HasPrefix(publicUrl, "/") {
+	if !strings.HasSuffix(publicUrl, "/") {
 		publicUrl += "/"
 	}
 	fileEntity := entity.File{
