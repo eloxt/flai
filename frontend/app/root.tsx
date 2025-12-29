@@ -29,7 +29,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Meta />
                 <Links />
             </head>
-            <body className="antialiased overflow-hidden">
+            <body className="antialiased">
                 {children}
                 <Scripts />
                 <Toaster position="top-center" richColors />

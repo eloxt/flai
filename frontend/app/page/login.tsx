@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth-store";
 import { api, ApiError } from "../lib/api";
 import type { AuthUser, TokenPair } from "../lib/auth-client";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { TentTree } from "lucide-react";
+
+import type { MetaFunction } from "react-router";
+import i18n from "../i18n";
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: `FlaiChat - ${i18n.t("pages.login.submit")}` }
+    ];
+};
 
 export default function Login({
     className,

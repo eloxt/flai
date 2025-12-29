@@ -40,6 +40,7 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
+    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuAction,
@@ -49,7 +50,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import SettingsPanel from "./settings-panel";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 
 export default function AppSidebar() {
     const { t } = useTranslation();
@@ -106,30 +107,25 @@ export default function AppSidebar() {
                             <PanelLeft className="size-4" />
                         </Button>
                     </div>
+                    <SidebarMenu>
+                        {quickActions.map((action) => (
+                            <SidebarMenuItem key={action.label}>
+                                <SidebarMenuButton asChild tooltip={action.label} isActive={location.pathname === action.to}>
+                                    <NavLink to={action.to} >
+                                        <action.icon />
+                                        <span>{action.label}</span>
+                                    </NavLink>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
                 </SidebarHeader>
 
                 <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
-                    <SidebarGroup>
-                        <SidebarGroupContent>
-                            <SidebarMenu>
-                                {quickActions.map((action) => (
-                                    <SidebarMenuItem key={action.label}>
-                                        <SidebarMenuButton asChild tooltip={action.label} isActive={location.pathname === action.to}>
-                                            <NavLink to={action.to} >
-                                                <action.icon />
-                                                <span>{action.label}</span>
-                                            </NavLink>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-
-                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 transition-opacity opacity-100 duration-200">
-                        <div className="px-2 py-2 text-xs font-semibold text-muted-foreground">
+                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none transition-opacity opacity-100 duration-200">
+                        <SidebarGroupLabel>
                             {t("components.sidebar.chats")}
-                        </div>
+                        </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {isLoading ? (

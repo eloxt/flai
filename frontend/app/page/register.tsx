@@ -18,6 +18,15 @@ interface RegisterPayload {
     password: string;
 }
 
+import type { MetaFunction } from "react-router";
+import i18n from "../i18n";
+
+export const meta: MetaFunction = () => {
+    return [
+        { title: `FlaiChat - ${i18n.t("pages.register.submit")}` }
+    ];
+};
+
 export default function Register({
     className,
     ...props
@@ -69,7 +78,7 @@ export default function Register({
         if (isAuthenticated) {
             navigate("/", { replace: true });
         }
-    }, [navigate]);
+    }, [isAuthenticated, navigate]);
 
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>

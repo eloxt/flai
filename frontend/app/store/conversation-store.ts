@@ -80,7 +80,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
     deleteConversation: async (id: string) => {
         try {
             await api.del(`/api/conversation/${id}`);
-            toast.success(t("success.conversationDeleted"))
+            toast.success(t("common.success.deleted"))
         } catch (error) {
             if (error instanceof ApiError) {
                 toast.error(error.message);

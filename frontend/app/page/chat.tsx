@@ -133,7 +133,11 @@ function applyGoogleCitations(text: string, supports: GoogleGroundingSupport[], 
                 return `[${i + 1}]`;
             }).join("");
             if (indices) {
-                newText = newText.replace(segmentText, `${segmentText} ${indices}`);
+                if (segmentText.endsWith("```")) {
+                    newText = newText.replace(segmentText, `${segmentText}\n${indices}`);
+                } else {
+                    newText = newText.replace(segmentText, `${segmentText} ${indices}`);
+                }
             }
         }
     });
@@ -146,7 +150,11 @@ function applyOpenaiCitations(text: string, openaiGroundingData: OpenaiGrounding
     openaiGroundingData.forEach((groundingData, index) => {
         const segmentText = text.substring(groundingData.start_index, groundingData.end_index);
         if (segmentText) {
-            newText = newText.replace(segmentText, `${segmentText} [[${index + 1}]](${groundingData.url})`);
+            if (segmentText.endsWith("```")) {
+                newText = newText.replace(segmentText, `${segmentText}\n[[${index + 1}]](${groundingData.url})`);
+            } else {
+                newText = newText.replace(segmentText, `${segmentText} [[${index + 1}]](${groundingData.url})`);
+            }
         }
     });
     return newText;
@@ -180,6 +188,20 @@ function ChatSkeleton() {
     );
 }
 
+import type { MetaFunction } from "react-router";
+
+export const meta: MetaFunction = ({ params }) => {
+    const { conversationId } = params;
+    let title = "FlaiChat";
+    if (conversationId) {
+        const conversation = useConversationStore.getState().conversations.find((c) => c.id === conversationId);
+        if (conversation) {
+            title = `FlaiChat - ${conversation.title}`;
+        }
+    }
+    return [{ title }];
+};
+
 export default function Chat() {
     const { t } = useTranslation();
     const { conversationId } = useParams();
@@ -204,6 +226,7 @@ export default function Chat() {
     const setSendMainInput = useInputStore((state) => state.setSendMainInput);
     const addConversation = useConversationStore((state) => state.addConversation);
     const generateTitle = useConversationStore((state) => state.generateTitle);
+
     const hasInitialized = useRef(false);
     const [inputHeight, setInputHeight] = useState(0);
     const [showScrollButton, setShowScrollButton] = useState(false);
@@ -312,7 +335,7 @@ export default function Chat() {
                 if (node.content && node.content.length > 0) {
                     const lastContent = node.content[node.content.length - 1];
                     if (lastContent.type === "message") {
-                        lastContent.data.content = applyGoogleCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks, );
+                        lastContent.data.content = applyGoogleCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks,);
                     }
                 }
             }
@@ -986,9 +1009,10 @@ export default function Chat() {
                     <div ref={messagesEndRef} />
                 </div>
 
+                <ScrollBar orientation="horizontal" />
             </ScrollArea>
 
-            <div className="absolute bottom-0 left-0 right-0 z-50 px-4 pointer-events-none">
+            <div className="absolute bottom-4 left-0 right-0 z-50 px-4 pointer-events-none">
                 <div
                     className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-all duration-300 ease-in-out ${showScrollButton
                         ? "opacity-100 translate-y-0 pointer-events-auto"
@@ -1005,7 +1029,6 @@ export default function Chat() {
                         <ArrowDown className="size-4" />
                     </Button>
                 </div>
-                <div className="h-8 bg-gradient-to-t from-background to-transparent" />
                 <div className="mx-auto max-w-5xl pointer-events-auto bg-background">
                     <ChatInput
                         value={input}
@@ -1014,7 +1037,6 @@ export default function Chat() {
                         onHeightChange={setInputHeight}
                     />
                 </div>
-                <div className="h-4 bg-background" />
             </div>
         </>
     );
