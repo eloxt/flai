@@ -55,7 +55,7 @@ interface MessageRequest {
 interface StreamResponse {
     message_id: string;
     type: string;
-    data: ContentMessage | ContentReasoning | MessageMetaInfo | GoogleGroundingData;
+    data: ContentMessage | ContentReasoning | MessageMetaInfo | GoogleGroundingData | OpenaiGroundingData[];
 }
 
 interface TreeNode extends Message {
@@ -71,6 +71,7 @@ interface MessageMetaInfo {
     cached_token_count: number;
     tool_use_token_count: number;
     google_grounding_data?: GoogleGroundingData;
+    openai_grounding_data?: OpenaiGroundingData[];
 }
 
 interface GoogleGroundingData {
@@ -98,6 +99,14 @@ interface GoogleGroundingSupport {
     groundingChunkIndices: number[];
 }
 
+interface OpenaiGroundingData {
+    type: string;
+    start_index: number;
+    end_index: number;
+    title: string;
+    url: string;
+}
+
 export interface File {
     id: string;
     file_name: string;
@@ -108,7 +117,7 @@ export interface File {
     created_at: Date;
 }
 
-function applyCitations(text: string, supports: GoogleGroundingSupport[], chunks: GoogleGroundingChunk[]): string {
+function applyGoogleCitations(text: string, supports: GoogleGroundingSupport[], chunks: GoogleGroundingChunk[]): string {
     if (!supports || supports.length === 0) return text;
 
     let newText = text;
@@ -129,6 +138,17 @@ function applyCitations(text: string, supports: GoogleGroundingSupport[], chunks
         }
     });
 
+    return newText;
+}
+
+function applyOpenaiCitations(text: string, openaiGroundingData: OpenaiGroundingData[]) {
+    let newText = text;
+    openaiGroundingData.forEach((groundingData, index) => {
+        const segmentText = text.substring(groundingData.start_index, groundingData.end_index);
+        if (segmentText) {
+            newText = newText.replace(segmentText, `${segmentText} [[${index + 1}]](${groundingData.url})`);
+        }
+    });
     return newText;
 }
 
@@ -292,7 +312,16 @@ export default function Chat() {
                 if (node.content && node.content.length > 0) {
                     const lastContent = node.content[node.content.length - 1];
                     if (lastContent.type === "message") {
-                        lastContent.data.content = applyCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks);
+                        lastContent.data.content = applyGoogleCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks, );
+                    }
+                }
+            }
+            if (node.meta_info?.openai_grounding_data) {
+                const groundingData = node.meta_info.openai_grounding_data;
+                if (node.content && node.content.length > 0) {
+                    const lastContent = node.content[node.content.length - 1];
+                    if (lastContent.type === "message") {
+                        lastContent.data.content = applyOpenaiCitations(lastContent.data.content, groundingData);
                     }
                 }
             }
@@ -513,7 +542,36 @@ export default function Chat() {
                                         if (msg.content.length > 0) {
                                             const lastContent = msg.content[msg.content.length - 1];
                                             if (lastContent.type === "message") {
-                                                lastContent.data.content = applyCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks);
+                                                lastContent.data.content = applyGoogleCitations(lastContent.data.content, groundingData.groundingSupports, groundingData.groundingChunks);
+                                            }
+                                        }
+                                    }
+                                    return msg;
+                                });
+                                setPath(newPath);
+                            } else if (streamContentType === "openai_grounding_data") {
+                                newPath = newPath.map(msg => {
+                                    if (msg.id === assistantMessageId) {
+                                        const groundingData = (streamResponse.data as OpenaiGroundingData[]);
+                                        const currentMeta = msg.meta_info || {
+                                            provider_name: "",
+                                            model_name: "",
+                                            prompt_token_count: 0,
+                                            reasoning_token_count: 0,
+                                            response_token_count: 0,
+                                            cached_token_count: 0,
+                                            tool_use_token_count: 0,
+                                        };
+                                        msg.meta_info = {
+                                            ...currentMeta,
+                                            openai_grounding_data: groundingData,
+                                        };
+
+                                        // Apply citations to the last content chunk
+                                        if (msg.content.length > 0) {
+                                            const lastContent = msg.content[msg.content.length - 1];
+                                            if (lastContent.type === "message") {
+                                                lastContent.data.content = applyOpenaiCitations(lastContent.data.content, groundingData);
                                             }
                                         }
                                     }
@@ -780,6 +838,27 @@ export default function Chat() {
                                                 dangerouslySetInnerHTML={{ __html: message.meta_info.google_grounding_data.searchEntryPoint.renderedContent }}
                                             />
                                         )}
+                                    </div>
+                                )}
+
+                                {message.meta_info?.openai_grounding_data && (
+                                    <div className="mt-2 mx-4 flex flex-col gap-4">
+                                        <Separator />
+                                        <div className="flex flex-wrap gap-2">
+                                            {message.meta_info.openai_grounding_data.map((groundingData, i) => (
+                                                <a
+                                                    key={i}
+                                                    href={groundingData.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs bg-secondary/50 hover:bg-secondary px-2 py-1 rounded-md transition-colors flex items-center gap-1 max-w-full truncate"
+                                                    title={groundingData.title}
+                                                >
+                                                    <span className="opacity-70">[{i + 1}]</span>
+                                                    <span className="truncate max-w-[150px]">{groundingData.title}</span>
+                                                </a>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 

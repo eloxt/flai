@@ -14,6 +14,7 @@ var MessageType = struct {
 	FunctionCall        string
 	MetaInfo            string
 	GoogleGroundingData string
+	OpenaiGroundingData string
 }{
 	Message:             "message",
 	Reasoning:           "reasoning",
@@ -21,6 +22,7 @@ var MessageType = struct {
 	FunctionCall:        "function_call",
 	MetaInfo:            "meta_info",
 	GoogleGroundingData: "google_grounding_data",
+	OpenaiGroundingData: "openai_grounding_data",
 }
 
 // User roles

@@ -193,6 +193,31 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		case responses.ResponseOutputItemDoneEvent:
 			appendContent(&currentContentBuilder, contentType, &contentList)
 			currentContentBuilder.Reset()
+
+			contents := e.Item.Content
+			var annotations []responses.ResponseOutputTextAnnotationUnion
+			for _, content := range contents {
+				if len(content.Annotations) == 0 {
+					continue
+				}
+				annotations = append(annotations, content.Annotations...)
+			}
+			if len(annotations) > 0 {
+				messageMetaInfo.OpenaiGroundingData = annotations
+				streamResponse := StreamResponse{
+					MessageId: messageId,
+					Type:      consts.MessageType.OpenaiGroundingData,
+					Data:      annotations,
+				}
+				err := StreamToClient(response, streamResponse)
+				if err != nil {
+					if errors.Is(ctx.Err(), context.Canceled) {
+						saveMessage(context.WithoutCancel(ctx))
+						return nil
+					}
+					return err
+				}
+			}
 			continue
 		case responses.ResponseTextDeltaEvent:
 			if e.Delta != "" {
