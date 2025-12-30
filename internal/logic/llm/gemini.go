@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"flai/internal/consts"
-	"flai/internal/dao"
 	"flai/internal/logic"
 	"flai/internal/model/entity"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcfg"
@@ -22,70 +20,46 @@ import (
 
 type GeminiClient struct{}
 
-func (geminiClient *GeminiClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo) (*genai.Client, error) {
-	if providerInfo.BaseUrl != "" {
-		return genai.NewClient(ctx, &genai.ClientConfig{
-			APIKey:  providerInfo.ApiKey,
-			Backend: genai.BackendGeminiAPI,
-			HTTPOptions: genai.HTTPOptions{
-				BaseURL: providerInfo.BaseUrl,
-			},
-		})
-	} else {
-		return genai.NewClient(ctx, &genai.ClientConfig{
-			APIKey:  providerInfo.ApiKey,
-			Backend: genai.BackendGeminiAPI,
-		})
+// ============================================================================
+// Client Creation
+// ============================================================================
+
+func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo) (*genai.Client, error) {
+	config := &genai.ClientConfig{
+		APIKey:  providerInfo.ApiKey,
+		Backend: genai.BackendGeminiAPI,
 	}
+
+	if providerInfo.BaseUrl != "" {
+		config.HTTPOptions = genai.HTTPOptions{
+			BaseURL: providerInfo.BaseUrl,
+		}
+	}
+
+	return genai.NewClient(ctx, config)
 }
-func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, files []*entity.File) error {
-	client, err := geminiClient.getClient(ctx, providerInfo)
+
+// ============================================================================
+// Stream Chat
+// ============================================================================
+
+func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, files []*entity.File) error {
+	client, err := c.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
 	}
 
-	// Convert historyMessages to genai.Message format
-	var history []*genai.Content
-	if len(historyMessages) > 0 {
-		for _, msg := range historyMessages {
-			var role genai.Role
-			role = genai.RoleUser
-			if msg.Role == consts.MessageRole.Assistant {
-				role = genai.RoleModel
-			}
-			var contents []Content
-			err := json.Unmarshal([]byte(msg.Content), &contents)
-			if err != nil {
-				return err
-			}
-			for _, content := range contents {
-				if content.Type == consts.MessageType.Message {
-					var data ContentMessage
-					err := mapstructure.Decode(content.Data, &data)
-					if err != nil {
-						return err
-					}
-					history = append(history, genai.NewContentFromText(data.Content, role))
-					if data.Files != nil {
-						for _, file := range data.Files {
-							history = append(history, genai.NewContentFromURI(file.Path, file.MimeType, role))
-						}
-					}
-				}
-			}
-		}
+	// Build chat history
+	history, err := c.buildHistory(historyMessages)
+	if err != nil {
+		return err
 	}
-	var genaiTools = []*genai.Tool{}
-	if tools != nil {
-		for _, tool := range tools {
-			if tool == consts.InternalTools.InternalWebSearch {
-				genaiTools = append(genaiTools, &genai.Tool{
-					GoogleSearch: &genai.GoogleSearch{},
-				})
-			}
-		}
-	}
-	var config = &genai.GenerateContentConfig{
+
+	// Build tools
+	genaiTools := c.buildTools(tools)
+
+	// Create chat config
+	config := &genai.GenerateContentConfig{
 		ThinkingConfig: &genai.ThinkingConfig{
 			IncludeThoughts: true,
 		},
@@ -97,65 +71,37 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 		return err
 	}
 
-	// Send the last message
-	var parts []genai.Part
-	publicUrl := gcfg.Instance().MustGet(ctx, "s3.publicUrl").String()
-	if !strings.HasSuffix(publicUrl, "/") {
-		publicUrl += "/"
-	}
-	for _, file := range files {
-		parts = append(parts, *genai.NewPartFromURI(publicUrl+file.Path, file.MimeType))
-	}
-	var contents []Content
-	err = json.Unmarshal([]byte(newMessage.Content), &contents)
+	// Build message parts
+	parts, err := c.buildMessageParts(ctx, newMessage, files)
 	if err != nil {
 		return err
 	}
-	parts = append(parts, *genai.NewPartFromText(contents[0].Data.(map[string]any)["content"].(string)))
+
+	// Start streaming
 	iter := chat.SendMessageStream(ctx, parts...)
 
+	// Initialize stream state
 	var currentMessageType string
 	var currentContentBuilder strings.Builder
 	var contentList []Content
+
 	messageId := uuid.New().String()
-	conversationId := newMessage.ConversationId
-	message := entity.Message{
+	message := &entity.Message{
 		Id:             messageId,
-		ConversationId: conversationId,
+		ConversationId: newMessage.ConversationId,
 		ParentId:       newMessage.Id,
 		Role:           consts.MessageRole.Assistant,
 	}
-	messageMetaInfo := MessageMetaInfo{
+	metaInfo := MessageMetaInfo{
 		ProviderName: providerInfo.Name,
 		ModelName:    modelConfig.Name,
 	}
 
-	saveMessage := func(ctx context.Context) {
-		if currentMessageType != "" && currentContentBuilder.Len() > 0 {
-			appendContent(&currentContentBuilder, currentMessageType, &contentList)
-		}
-		contentListByte, err := json.Marshal(contentList)
-		if err != nil {
-			g.Log().Errorf(ctx, "Failed to marshal content list: %v", err)
-			return
-		}
-		message.Content = string(contentListByte)
-		messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
-		if err != nil {
-			g.Log().Errorf(ctx, "Failed to marshal meta info: %v", err)
-			return
-		}
-		message.MetaInfo = string(messageMetaInfoByte)
-		_, err = dao.Message.Ctx(ctx).Data(message).Insert()
-		if err != nil {
-			g.Log().Errorf(ctx, "Failed to save message: %v", err)
-		}
-	}
-
+	// Process stream
 	for resp, err := range iter {
 		if err != nil {
 			if errors.Is(ctx.Err(), context.Canceled) {
-				saveMessage(context.WithoutCancel(ctx))
+				c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 				return nil
 			}
 			return err
@@ -163,6 +109,7 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 
 		for _, candidate := range resp.Candidates {
 			var thoughtSignature []byte
+
 			if candidate.Content != nil {
 				for _, part := range candidate.Content.Parts {
 					if part.Text != "" {
@@ -171,11 +118,12 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 							partType = consts.MessageType.Reasoning
 						}
 
-						messageMetaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
-						messageMetaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
-						messageMetaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
-						messageMetaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
-						messageMetaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
+						// Update usage metadata
+						metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
+						metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
+						metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
+						metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
+						metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
 
 						// If type switched, save previous block
 						if currentMessageType != "" && currentMessageType != partType {
@@ -186,6 +134,7 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 						currentMessageType = partType
 						currentContentBuilder.WriteString(part.Text)
 
+						// Stream to client
 						streamResponse := StreamResponse{
 							MessageId: messageId,
 							Type:      partType,
@@ -196,47 +145,49 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 							streamResponse.Data = ContentMessage{Content: part.Text}
 						}
 
-						err := StreamToClient(response, streamResponse)
-						if err != nil {
+						if err := StreamToClient(response, streamResponse); err != nil {
 							if errors.Is(ctx.Err(), context.Canceled) {
-								saveMessage(context.WithoutCancel(ctx))
+								c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 								return nil
 							}
 							return err
 						}
 					}
+
 					if len(part.ThoughtSignature) > 0 {
 						thoughtSignature = part.ThoughtSignature
 					}
 				}
 			}
+
 			if candidate.FinishReason == genai.FinishReasonStop {
-				messageMetaInfo.ThoughtSignature = base64.StdEncoding.EncodeToString(thoughtSignature)
-				streamResponse := StreamResponse{
+				metaInfo.ThoughtSignature = base64.StdEncoding.EncodeToString(thoughtSignature)
+
+				// Send meta info
+				metaResponse := StreamResponse{
 					MessageId: messageId,
 					Type:      consts.MessageType.MetaInfo,
-					Data:      messageMetaInfo,
+					Data:      metaInfo,
 				}
-				err := StreamToClient(response, streamResponse)
-				if err != nil {
+				if err := StreamToClient(response, metaResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
-						saveMessage(context.WithoutCancel(ctx))
+						c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 						return nil
 					}
 					return err
 				}
 
+				// Send grounding data if present
 				if candidate.GroundingMetadata != nil && len(candidate.GroundingMetadata.GroundingChunks) > 0 {
-					messageMetaInfo.GoogleGroundingData = candidate.GroundingMetadata
-					streamResponse := StreamResponse{
+					metaInfo.GoogleGroundingData = candidate.GroundingMetadata
+					groundingResponse := StreamResponse{
 						MessageId: messageId,
 						Type:      consts.MessageType.GoogleGroundingData,
 						Data:      candidate.GroundingMetadata,
 					}
-					err := StreamToClient(response, streamResponse)
-					if err != nil {
+					if err := StreamToClient(response, groundingResponse); err != nil {
 						if errors.Is(ctx.Err(), context.Canceled) {
-							saveMessage(context.WithoutCancel(ctx))
+							c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 							return nil
 						}
 						return err
@@ -246,45 +197,124 @@ func (geminiClient *GeminiClient) StreamChat(ctx context.Context, response *ghtt
 		}
 	}
 
-	saveMessage(context.WithoutCancel(ctx))
-	response.Writef("data: [DONE]\n\n")
-	response.Flush()
-	return err
+	// Save final message
+	c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+	StreamDone(response)
+
+	return nil
 }
 
-func (geminiClient *GeminiClient) GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error) {
-	client, err := geminiClient.getClient(ctx, providerInfo)
+func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+	if contentType != "" && contentBuilder.Len() > 0 {
+		appendContent(contentBuilder, contentType, contentList)
+	}
+	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
+}
+
+// ============================================================================
+// History Building
+// ============================================================================
+
+func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai.Content, error) {
+	var history []*genai.Content
+
+	for _, msg := range historyMessages {
+		var role genai.Role
+		role = genai.RoleUser
+		if msg.Role == consts.MessageRole.Assistant {
+			role = genai.RoleModel
+		}
+
+		contents, err := ParseHistoryContents(msg)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range contents {
+			if content.Type != consts.MessageType.Message {
+				continue
+			}
+
+			var data ContentMessage
+			if err := mapstructure.Decode(content.Data, &data); err != nil {
+				return nil, err
+			}
+
+			history = append(history, genai.NewContentFromText(data.Content, role))
+
+			// Add file references
+			for _, file := range data.Files {
+				history = append(history, genai.NewContentFromURI(file.Path, file.MimeType, role))
+			}
+		}
+	}
+
+	return history, nil
+}
+
+// ============================================================================
+// Tool Building
+// ============================================================================
+
+func (c *GeminiClient) buildTools(tools []string) []*genai.Tool {
+	genaiTools := []*genai.Tool{
+		{URLContext: &genai.URLContext{}},
+	}
+
+	for _, tool := range tools {
+		if tool == consts.InternalTools.InternalWebSearch {
+			genaiTools = append(genaiTools, &genai.Tool{
+				GoogleSearch: &genai.GoogleSearch{},
+			})
+		}
+	}
+
+	return genaiTools
+}
+
+// ============================================================================
+// Message Parts Building
+// ============================================================================
+
+func (c *GeminiClient) buildMessageParts(ctx context.Context, newMessage *entity.Message, files []*entity.File) ([]genai.Part, error) {
+	var parts []genai.Part
+
+	// Add file parts
+	publicUrl := gcfg.Instance().MustGet(ctx, "s3.publicUrl").String()
+	if !strings.HasSuffix(publicUrl, "/") {
+		publicUrl += "/"
+	}
+
+	for _, file := range files {
+		parts = append(parts, *genai.NewPartFromURI(publicUrl+file.Path, file.MimeType))
+	}
+
+	// Add text content
+	content, err := ParseMessageContent(newMessage)
+	if err != nil {
+		return nil, err
+	}
+	parts = append(parts, *genai.NewPartFromText(content))
+
+	return parts, nil
+}
+
+// ============================================================================
+// Title Generation
+// ============================================================================
+
+func (c *GeminiClient) GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error) {
+	client, err := c.getClient(ctx, providerInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	var config = &genai.GenerateContentConfig{
+	config := &genai.GenerateContentConfig{
 		SystemInstruction: &genai.Content{
 			Parts: []*genai.Part{genai.NewPartFromText(systemInstruction)},
 		},
 		ResponseMIMEType: "application/json",
-		ResponseSchema: func() *genai.Schema {
-			schemaJSON := `{
-          "type": "object",
-          "properties": {
-            "icon": {
-              "type": "string"
-            },
-            "title": {
-              "type": "string"
-            }
-          },
-          "propertyOrdering": [
-            "icon",
-            "title"
-          ]
-        }`
-			var schema genai.Schema
-			if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil {
-				g.Log().Errorf(ctx, "Failed to unmarshal schema: %v", err)
-			}
-			return &schema
-		}(),
+		ResponseSchema:   c.getTitleSchema(ctx),
 	}
 
 	contentObj := &genai.Content{
@@ -296,18 +326,40 @@ func (geminiClient *GeminiClient) GenerateTitle(ctx context.Context, providerInf
 		return nil, err
 	}
 
-	if len(resp.Candidates) > 0 && resp.Candidates[0].Content != nil {
-		var result string
-		for _, part := range resp.Candidates[0].Content.Parts {
-			result += part.Text
-		}
-		var titleGenerationResponse TitleGenerationResponse
-		err := json.Unmarshal([]byte(result), &titleGenerationResponse)
-		if err != nil {
-			return nil, err
-		}
-		return &titleGenerationResponse, nil
+	return c.parseTitleResponse(resp)
+}
+
+func (c *GeminiClient) getTitleSchema(ctx context.Context) *genai.Schema {
+	schemaJSON := `{
+		"type": "object",
+		"properties": {
+			"icon": {"type": "string"},
+			"title": {"type": "string"}
+		},
+		"propertyOrdering": ["icon", "title"]
+	}`
+
+	var schema genai.Schema
+	if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil {
+		g.Log().Errorf(ctx, "Failed to unmarshal schema: %v", err)
+	}
+	return &schema
+}
+
+func (c *GeminiClient) parseTitleResponse(resp *genai.GenerateContentResponse) (*TitleGenerationResponse, error) {
+	if len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+		return nil, nil
 	}
 
-	return nil, gerror.New("Failed to generate title")
+	var result strings.Builder
+	for _, part := range resp.Candidates[0].Content.Parts {
+		result.WriteString(part.Text)
+	}
+
+	var titleResp TitleGenerationResponse
+	if err := json.Unmarshal([]byte(result.String()), &titleResp); err != nil {
+		return nil, err
+	}
+
+	return &titleResp, nil
 }

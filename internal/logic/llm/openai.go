@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"flai/internal/consts"
-	"flai/internal/dao"
 	"flai/internal/logic"
 	"flai/internal/model/entity"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
@@ -21,6 +19,10 @@ import (
 )
 
 type OpenAIClient struct{}
+
+// ============================================================================
+// Client Creation
+// ============================================================================
 
 func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo) openai.Client {
 	opts := []option.RequestOption{
@@ -32,91 +34,244 @@ func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.Simple
 	return openai.NewClient(opts...)
 }
 
+// ============================================================================
+// Stream Chat
+// ============================================================================
+
 func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, files []*entity.File) error {
 	client := c.getClient(ctx, providerInfo)
 
-	var inputItems []responses.ResponseInputItemUnionParam
-
-	if len(historyMessages) > 0 {
-		for _, msg := range historyMessages {
-			var contents []Content
-			err := json.Unmarshal([]byte(msg.Content), &contents)
-			if err != nil {
-				return err
-			}
-			role := responses.EasyInputMessageRoleUser
-			if msg.Role == consts.MessageRole.Assistant {
-				role = responses.EasyInputMessageRoleAssistant
-			}
-
-			for _, content := range contents {
-				if content.Type == consts.MessageType.Message {
-					var data ContentMessage
-					if err := mapstructure.Decode(content.Data, &data); err != nil {
-						return err
-					}
-					inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(data.Content, role))
-					if len(data.Files) > 0 {
-						for _, file := range data.Files {
-							if strings.HasPrefix(file.MimeType, "image") {
-								var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
-									{
-										OfInputImage: &responses.ResponseInputImageParam{
-											ImageURL: openai.String(file.PublicUrl),
-										},
-									},
-								}
-								inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, role))
-							} else {
-								var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
-									{
-										OfInputFile: &responses.ResponseInputFileParam{
-											FileURL: openai.String(file.PublicUrl),
-										},
-									},
-								}
-								inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, role))
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	var contents []Content
-	err := json.Unmarshal([]byte(newMessage.Content), &contents)
+	// Build input items from history and new message
+	inputItems, err := c.buildInputItems(historyMessages, newMessage, files)
 	if err != nil {
 		return err
 	}
-	inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(contents[0].Data.(map[string]any)["content"].(string), responses.EasyInputMessageRoleUser))
-	for _, file := range files {
-		if strings.HasPrefix(file.MimeType, "image") {
-			var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
-				{
-					OfInputImage: &responses.ResponseInputImageParam{
-						ImageURL: openai.String(file.PublicUrl),
-					},
-				},
+
+	// Build tools
+	openaiTools := c.buildTools(tools)
+
+	// Create stream params
+	params := responses.ResponseNewParams{
+		Model: modelConfig.ID,
+		Input: responses.ResponseNewParamsInputUnion{
+			OfInputItemList: inputItems,
+		},
+		Reasoning: shared.ReasoningParam{
+			Summary: shared.ReasoningSummaryAuto,
+		},
+		Tools: openaiTools,
+	}
+
+	stream := client.Responses.NewStreaming(ctx, params)
+
+	// Initialize stream state
+	var currentContentBuilder strings.Builder
+	var contentList []Content
+	var contentType string
+
+	messageId := uuid.New().String()
+	message := &entity.Message{
+		Id:             messageId,
+		ConversationId: newMessage.ConversationId,
+		ParentId:       newMessage.Id,
+		Role:           consts.MessageRole.Assistant,
+	}
+	metaInfo := MessageMetaInfo{
+		ProviderName: providerInfo.Name,
+		ModelName:    modelConfig.Name,
+	}
+
+	// Process stream
+	for stream.Next() {
+		event := stream.Current()
+
+		streamResponse := StreamResponse{
+			MessageId: messageId,
+		}
+
+		shouldSend := false
+
+		switch e := event.AsAny().(type) {
+		case responses.ResponseReasoningSummaryTextDeltaEvent:
+			if e.Delta != "" {
+				contentType = consts.MessageType.Reasoning
+				currentContentBuilder.WriteString(e.Delta)
+				streamResponse.Data = ContentReasoning{Content: e.Delta}
+				streamResponse.Type = contentType
+				shouldSend = true
 			}
-			inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, responses.EasyInputMessageRoleUser))
-		} else {
-			var param responses.ResponseInputMessageContentListParam = []responses.ResponseInputContentUnionParam{
-				{
-					OfInputFile: &responses.ResponseInputFileParam{
-						FileURL: openai.String(file.PublicUrl),
-					},
-				},
+
+		case responses.ResponseReasoningSummaryPartDoneEvent:
+			currentContentBuilder.WriteString("\n\n")
+			contentType = consts.MessageType.Reasoning
+			streamResponse.Data = ContentReasoning{Content: "\n\n"}
+			streamResponse.Type = contentType
+			shouldSend = true
+
+		case responses.ResponseOutputItemDoneEvent:
+			appendContent(&currentContentBuilder, contentType, &contentList)
+			currentContentBuilder.Reset()
+
+			// Handle annotations
+			var annotations []responses.ResponseOutputTextAnnotationUnion
+			for _, content := range e.Item.Content {
+				if len(content.Annotations) > 0 {
+					annotations = append(annotations, content.Annotations...)
+				}
 			}
-			inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(param, responses.EasyInputMessageRoleUser))
+
+			if len(annotations) > 0 {
+				metaInfo.OpenaiGroundingData = annotations
+				annotationResponse := StreamResponse{
+					MessageId: messageId,
+					Type:      consts.MessageType.OpenaiGroundingData,
+					Data:      annotations,
+				}
+				if err := StreamToClient(response, annotationResponse); err != nil {
+					if errors.Is(ctx.Err(), context.Canceled) {
+						c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+						return nil
+					}
+					return err
+				}
+			}
+			continue
+
+		case responses.ResponseTextDeltaEvent:
+			if e.Delta != "" {
+				contentType = consts.MessageType.Message
+				currentContentBuilder.WriteString(e.Delta)
+				streamResponse.Data = ContentMessage{Content: e.Delta}
+				streamResponse.Type = contentType
+				shouldSend = true
+			}
+
+		case responses.ResponseCompletedEvent:
+			metaInfo.CachedTokenCount = int(e.Response.Usage.InputTokensDetails.CachedTokens)
+			metaInfo.PromptTokenCount = int(e.Response.Usage.InputTokens)
+			metaInfo.ReasoningTokenCount = int(e.Response.Usage.OutputTokensDetails.ReasoningTokens)
+			metaInfo.ResponseTokenCount = int(e.Response.Usage.OutputTokens)
+			streamResponse.Type = consts.MessageType.MetaInfo
+			streamResponse.Data = metaInfo
+			shouldSend = true
+
+		default:
+			continue
+		}
+
+		if shouldSend {
+			if err := StreamToClient(response, streamResponse); err != nil {
+				if errors.Is(ctx.Err(), context.Canceled) {
+					c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+					return nil
+				}
+				return err
+			}
 		}
 	}
 
-	input := responses.ResponseNewParamsInputUnion{
-		OfInputItemList: inputItems,
+	if err := stream.Err(); err != nil {
+		if errors.Is(ctx.Err(), context.Canceled) {
+			c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+			return nil
+		}
+		return err
 	}
 
-	openaiTools := []responses.ToolUnionParam{}
+	// Save final message
+	c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+	StreamDone(response)
+
+	return nil
+}
+
+func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+	appendContent(contentBuilder, contentType, contentList)
+	SaveAssistantMessage(ctx, message, *contentList, metaInfo)
+}
+
+// ============================================================================
+// Input Building
+// ============================================================================
+
+func (c *OpenAIClient) buildInputItems(historyMessages []*entity.Message, newMessage *entity.Message, files []*entity.File) ([]responses.ResponseInputItemUnionParam, error) {
+	var inputItems []responses.ResponseInputItemUnionParam
+
+	// Build history items
+	for _, msg := range historyMessages {
+		role := responses.EasyInputMessageRoleUser
+		if msg.Role == consts.MessageRole.Assistant {
+			role = responses.EasyInputMessageRoleAssistant
+		}
+
+		contents, err := ParseHistoryContents(msg)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, content := range contents {
+			if content.Type != consts.MessageType.Message {
+				continue
+			}
+
+			var data ContentMessage
+			if err := mapstructure.Decode(content.Data, &data); err != nil {
+				return nil, err
+			}
+
+			inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(data.Content, role))
+
+			// Add file items
+			for _, file := range data.Files {
+				inputItems = append(inputItems, c.buildFileInputItem(file, role))
+			}
+		}
+	}
+
+	// Add new message content
+	content, err := ParseMessageContent(newMessage)
+	if err != nil {
+		return nil, err
+	}
+	inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(content, responses.EasyInputMessageRoleUser))
+
+	// Add new message files
+	for _, file := range files {
+		inputItems = append(inputItems, c.buildFileInputItem(file, responses.EasyInputMessageRoleUser))
+	}
+
+	return inputItems, nil
+}
+
+func (c *OpenAIClient) buildFileInputItem(file *entity.File, role responses.EasyInputMessageRole) responses.ResponseInputItemUnionParam {
+	if strings.HasPrefix(file.MimeType, "image") {
+		param := []responses.ResponseInputContentUnionParam{
+			{
+				OfInputImage: &responses.ResponseInputImageParam{
+					ImageURL: openai.String(file.PublicUrl),
+				},
+			},
+		}
+		return responses.ResponseInputItemParamOfMessage(responses.ResponseInputMessageContentListParam(param), role)
+	}
+
+	param := []responses.ResponseInputContentUnionParam{
+		{
+			OfInputFile: &responses.ResponseInputFileParam{
+				FileURL: openai.String(file.PublicUrl),
+			},
+		},
+	}
+	return responses.ResponseInputItemParamOfMessage(responses.ResponseInputMessageContentListParam(param), role)
+}
+
+// ============================================================================
+// Tool Building
+// ============================================================================
+
+func (c *OpenAIClient) buildTools(tools []string) []responses.ToolUnionParam {
+	var openaiTools []responses.ToolUnionParam
+
 	for _, tool := range tools {
 		if tool == consts.InternalTools.InternalWebSearch {
 			openaiTools = append(openaiTools, responses.ToolUnionParam{
@@ -126,171 +281,18 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 			})
 		}
 	}
-	params := responses.ResponseNewParams{
-		Model: modelConfig.ID,
-		Input: input,
-		Reasoning: shared.ReasoningParam{
-			Summary: shared.ReasoningSummaryAuto,
-		},
-		Tools: openaiTools,
-	}
-	stream := client.Responses.NewStreaming(ctx, params)
 
-	var currentContentBuilder strings.Builder
-	var contentList []Content
-	var contentType string
-	messageId := uuid.New().String()
-	conversationId := newMessage.ConversationId
-	message := entity.Message{
-		Id:             messageId,
-		ConversationId: conversationId,
-		ParentId:       newMessage.Id,
-		Role:           consts.MessageRole.Assistant,
-	}
-	messageMetaInfo := MessageMetaInfo{
-		ProviderName: providerInfo.Name,
-		ModelName:    modelConfig.Name,
-	}
-
-	saveMessage := func(ctx context.Context) {
-		appendContent(&currentContentBuilder, contentType, &contentList)
-		contentListByte, err := json.Marshal(contentList)
-		if err != nil {
-			g.Log().Errorf(ctx, "Failed to marshal content list: %v", err)
-			return
-		}
-		message.Content = string(contentListByte)
-		messageMetaInfoByte, err := json.Marshal(messageMetaInfo)
-		if err != nil {
-			g.Log().Errorf(ctx, "Failed to marshal meta info: %v", err)
-			return
-		}
-		message.MetaInfo = string(messageMetaInfoByte)
-		_, err = dao.Message.Ctx(ctx).Data(message).Insert()
-		if err != nil {
-			g.Log().Errorf(ctx, "Failed to save message: %v", err)
-		}
-	}
-
-	for stream.Next() {
-		event := stream.Current()
-		streamResponse := StreamResponse{
-			MessageId: messageId,
-		}
-		switch e := event.AsAny().(type) {
-		case responses.ResponseReasoningSummaryTextDeltaEvent:
-			if e.Delta != "" {
-				contentType = consts.MessageType.Reasoning
-				currentContentBuilder.WriteString(e.Delta)
-				streamResponse.Data = ContentReasoning{Content: e.Delta}
-				streamResponse.Type = contentType
-			}
-		case responses.ResponseReasoningSummaryPartDoneEvent:
-			currentContentBuilder.WriteString("\n\n")
-			contentType = consts.MessageType.Reasoning
-			streamResponse.Data = ContentReasoning{"\n\n"}
-			streamResponse.Type = contentType
-		case responses.ResponseOutputItemDoneEvent:
-			appendContent(&currentContentBuilder, contentType, &contentList)
-			currentContentBuilder.Reset()
-
-			contents := e.Item.Content
-			var annotations []responses.ResponseOutputTextAnnotationUnion
-			for _, content := range contents {
-				if len(content.Annotations) == 0 {
-					continue
-				}
-				annotations = append(annotations, content.Annotations...)
-			}
-			if len(annotations) > 0 {
-				messageMetaInfo.OpenaiGroundingData = annotations
-				streamResponse := StreamResponse{
-					MessageId: messageId,
-					Type:      consts.MessageType.OpenaiGroundingData,
-					Data:      annotations,
-				}
-				err := StreamToClient(response, streamResponse)
-				if err != nil {
-					if errors.Is(ctx.Err(), context.Canceled) {
-						saveMessage(context.WithoutCancel(ctx))
-						return nil
-					}
-					return err
-				}
-			}
-			continue
-		case responses.ResponseTextDeltaEvent:
-			if e.Delta != "" {
-				contentType = consts.MessageType.Message
-				currentContentBuilder.WriteString(e.Delta)
-				streamResponse.Data = ContentMessage{Content: e.Delta}
-				streamResponse.Type = contentType
-			}
-		case responses.ResponseCompletedEvent:
-			messageMetaInfo.CachedTokenCount = int(e.Response.Usage.InputTokensDetails.CachedTokens)
-			messageMetaInfo.PromptTokenCount = int(e.Response.Usage.InputTokens)
-			messageMetaInfo.ReasoningTokenCount = int(e.Response.Usage.OutputTokensDetails.ReasoningTokens)
-			messageMetaInfo.ResponseTokenCount = int(e.Response.Usage.OutputTokens)
-			streamResponse.Type = consts.MessageType.MetaInfo
-			streamResponse.Data = messageMetaInfo
-		default:
-			continue
-		}
-
-		err := StreamToClient(response, streamResponse)
-		if err != nil {
-			if errors.Is(ctx.Err(), context.Canceled) {
-				saveMessage(context.WithoutCancel(ctx))
-				return nil
-			}
-			return err
-		}
-	}
-
-	if err := stream.Err(); err != nil {
-		if errors.Is(ctx.Err(), context.Canceled) {
-			saveMessage(context.WithoutCancel(ctx))
-			return nil
-		}
-		return err
-	}
-
-	saveMessage(ctx)
-	response.Writef("data: [DONE]\n\n")
-	response.Flush()
-	return nil
+	return openaiTools
 }
+
+// ============================================================================
+// Title Generation
+// ============================================================================
 
 func (c *OpenAIClient) GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error) {
 	client := c.getClient(ctx, providerInfo)
 
-	jsonSchemaText := `
-{
-  "type": "object",
-  "properties": {
-    "title": {
-      "type": "string"
-    },
-    "icon": {
-      "type": "string"
-    }
-  },
-  "additionalProperties": false,
-  "required": [
-    "title",
-    "icon"
-  ]
-}
-`
-	var schema map[string]any
-	err := json.Unmarshal([]byte(jsonSchemaText), &schema)
-
-	jsonSchema := responses.ResponseFormatTextJSONSchemaConfigParam{
-		Name:        "title_and_icon",
-		Description: openai.String("Generate title and icon for a conversation"),
-		Strict:      openai.Bool(true),
-		Schema:      schema,
-	}
+	jsonSchema := c.getTitleSchema()
 
 	params := responses.ResponseNewParams{
 		Instructions: openai.String(systemInstruction),
@@ -310,10 +312,32 @@ func (c *OpenAIClient) GenerateTitle(ctx context.Context, providerInfo *logic.Si
 		return nil, err
 	}
 
-	var titleGenerationResponse TitleGenerationResponse
-	err = json.Unmarshal([]byte(resp.OutputText()), &titleGenerationResponse)
-	if err != nil {
+	var titleResp TitleGenerationResponse
+	if err := json.Unmarshal([]byte(resp.OutputText()), &titleResp); err != nil {
 		return nil, err
 	}
-	return &titleGenerationResponse, nil
+
+	return &titleResp, nil
+}
+
+func (c *OpenAIClient) getTitleSchema() responses.ResponseFormatTextJSONSchemaConfigParam {
+	schemaJSON := `{
+		"type": "object",
+		"properties": {
+			"title": {"type": "string"},
+			"icon": {"type": "string"}
+		},
+		"additionalProperties": false,
+		"required": ["title", "icon"]
+	}`
+
+	var schema map[string]any
+	json.Unmarshal([]byte(schemaJSON), &schema)
+
+	return responses.ResponseFormatTextJSONSchemaConfigParam{
+		Name:        "title_and_icon",
+		Description: openai.String("Generate title and icon for a conversation"),
+		Strict:      openai.Bool(true),
+		Schema:      schema,
+	}
 }

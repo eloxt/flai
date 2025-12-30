@@ -17,6 +17,7 @@
             "fetchMessages": "获取消息失败",
             "sendMessage": "发送消息失败",
             "modelProviderNotFound": "未找到模型提供商。请先选择一个模型。",
+            "retry": "出错了，请重试。",
             "generic": "发生了一些错误"
         },
         "success": {

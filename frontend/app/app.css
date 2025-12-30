@@ -167,3 +167,20 @@
     background-position: -200% 0;
   }
 }
+
+/* Prevent horizontal overflow in chat messages */
+.markdown-body {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.markdown-body pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Fix Radix ScrollArea table display issue */
+[data-slot="scroll-area-viewport"]>div {
+  display: block !important;
+}
