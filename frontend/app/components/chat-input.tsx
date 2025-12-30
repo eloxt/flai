@@ -4,12 +4,46 @@ import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/i
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
 import { useInputStore } from "@/store/input-store";
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { File } from "@/page/chat";
+
+// Allowed file types: plain text, PDF, and images
+const ALLOWED_MIME_TYPES = [
+    'text/plain',
+    'text/markdown',
+    'text/csv',
+    'text/html',
+    'text/css',
+    'text/javascript',
+    'application/json',
+    'application/xml',
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+];
+
+const ALLOWED_EXTENSIONS = [
+    '.txt', '.md', '.csv', '.html', '.css', '.js', '.ts', '.jsx', '.tsx',
+    '.json', '.xml', '.yaml', '.yml', '.log', '.conf', '.cfg', '.ini',
+    '.pdf',
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+];
+
+function isFileAllowed(file: globalThis.File): boolean {
+    // Check MIME type
+    if (ALLOWED_MIME_TYPES.includes(file.type)) {
+        return true;
+    }
+    // Check extension as fallback (some text files may not have correct MIME type)
+    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+    return ALLOWED_EXTENSIONS.includes(extension);
+}
 
 interface ChatInputProps {
     value: string;
@@ -37,6 +71,8 @@ export function ChatInput({
     const addAttachment = useInputStore((state) => state.addAttachment);
     const removeAttachment = useInputStore((state) => state.removeAttachment);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragCounterRef = useRef(0);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -49,30 +85,93 @@ export function ChatInput({
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const uploadFile = useCallback(async (file: globalThis.File) => {
+        if (!isFileAllowed(file)) {
+            toast.error(t("common.fileTypeNotAllowed"));
+            return;
+        }
 
-        const toastId = toast.loading("Uploading...");
+        const toastId = toast.loading(t("common.uploading"));
         try {
             const formData = new FormData();
             formData.append("file", file);
             const res = await api.post<File>("/api/user/file", formData);
 
             addAttachment(res);
-            toast.success("File uploaded", { id: toastId });
+            toast.success(t("common.fileUploaded"), { id: toastId });
         } catch (error) {
             console.error(error);
-            toast.error("Failed to upload file", { id: toastId });
-        } finally {
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
+            toast.error(t("common.uploadFailed"), { id: toastId });
+        }
+    }, [addAttachment, t]);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        await uploadFile(file);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
         }
     };
 
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current++;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setIsDragging(true);
+        }
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current--;
+        if (dragCounterRef.current === 0) {
+            setIsDragging(false);
+        }
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        dragCounterRef.current = 0;
+
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            // Upload all dropped files
+            for (const file of Array.from(files)) {
+                await uploadFile(file);
+            }
+        }
+    }, [uploadFile]);
+
     return (
-        <div className={`flex flex-col w-full gap-2 ${className || ""}`}>
+        <div
+            className={`flex flex-col w-full gap-2 ${className || ""} relative`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
+            {/* Drag overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-1 border-dashed border-primary rounded-lg backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-2 text-primary">
+                        <Paperclip className="size-6" />
+                        <p className="text-sm font-medium">{t("common.dropFilesHere")}</p>
+                        <p className="text-xs text-muted-foreground">{t("common.allowedFileTypes")}</p>
+                    </div>
+                </div>
+            )}
             <InputGroup>
                 <TextareaAutosize
                     data-slot="input-group-control"

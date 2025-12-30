@@ -4,6 +4,12 @@
         "generating": "Generating...",
         "search": "Search",
         "attachment": "Attachment",
+        "uploading": "Uploading...",
+        "fileUploaded": "File uploaded",
+        "uploadFailed": "Failed to upload file",
+        "fileTypeNotAllowed": "Only text, PDF, and image files are allowed",
+        "dropFilesHere": "Drop files here",
+        "allowedFileTypes": "Text, PDF, and images only",
         "actions": {
             "save": "Save",
             "cancel": "Cancel",

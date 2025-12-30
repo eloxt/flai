@@ -4,6 +4,12 @@
         "generating": "生成中...",
         "search": "搜索",
         "attachment": "附件",
+        "uploading": "上传中...",
+        "fileUploaded": "文件已上传",
+        "uploadFailed": "上传文件失败",
+        "fileTypeNotAllowed": "只允许上传文本、PDF和图片文件",
+        "dropFilesHere": "拖放文件到这里",
+        "allowedFileTypes": "仅支持文本、PDF和图片",
         "actions": {
             "save": "保存",
             "cancel": "取消",
