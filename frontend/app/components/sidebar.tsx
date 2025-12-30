@@ -6,7 +6,6 @@ import {
     RefreshCw,
     Trash,
     EllipsisVertical,
-    Construction,
     UserCog,
     Settings,
     TentTree,
@@ -24,16 +23,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Empty,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyMedia,
-    EmptyTitle,
-} from "@/components/ui/empty";
+
 import {
     Sidebar,
     SidebarContent,
@@ -50,6 +42,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import SettingsPanel from "./settings-panel";
+import AdminPanel from "./admin-panel";
 import { Button } from "@/components/ui/button";
 
 export default function AppSidebar() {
@@ -244,30 +237,16 @@ export default function AppSidebar() {
             </Sidebar>
 
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-                <DialogContent className="sm:max-w-5xl w-full p-0 gap-0 overflow-hidden outline-none">
+                <DialogContent className="sm:max-w-5xl w-full max-h-[85vh] p-0 gap-0 overflow-hidden outline-none">
                     <DialogTitle className="hidden">Settings</DialogTitle>
                     <SettingsPanel />
                 </DialogContent>
             </Dialog>
 
             <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{t("components.sidebar.adminSettings")}</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex h-full w-full items-center justify-center p-4">
-                        <Empty>
-                            <EmptyHeader>
-                                <EmptyMedia variant="icon">
-                                    <Construction className="size-6" />
-                                </EmptyMedia>
-                                <EmptyTitle>{t("components.sidebar.dialog.adminConstructionTitle")}</EmptyTitle>
-                                <EmptyDescription>
-                                    {t("components.sidebar.dialog.adminConstructionDesc")}
-                                </EmptyDescription>
-                            </EmptyHeader>
-                        </Empty>
-                    </div>
+                <DialogContent className="sm:max-w-5xl w-full max-h-[85vh] p-0 gap-0 overflow-hidden outline-none">
+                    <DialogTitle className="hidden">Admin Settings</DialogTitle>
+                    <AdminPanel />
                 </DialogContent>
             </Dialog>
 

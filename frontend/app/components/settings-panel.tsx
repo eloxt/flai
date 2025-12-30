@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { User, Lock } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -11,49 +10,68 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarGroup,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+} from "@/components/ui/sidebar";
 
 export default function SettingsPanel() {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState("account");
 
     const tabs = [
-        { id: "account", label: t("pages.settings.tabs.account"), icon: <User className="size-4" /> },
+        { id: "account", label: t("pages.settings.tabs.account"), icon: User },
     ];
 
     return (
-        <div className="flex h-full w-full bg-background text-foreground">
-            {/* Left Sidebar */}
-            <aside className="w-64 flex-shrink-0 border-r bg-muted/30">
-                <div className="p-4 pt-6">
-                    <h2 className="text-lg font-semibold tracking-tight px-2 mb-4">{t("pages.settings.title")}</h2>
-                    <nav className="flex flex-col gap-1">
-                        {tabs.map((tab) => (
-                            <Button
-                                key={tab.id}
-                                variant={activeTab === tab.id ? "secondary" : "ghost"}
-                                className={cn(
-                                    "justify-start gap-3 h-10 px-3 font-normal",
-                                    activeTab === tab.id && "bg-secondary font-medium"
-                                )}
-                                onClick={() => setActiveTab(tab.id)}
-                            >
-                                {tab.icon}
-                                {tab.label}
-                            </Button>
-                        ))}
-                    </nav>
-                </div>
-            </aside>
+        <SidebarProvider
+            defaultOpen={true}
+            style={{
+                "--sidebar-width": "16rem",
+            } as React.CSSProperties}
+        >
+            <div className="flex h-full w-full bg-background text-foreground">
+                <Sidebar collapsible="none" className="border-r">
+                    <SidebarHeader className="p-4">
+                        <h2 className="text-lg font-semibold tracking-tight">
+                            {t("pages.settings.title")}
+                        </h2>
+                    </SidebarHeader>
+                    <SidebarContent>
+                        <SidebarGroup>
+                            <SidebarMenu>
+                                {tabs.map((tab) => (
+                                    <SidebarMenuItem key={tab.id}>
+                                        <SidebarMenuButton
+                                            isActive={activeTab === tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                        >
+                                            <tab.icon className="size-4" />
+                                            <span>{tab.label}</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroup>
+                    </SidebarContent>
+                </Sidebar>
 
-            {/* Right Content */}
-            <main className="flex-1 min-w-0">
-                <ScrollArea className="h-[85vh]">
-                    <div className="p-6 max-w-2xl space-y-8 pb-32">
-                        {activeTab === "account" && <AccountSettings />}
-                    </div>
-                </ScrollArea>
-            </main>
-        </div>
+                {/* Right Content */}
+                <main className="flex-1 min-w-0">
+                    <ScrollArea className="h-[85vh]">
+                        <div className="p-6 pt-8 max-w-2xl space-y-8">
+                            {activeTab === "account" && <AccountSettings />}
+                        </div>
+                    </ScrollArea>
+                </main>
+            </div>
+        </SidebarProvider>
     );
 }
 

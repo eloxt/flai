@@ -106,6 +106,99 @@
                 "error": "Failed to update password",
                 "fillAll": "Please fill in both password fields"
             }
+        },
+        "admin": {
+            "title": "Admin Settings",
+            "tabs": {
+                "users": "User Management",
+                "providers": "Provider Management"
+            },
+            "users": {
+                "title": "Users",
+                "description": "Manage system users and their permissions.",
+                "create": "Create User",
+                "createTitle": "Create New User",
+                "editTitle": "Edit User",
+                "fetchError": "Failed to fetch users",
+                "createSuccess": "User created successfully",
+                "createError": "Failed to create user",
+                "updateSuccess": "User updated successfully",
+                "updateError": "Failed to update user",
+                "deleteSuccess": "User deleted successfully",
+                "deleteError": "Failed to delete user",
+                "deleteTitle": "Delete User",
+                "deleteDescription": "Are you sure you want to delete this user? This action cannot be undone.",
+                "fillAll": "Please fill in all required fields",
+                "empty": "No users found",
+                "active": "Active",
+                "inactive": "Inactive",
+                "roleUser": "User",
+                "roleAdmin": "Admin",
+                "table": {
+                    "username": "Username",
+                    "email": "Email",
+                    "role": "Role",
+                    "status": "Status",
+                    "createdAt": "Created At",
+                    "actions": "Actions"
+                },
+                "form": {
+                    "email": "Email",
+                    "emailPlaceholder": "user@example.com",
+                    "username": "Username",
+                    "usernamePlaceholder": "Enter username",
+                    "password": "Password",
+                    "passwordPlaceholder": "Enter password",
+                    "passwordPlaceholderOptional": "Leave empty to keep current",
+                    "role": "Role",
+                    "isActive": "Active"
+                }
+            },
+            "providers": {
+                "title": "Providers",
+                "description": "Manage AI model providers and API configurations.",
+                "create": "Create Provider",
+                "createTitle": "Create New Provider",
+                "editTitle": "Edit Provider",
+                "fetchError": "Failed to fetch providers",
+                "createSuccess": "Provider created successfully",
+                "createError": "Failed to create provider",
+                "updateSuccess": "Provider updated successfully",
+                "updateError": "Failed to update provider",
+                "deleteSuccess": "Provider deleted successfully",
+                "deleteError": "Failed to delete provider",
+                "deleteTitle": "Delete Provider",
+                "deleteDescription": "Are you sure you want to delete this provider? This action cannot be undone.",
+                "nameRequired": "Provider name is required",
+                "empty": "No providers found",
+                "active": "Active",
+                "inactive": "Inactive",
+                "table": {
+                    "name": "Name",
+                    "models": "Models",
+                    "providerType": "Type",
+                    "apiKey": "API Key",
+                    "status": "Status",
+                    "actions": "Actions"
+                },
+                "form": {
+                    "name": "Name",
+                    "namePlaceholder": "Provider name",
+                    "apiKey": "API Key",
+                    "apiKeyPlaceholder": "Enter API key",
+                    "apiKeyPlaceholderOptional": "Leave empty to keep current",
+                    "providerType": "Provider Type",
+                    "providerTypePlaceholder": "Select type",
+                    "baseUrl": "Base URL",
+                    "baseUrlPlaceholder": "https://api.example.com",
+                    "models": "Models (JSON)",
+                    "modelsPlaceholder": "[{\"id\": \"gpt-4\", \"name\": \"GPT-4\", ...}]",
+                    "logo": "Logo URL",
+                    "logoPlaceholder": "https://example.com/logo.svg",
+                    "isActive": "Active"
+                },
+                "modelsCount": "models"
+            }
         }
     },
     "components": {
