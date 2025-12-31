@@ -53,6 +53,7 @@ export default function Main() {
                 onChange={setInputValue}
                 onSend={handleSend}
                 isLoading={isLoading}
+                autoFocus
             />
         </div>
     );

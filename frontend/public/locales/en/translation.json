@@ -10,6 +10,7 @@
         "fileTypeNotAllowed": "Only text, PDF, and image files are allowed",
         "dropFilesHere": "Drop files here",
         "allowedFileTypes": "Text, PDF, and images only",
+        "shareConversation": "Share conversation",
         "actions": {
             "save": "Save",
             "cancel": "Cancel",
@@ -80,6 +81,15 @@
         "search": {
             "title": "Search Under Construction",
             "description": "We are working hard to bring you the best search experience. Please check back later."
+        },
+        "share": {
+            "error": "Failed to load shared conversation",
+            "notFound": "Shared conversation not found",
+            "notFoundDescription": "This share link may have expired or been deleted.",
+            "untitled": "Untitled Conversation",
+            "sharedOn": "Shared on",
+            "expiresOn": "Expires on",
+            "footer": "Shared via FlaiChat"
         },
         "settings": {
             "title": "Settings",
@@ -245,6 +255,27 @@
                 "info": "Metadata",
                 "info_desc": "Execution details for this message"
             }
+        },
+        "share": {
+            "title": "Share Conversation",
+            "description": "Create a shareable link for this conversation. Anyone with the link can view it. Future messages will not be shared.",
+            "updateDescription": "This conversation is already shared. You can update session content and expiration time, or copy the link.",
+            "expirationLabel": "Link Expiration",
+            "expiration": {
+                "1hour": "1 Hour",
+                "1day": "1 Day",
+                "7days": "7 Days",
+                "30days": "30 Days",
+                "never": "Never"
+            },
+            "createButton": "Create Share Link",
+            "updateButton": "Update Expiration",
+            "linkLabel": "Share Link",
+            "success": "Share link created successfully",
+            "updateSuccess": "Share link updated successfully",
+            "error": "Failed to create share link",
+            "updateError": "Failed to update share link",
+            "copied": "Link copied to clipboard"
         }
     }
 }

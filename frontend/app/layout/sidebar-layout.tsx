@@ -3,6 +3,7 @@ import Sidebar from "../components/sidebar";
 import ModelSelector from "../components/model-selector";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAppStore } from "../store/app-store";
+import ChatHeader from "@/components/chat-header";
 
 export default function SidebarLayout() {
     const isSidebarCollapsed = useAppStore((state) => state.isSidebarCollapsed);
@@ -16,7 +17,7 @@ export default function SidebarLayout() {
         >
             <Sidebar />
             <SidebarInset className="h-svh overflow-hidden">
-                <ModelSelector />
+                <ChatHeader />
                 <Outlet />
             </SidebarInset>
         </SidebarProvider>

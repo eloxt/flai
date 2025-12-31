@@ -8,6 +8,8 @@ interface AppState {
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  showHeaderBorder: boolean;
+  setShowHeaderBorder: (show: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -19,6 +21,8 @@ export const useAppStore = create<AppState>()(
           isSidebarCollapsed: !state.isSidebarCollapsed,
         })),
       setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
+      showHeaderBorder: false,
+      setShowHeaderBorder: (show) => set({ showHeaderBorder: show }),
     }),
     {
       name: "flai-app-store",

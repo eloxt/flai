@@ -53,6 +53,7 @@ interface ChatInputProps {
     placeholder?: string;
     className?: string;
     onHeightChange?: (height: number) => void;
+    autoFocus?: boolean;
 }
 
 export function ChatInput({
@@ -62,7 +63,8 @@ export function ChatInput({
     isLoading = false,
     placeholder,
     className,
-    onHeightChange
+    onHeightChange,
+    autoFocus = false
 }: ChatInputProps) {
     const { t } = useTranslation();
     const selectedTools = useInputStore((state) => state.selectedTools);
@@ -183,6 +185,7 @@ export function ChatInput({
                     disabled={isLoading}
                     maxRows={7}
                     minRows={1}
+                    autoFocus={autoFocus}
                     className="flex field-sizing-content w-full resize-none rounded-md bg-transparent px-3 py-2.5 text-base transition-all outline-none md:text-sm"
                 />
                 <InputGroupAddon align="block-end" className="items-end">

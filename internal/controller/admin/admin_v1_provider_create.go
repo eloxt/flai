@@ -34,7 +34,7 @@ func (c *ControllerV1) ProviderCreate(ctx context.Context, req *v1.ProviderCreat
 		ProviderType: req.ProviderType,
 		BaseUrl:      req.BaseURL,
 		Model:        modelsJson,
-		IsActive:     int64(isActive),
+		IsActive:     isActive,
 		Logo:         req.Logo,
 	}
 

@@ -304,7 +304,7 @@ function UserManagement() {
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return "-";
-        return new Date(dateStr).toLocaleDateString();
+        return new Date(dateStr).toISOString().split("T")[0];
     };
 
     return (
@@ -822,10 +822,7 @@ function ProviderManagement() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="openai">OpenAI</SelectItem>
-                                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                                    <SelectItem value="google">Google</SelectItem>
-                                    <SelectItem value="azure">Azure</SelectItem>
-                                    <SelectItem value="custom">Custom</SelectItem>
+                                    <SelectItem value="gemini">Google Gemini</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -911,10 +908,7 @@ function ProviderManagement() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="openai">OpenAI</SelectItem>
-                                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                                    <SelectItem value="google">Google</SelectItem>
-                                    <SelectItem value="azure">Azure</SelectItem>
-                                    <SelectItem value="custom">Custom</SelectItem>
+                                    <SelectItem value="gemini">Google Gemini</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

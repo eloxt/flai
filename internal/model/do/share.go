@@ -9,18 +9,14 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-// Provider is the golang structure of table provider for DAO operations like Where/Data.
-type Provider struct {
-	g.Meta       `orm:"table:provider, do:true"`
+// Share is the golang structure of table share for DAO operations like Where/Data.
+type Share struct {
+	g.Meta       `orm:"table:share, do:true"`
 	Id           any         //
-	Name         any         //
-	ApiKey       any         //
-	ProviderType any         //
-	BaseUrl      any         //
-	Model        any         //
+	UserId       any         //
+	Conversation any         //
+	Message      any         //
 	CreatedAt    *gtime.Time //
-	UpdatedAt    *gtime.Time //
 	DeletedAt    *gtime.Time //
-	Logo         any         //
-	IsActive     any         //
+	ExpiresAt    *gtime.Time //
 }

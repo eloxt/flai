@@ -11,76 +11,68 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// ProviderDao is the data access object for the table provider.
-type ProviderDao struct {
+// ShareDao is the data access object for the table share.
+type ShareDao struct {
 	table    string             // table is the underlying table name of the DAO.
 	group    string             // group is the database configuration group name of the current DAO.
-	columns  ProviderColumns    // columns contains all the column names of Table for convenient usage.
+	columns  ShareColumns       // columns contains all the column names of Table for convenient usage.
 	handlers []gdb.ModelHandler // handlers for customized model modification.
 }
 
-// ProviderColumns defines and stores column names for the table provider.
-type ProviderColumns struct {
+// ShareColumns defines and stores column names for the table share.
+type ShareColumns struct {
 	Id           string //
-	Name         string //
-	ApiKey       string //
-	ProviderType string //
-	BaseUrl      string //
-	Model        string //
+	UserId       string //
+	Conversation string //
+	Message      string //
 	CreatedAt    string //
-	UpdatedAt    string //
 	DeletedAt    string //
-	Logo         string //
-	IsActive     string //
+	ExpiresAt    string //
 }
 
-// providerColumns holds the columns for the table provider.
-var providerColumns = ProviderColumns{
+// shareColumns holds the columns for the table share.
+var shareColumns = ShareColumns{
 	Id:           "id",
-	Name:         "name",
-	ApiKey:       "api_key",
-	ProviderType: "provider_type",
-	BaseUrl:      "base_url",
-	Model:        "model",
+	UserId:       "user_id",
+	Conversation: "conversation",
+	Message:      "message",
 	CreatedAt:    "created_at",
-	UpdatedAt:    "updated_at",
 	DeletedAt:    "deleted_at",
-	Logo:         "logo",
-	IsActive:     "is_active",
+	ExpiresAt:    "expires_at",
 }
 
-// NewProviderDao creates and returns a new DAO object for table data access.
-func NewProviderDao(handlers ...gdb.ModelHandler) *ProviderDao {
-	return &ProviderDao{
+// NewShareDao creates and returns a new DAO object for table data access.
+func NewShareDao(handlers ...gdb.ModelHandler) *ShareDao {
+	return &ShareDao{
 		group:    "default",
-		table:    "provider",
-		columns:  providerColumns,
+		table:    "share",
+		columns:  shareColumns,
 		handlers: handlers,
 	}
 }
 
 // DB retrieves and returns the underlying raw database management object of the current DAO.
-func (dao *ProviderDao) DB() gdb.DB {
+func (dao *ShareDao) DB() gdb.DB {
 	return g.DB(dao.group)
 }
 
 // Table returns the table name of the current DAO.
-func (dao *ProviderDao) Table() string {
+func (dao *ShareDao) Table() string {
 	return dao.table
 }
 
 // Columns returns all column names of the current DAO.
-func (dao *ProviderDao) Columns() ProviderColumns {
+func (dao *ShareDao) Columns() ShareColumns {
 	return dao.columns
 }
 
 // Group returns the database configuration group name of the current DAO.
-func (dao *ProviderDao) Group() string {
+func (dao *ShareDao) Group() string {
 	return dao.group
 }
 
 // Ctx creates and returns a Model for the current DAO. It automatically sets the context for the current operation.
-func (dao *ProviderDao) Ctx(ctx context.Context) *gdb.Model {
+func (dao *ShareDao) Ctx(ctx context.Context) *gdb.Model {
 	model := dao.DB().Model(dao.table)
 	for _, handler := range dao.handlers {
 		model = handler(model)
@@ -94,6 +86,6 @@ func (dao *ProviderDao) Ctx(ctx context.Context) *gdb.Model {
 //
 // Note: Do not commit or roll back the transaction in function f,
 // as it is automatically handled by this function.
-func (dao *ProviderDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
+func (dao *ShareDao) Transaction(ctx context.Context, f func(ctx context.Context, tx gdb.TX) error) (err error) {
 	return dao.Ctx(ctx).Transaction(ctx, f)
 }

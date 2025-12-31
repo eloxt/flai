@@ -8,6 +8,8 @@ import (
 	"flai/internal/controller/file"
 	"flai/internal/controller/message"
 	"flai/internal/controller/provider"
+	"flai/internal/controller/public"
+	"flai/internal/controller/share"
 	"flai/internal/controller/user"
 	"flai/internal/logic"
 	"flai/internal/middleware"
@@ -49,6 +51,7 @@ func RegisterRouter(s *ghttp.Server) {
 			provider.NewV1(),
 			user.NewV1(),
 			file.NewV1(),
+			share.NewV1(),
 		)
 	})
 	s.Group("/auth", func(group *ghttp.RouterGroup) {
@@ -63,6 +66,12 @@ func RegisterRouter(s *ghttp.Server) {
 		group.Middleware(ghttp.MiddlewareHandlerResponse)
 		group.Bind(
 			admin.NewV1(),
+		)
+	})
+	s.Group("/public", func(group *ghttp.RouterGroup) {
+		group.Middleware(ghttp.MiddlewareHandlerResponse)
+		group.Bind(
+			public.NewV1(),
 		)
 	})
 

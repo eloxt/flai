@@ -1,6 +1,7 @@
 import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
 
 export default [
+  route("/share/:id", "./page/share.tsx"),
   layout("./layout/public-route.tsx", [
     layout("./layout/auth-layout.tsx", [
       route("/login", "./page/login.tsx"),

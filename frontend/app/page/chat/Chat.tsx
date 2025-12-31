@@ -8,6 +8,7 @@ import { ChatInput } from "@/components/chat-input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
+import { useAppStore } from "@/store/app-store";
 
 import { useChat } from "./use-chat";
 import { ChatSkeleton } from "./ChatSkeleton";
@@ -47,6 +48,7 @@ export default function Chat() {
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [inputHeight, setInputHeight] = useState(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
 
     // Chat hook
     const {
@@ -84,8 +86,9 @@ export default function Chat() {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        const isBottom = scrollHeight - scrollTop - clientHeight < 100;
+        const isBottom = scrollHeight - scrollTop - clientHeight < 200;
         setShowScrollButton(!isBottom);
+        setShowHeaderBorder(scrollTop > 20);
     };
 
     const toggleReasoning = (messageId: string) => {
@@ -108,13 +111,13 @@ export default function Chat() {
     return (
         <>
             <ScrollArea
-                className="flex-1 p-4 pb-0 overflow-y-hidden h-full"
+                className="flex-1 px-4 pb-0 overflow-y-hidden h-full"
                 onScroll={handleScroll}
                 style={{
                     paddingBottom: `${inputHeight + 66 + (attachments.length > 0 ? 36 : 0)}px`,
                 }}
             >
-                <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
+                <div className="pt-4 mx-auto max-w-5xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
                     {isLoading ? (
                         <ChatSkeleton />
                     ) : (
@@ -142,9 +145,9 @@ export default function Chat() {
 
             <div className="absolute bottom-4 left-0 right-0 z-50 px-4 pointer-events-none">
                 <div
-                    className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-all duration-300 ease-in-out ${showScrollButton
-                        ? "opacity-100 translate-y-0 pointer-events-auto"
-                        : "opacity-0 translate-y-4 pointer-events-none"
+                    className={`absolute left-1/2 mb-4 transition-opacity duration-200 ${showScrollButton
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-0 pointer-events-none"
                         }`}
                     style={{
                         bottom: `${inputHeight + 70 + (attachments.length > 0 ? 48 : 0)}px`,
@@ -153,7 +156,7 @@ export default function Chat() {
                     <Button
                         variant="outline"
                         size="icon"
-                        className="rounded-full shadow-lg bg-background/80 backdrop-blur-sm hover:bg-background"
+                        className="rounded-full shadow-lg bg-background/60 backdrop-blur-sm hover:bg-background"
                         onClick={scrollToBottom}
                     >
                         <ArrowDown className="size-4" />
@@ -165,6 +168,7 @@ export default function Chat() {
                         onChange={setInput}
                         onSend={handleSend}
                         onHeightChange={setInputHeight}
+                        autoFocus={true}
                     />
                 </div>
             </div>

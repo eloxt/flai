@@ -34,7 +34,7 @@ type ProviderResponse struct {
 	ProviderType string           `json:"provider_type"`
 	BaseUrl      string           `json:"base_url"`
 	Model        []map[string]any `json:"model"`
-	IsActive     int64            `json:"is_active"`
+	IsActive     int              `json:"is_active"`
 	CreatedAt    string           `json:"created_at"`
 	UpdatedAt    string           `json:"updated_at"`
 	DeletedAt    string           `json:"deleted_at"`

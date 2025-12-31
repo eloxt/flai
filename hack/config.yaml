@@ -4,8 +4,8 @@
 gfcli:
   build:
     name: "flai"
-    arch: "amd64,arm64"
-    system: "linux,darwin,windows"
+    arch: "amd64"
+    system: "linux"
     version: "0.0.1"
     path: "./bin"
     packSrc: "resource/public"

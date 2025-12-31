@@ -45,9 +45,7 @@ export default function ModelSelector() {
     };
 
     return (
-        <header
-            className="sticky top-0 z-50 bg-background flex items-center justify-start px-4 py-2 gap-2"
-        >
+        <>
             <SidebarTrigger className="md:hidden" />
             <DropdownMenu onOpenChange={setShowModelMenu}>
                 <DropdownMenuTrigger asChild>
@@ -105,7 +103,7 @@ export default function ModelSelector() {
                     ))}
                 </DropdownMenuContent>
             </DropdownMenu>
-        </header>
+        </>
     );
 }
 
