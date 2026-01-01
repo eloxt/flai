@@ -65,8 +65,17 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, err
 	}
 
+	// Load MCP tools from database based on request
+	var mcpToolInfos []*llm.MCPToolInfo
+	if len(req.McpTools) > 0 {
+		mcpToolInfos, err = c.loadMcpTools(ctx, user.Id, req.McpTools)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Stream chat response
-	if err := llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, files); err != nil {
+	if err := llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpToolInfos, files); err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
 	}
 
@@ -210,4 +219,95 @@ func (c *ControllerV1) setupSSEResponse(ctx context.Context) (*ghttp.Response, e
 	response.Header().Set("Access-Control-Allow-Origin", "*")
 
 	return response, nil
+}
+
+// loadMcpTools loads MCP tool definitions from database based on the request.
+func (c *ControllerV1) loadMcpTools(ctx context.Context, userId string, mcpToolReqs []v1.McpToolRequest) ([]*llm.MCPToolInfo, error) {
+	if len(mcpToolReqs) == 0 {
+		return nil, nil
+	}
+
+	// Group tools by MCP ID for efficient querying
+	mcpIdToTools := make(map[string][]string)
+	for _, req := range mcpToolReqs {
+		mcpIdToTools[req.McpId] = append(mcpIdToTools[req.McpId], req.Name)
+	}
+
+	// Get unique MCP IDs
+	mcpIds := make([]string, 0, len(mcpIdToTools))
+	for mcpId := range mcpIdToTools {
+		mcpIds = append(mcpIds, mcpId)
+	}
+
+	// Query MCP configurations
+	var mcpConfigs []*entity.Mcp
+	err := dao.Mcp.Ctx(ctx).
+		Where(do.Mcp{UserId: userId}).
+		WhereIn("id", mcpIds).
+		Where(do.Mcp{IsActive: 1}).
+		WhereNull("deleted_at").
+		Scan(&mcpConfigs)
+	if err != nil {
+		return nil, gerror.WrapCode(gcode.CodeDbOperationError, err, "Failed to load MCP configurations")
+	}
+
+	// Build MCPToolInfo slice
+	var mcpToolInfos []*llm.MCPToolInfo
+	for _, config := range mcpConfigs {
+		requestedToolNames := mcpIdToTools[config.Id]
+		if len(requestedToolNames) == 0 {
+			continue
+		}
+
+		// Parse headers
+		var headers map[string]string
+		if config.Headers != "" {
+			var headersAny map[string]any
+			if json.Unmarshal([]byte(config.Headers), &headersAny) == nil {
+				headers = make(map[string]string)
+				for k, v := range headersAny {
+					if str, ok := v.(string); ok {
+						headers[k] = str
+					}
+				}
+			}
+		}
+
+		// Parse tools
+		if config.Tools == "" {
+			continue
+		}
+
+		var storedTools []struct {
+			Name        string         `json:"name"`
+			Description string         `json:"description,omitempty"`
+			InputSchema map[string]any `json:"input_schema,omitempty"`
+		}
+		if err := json.Unmarshal([]byte(config.Tools), &storedTools); err != nil {
+			continue
+		}
+
+		// Create a set of requested tool names for quick lookup
+		requestedSet := make(map[string]bool)
+		for _, name := range requestedToolNames {
+			requestedSet[name] = true
+		}
+
+		// Add matching tools
+		for _, tool := range storedTools {
+			if !requestedSet[tool.Name] {
+				continue
+			}
+
+			mcpToolInfos = append(mcpToolInfos, &llm.MCPToolInfo{
+				Name:        tool.Name,
+				Description: tool.Description,
+				InputSchema: tool.InputSchema,
+				Endpoint:    config.Endpoint,
+				Headers:     headers,
+			})
+		}
+	}
+
+	return mcpToolInfos, nil
 }

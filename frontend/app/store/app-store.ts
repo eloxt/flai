@@ -10,6 +10,8 @@ interface AppState {
   setSidebarCollapsed: (collapsed: boolean) => void;
   showHeaderBorder: boolean;
   setShowHeaderBorder: (show: boolean) => void;
+  currentMessagePath: string[];
+  setCurrentMessagePath: (path: string[]) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -23,6 +25,8 @@ export const useAppStore = create<AppState>()(
       setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
       showHeaderBorder: false,
       setShowHeaderBorder: (show) => set({ showHeaderBorder: show }),
+      currentMessagePath: [],
+      setCurrentMessagePath: (path) => set({ currentMessagePath: path }),
     }),
     {
       name: "flai-app-store",

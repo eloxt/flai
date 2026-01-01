@@ -12,6 +12,7 @@ export default function ChatHeader() {
     const location = useLocation();
     const [showShareDialog, setShowShareDialog] = useState(false);
     const showHeaderBorder = useAppStore((state) => state.showHeaderBorder);
+    const currentMessagePath = useAppStore((state) => state.currentMessagePath);
 
     const conversationId = location.pathname.startsWith("/chat/")
         ? location.pathname.split("/chat/")[1]
@@ -39,6 +40,7 @@ export default function ChatHeader() {
                 open={showShareDialog}
                 onOpenChange={setShowShareDialog}
                 conversationId={conversationId}
+                messagePath={currentMessagePath}
             />
         </>
     );

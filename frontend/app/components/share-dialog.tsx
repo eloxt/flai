@@ -27,6 +27,7 @@ interface ShareDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     conversationId: string;
+    messagePath: string[];
 }
 
 interface CreateShareResponse {
@@ -38,7 +39,7 @@ interface CheckShareResponse {
     id?: string;
 }
 
-export default function ShareDialog({ open, onOpenChange, conversationId }: ShareDialogProps) {
+export default function ShareDialog({ open, onOpenChange, conversationId, messagePath }: ShareDialogProps) {
     const { t } = useTranslation();
     const [expiresAt, setExpiresAt] = useState<string>("7d");
     const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +69,7 @@ export default function ShareDialog({ open, onOpenChange, conversationId }: Shar
             const response = await api.get<CheckShareResponse>(`/api/share/${conversationId}/check`);
             if (response.exists && response.id) {
                 setExistingShareId(response.id);
-                const url = `${window.location.origin}/public/share/${response.id}`;
+                const url = `${window.location.origin}/share/${response.id}`;
                 setShareUrl(url);
             }
         } catch {
@@ -105,6 +106,7 @@ export default function ShareDialog({ open, onOpenChange, conversationId }: Shar
             if (existingShareId) {
                 // Update existing share
                 await api.put(`/api/share/${existingShareId}`, {
+                    message_path: messagePath,
                     expires_at: calculateExpiresAt(expiresAt),
                 });
                 toast.success(t("components.share.updateSuccess"));
@@ -112,10 +114,11 @@ export default function ShareDialog({ open, onOpenChange, conversationId }: Shar
                 // Create new share
                 const response = await api.post<CreateShareResponse>("/api/share", {
                     conversation_id: conversationId,
+                    message_path: messagePath,
                     expires_at: calculateExpiresAt(expiresAt),
                 });
                 setExistingShareId(response.id);
-                const url = `${window.location.origin}/public/share/${response.id}`;
+                const url = `${window.location.origin}/share/${response.id}`;
                 setShareUrl(url);
                 toast.success(t("components.share.success"));
             }

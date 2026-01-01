@@ -12,6 +12,8 @@ var MessageType = struct {
 	Reasoning           string
 	Image               string
 	FunctionCall        string
+	ToolCall            string
+	ToolResult          string
 	MetaInfo            string
 	GoogleGroundingData string
 	OpenaiGroundingData string
@@ -20,6 +22,8 @@ var MessageType = struct {
 	Reasoning:           "reasoning",
 	Image:               "image",
 	FunctionCall:        "function_call",
+	ToolCall:            "tool_call",
+	ToolResult:          "tool_result",
 	MetaInfo:            "meta_info",
 	GoogleGroundingData: "google_grounding_data",
 	OpenaiGroundingData: "openai_grounding_data",

@@ -27,8 +27,9 @@ type DeleteRes struct {
 
 type CreateReq struct {
 	g.Meta         `path:"/share" method:"post" tag:"Share" summary:"Create share"`
-	ConversationId string `json:"conversation_id" v:"required"`
-	ExpiresAt      string `json:"expires_at"`
+	ConversationId string   `json:"conversation_id" v:"required"`
+	MessagePath    []string `json:"message_path"`
+	ExpiresAt      string   `json:"expires_at"`
 }
 
 type CreateRes struct {
@@ -46,9 +47,10 @@ type CheckRes struct {
 }
 
 type UpdateReq struct {
-	g.Meta    `path:"/share/{id}" method:"put" tag:"Share" summary:"Update share"`
-	Id        string `v:"required"`
-	ExpiresAt string `json:"expires_at"`
+	g.Meta      `path:"/share/{id}" method:"put" tag:"Share" summary:"Update share"`
+	Id          string   `v:"required"`
+	MessagePath []string `json:"message_path"`
+	ExpiresAt   string   `json:"expires_at"`
 }
 
 type UpdateRes struct {

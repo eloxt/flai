@@ -44,3 +44,27 @@ type MessageMetaInfo struct {
 	GoogleGroundingData *genai.GroundingMetadata                      `json:"google_grounding_data,omitempty"`
 	OpenaiGroundingData []responses.ResponseOutputTextAnnotationUnion `json:"openai_grounding_data,omitempty"`
 }
+
+// MCPToolCall represents a tool call request from the model
+type MCPToolCall struct {
+	Id        string         `json:"id"`
+	Name      string         `json:"name"`
+	Arguments map[string]any `json:"arguments"`
+}
+
+// MCPToolResult represents the result of an MCP tool call
+type MCPToolResult struct {
+	Id      string `json:"id"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+	IsError bool   `json:"is_error,omitempty"`
+}
+
+// MCPToolInfo represents MCP tool metadata for function declaration
+type MCPToolInfo struct {
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	InputSchema map[string]any    `json:"input_schema,omitempty"`
+	Endpoint    string            `json:"endpoint"`          // MCP server endpoint
+	Headers     map[string]string `json:"headers,omitempty"` // Custom headers for the MCP server
+}

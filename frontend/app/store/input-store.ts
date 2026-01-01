@@ -1,4 +1,4 @@
-import { File } from '@/page/chat';
+import { Attachment, MCPTool } from '@/page/chat/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -6,13 +6,17 @@ interface InputState {
     mainInput: string;
     sendMainInput: boolean;
     selectedTools: string[];
+    selectedMcpTools: MCPTool[];
     setMainInput: (value: string) => void;
     setSendMainInput: (value: boolean) => void;
     setSelectedTools: (value: string[]) => void;
+    addMcpTool: (tool: MCPTool) => void;
+    removeMcpTool: (mcpId: string, toolName: string) => void;
+    clearMcpTools: () => void;
     chatInputs: Record<string, string>;
     setChatInput: (conversationId: string, value: string) => void;
-    attachments: File[];
-    addAttachment: (file: File) => void;
+    attachments: Attachment[];
+    addAttachment: (file: Attachment) => void;
     removeAttachment: (id: string) => void;
     clearAttachments: () => void;
 }
@@ -23,9 +27,24 @@ export const useInputStore = create<InputState>()(
             mainInput: "",
             sendMainInput: false,
             selectedTools: ["internal_web_search"],
+            selectedMcpTools: [],
             setMainInput: (value) => set({ mainInput: value }),
             setSendMainInput: (value) => set({ sendMainInput: value }),
             setSelectedTools: (value) => set({ selectedTools: value }),
+            addMcpTool: (tool) => set((state) => {
+                // Avoid duplicates
+                const exists = state.selectedMcpTools.some(
+                    t => t.mcp_id === tool.mcp_id && t.name === tool.name
+                );
+                if (exists) return state;
+                return { selectedMcpTools: [...state.selectedMcpTools, tool] };
+            }),
+            removeMcpTool: (mcpId, toolName) => set((state) => ({
+                selectedMcpTools: state.selectedMcpTools.filter(
+                    t => !(t.mcp_id === mcpId && t.name === toolName)
+                )
+            })),
+            clearMcpTools: () => set({ selectedMcpTools: [] }),
             chatInputs: {},
             setChatInput: (conversationId, value) =>
                 set((state) => ({
@@ -45,3 +64,4 @@ export const useInputStore = create<InputState>()(
         }
     )
 );
+

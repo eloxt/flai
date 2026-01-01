@@ -2,7 +2,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Streamdown } from "streamdown";
-import type { Content, ContentMessage, ContentReasoning } from "./types";
+import type { Content, ContentMessage, ContentReasoning, ContentToolCall, ContentToolResult } from "./types";
+import { ToolCallItem, ToolResultItem } from "./ToolCallContent";
 
 interface MessageContentProps {
     content: Content;
@@ -25,6 +26,16 @@ export function MessageContent({
     onToggleReasoning,
 }: MessageContentProps) {
     const { t } = useTranslation();
+
+    // Tool call content
+    if (content.type === "tool_call") {
+        return <ToolCallItem toolCall={content.data as ContentToolCall} />;
+    }
+
+    // Tool result content
+    if (content.type === "tool_result") {
+        return <ToolResultItem toolResult={content.data as ContentToolResult} />;
+    }
 
     if (content.type === "reasoning") {
         return (
@@ -72,3 +83,4 @@ export function MessageContent({
         </div>
     );
 }
+

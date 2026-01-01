@@ -15,11 +15,14 @@ import type {
     StreamResponse,
     ContentMessage,
     ContentReasoning,
+    ContentToolCall,
+    ContentToolResult,
     MessageMetaInfo,
     GoogleGroundingData,
     OpenaiGroundingData,
     Content,
-    File,
+    Attachment,
+    MCPTool,
 } from "./types";
 import { applyGoogleCitations, applyOpenaiCitations } from "./utils";
 
@@ -92,7 +95,7 @@ function createUserMessage(
     id: string,
     parentId: string,
     text: string,
-    files: File[]
+    files: Attachment[]
 ): TreeNode {
     return {
         id,
@@ -129,6 +132,7 @@ function buildMessageRequest(
     newPath: TreeNode[],
     text: string,
     selectedTools: string[],
+    mcpTools: MCPTool[],
     fileIds: string[]
 ): MessageRequest {
     return {
@@ -141,6 +145,7 @@ function buildMessageRequest(
             .map((msg) => msg.id),
         prompt: text,
         tools: selectedTools,
+        mcpTools: mcpTools,
         files: fileIds,
     };
 }
@@ -230,6 +235,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
     const sendMainInput = useInputStore((state) => state.sendMainInput);
     const setSendMainInput = useInputStore((state) => state.setSendMainInput);
     const selectedTools = useInputStore((state) => state.selectedTools);
+    const selectedMcpTools = useInputStore((state) => state.selectedMcpTools);
     const attachments = useInputStore((state) => state.attachments);
     const clearAttachments = useInputStore((state) => state.clearAttachments);
     const addConversation = useConversationStore((state) => state.addConversation);
@@ -351,6 +357,12 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         const { type: streamContentType, message_id } = streamResponse;
         const assistantContent = parseStreamContent(streamResponse);
 
+        if (streamContentType === "reasoning") {
+            options?.onExpandReasoning?.(ctx.assistantMessageId);
+        } else {
+            options?.onCollapseReasoning?.(ctx.assistantMessageId);
+        }
+
         // New message initialization
         if (ctx.assistantMessageId !== message_id) {
             initializeAssistantNode(ctx, streamResponse, assistantContent);
@@ -411,6 +423,28 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             return;
         }
 
+        // Handle tool_call - add as new content block
+        if (streamContentType === "tool_call") {
+            const toolCallData = streamResponse.data as ContentToolCall;
+            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
+                msg.content.push({ type: "tool_call", data: toolCallData });
+            });
+            setPathFn(ctx.newPath);
+            ctx.lastMessageType = streamContentType;
+            return;
+        }
+
+        // Handle tool_result - update the matching tool_call with result
+        if (streamContentType === "tool_result") {
+            const toolResultData = streamResponse.data as ContentToolResult;
+            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
+                msg.content.push({ type: "tool_result", data: toolResultData });
+            });
+            setPathFn(ctx.newPath);
+            ctx.lastMessageType = streamContentType;
+            return;
+        }
+
         // Content type changed - add new content block
         if (ctx.lastMessageType !== streamContentType) {
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
@@ -427,12 +461,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             (lastContent.data as ContentMessage).content += assistantContent;
         });
         setPathFn(ctx.newPath);
-
-        if (streamContentType === "reasoning") {
-            options?.onExpandReasoning?.(ctx.assistantMessageId);
-        } else {
-            options?.onCollapseReasoning?.(ctx.assistantMessageId);
-        }
+        
         ctx.lastMessageType = streamContentType;
     }, [options]);
 
@@ -527,6 +556,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 newPath,
                 text,
                 selectedTools,
+                selectedMcpTools,
                 fileIds
             );
             clearAttachments();

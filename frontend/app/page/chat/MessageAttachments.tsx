@@ -3,13 +3,13 @@ import { FileIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { formatBytes } from "@/lib/utils";
-import type { File } from "./types";
+import type { Attachment } from "./types";
 
 interface MessageAttachmentsProps {
-    files: File[];
+    files: Attachment[];
 }
 
-function ImageWithSpinner({ file }: { file: File }) {
+function ImageWithSpinner({ file }: { file: Attachment }) {
     const [isLoading, setIsLoading] = useState(true);
 
     return (

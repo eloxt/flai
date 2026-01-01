@@ -13,7 +13,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/google/uuid"
 
-	"flai/api/share/v1"
+	v1 "flai/api/share/v1"
 )
 
 func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.CreateRes, err error) {
@@ -39,11 +39,18 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, err
 	}
 
-	// fetch messages
+	// fetch messages by path if provided, otherwise fetch all
 	var messages []*entity.Message
-	err = dao.Message.Ctx(ctx).
-		Where(dao.Message.Columns().ConversationId, req.ConversationId).
-		Scan(&messages)
+	if len(req.MessagePath) > 0 {
+		err = dao.Message.Ctx(ctx).
+			Where(dao.Message.Columns().ConversationId, req.ConversationId).
+			WhereIn(dao.Message.Columns().Id, req.MessagePath).
+			Scan(&messages)
+	} else {
+		err = dao.Message.Ctx(ctx).
+			Where(dao.Message.Columns().ConversationId, req.ConversationId).
+			Scan(&messages)
+	}
 	if err != nil {
 		return nil, err
 	}

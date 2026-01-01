@@ -13,15 +13,28 @@ export interface Content {
     data: ContentData;
 }
 
-export type ContentData = ContentMessage | ContentReasoning;
+export type ContentData = ContentMessage | ContentReasoning | ContentToolCall | ContentToolResult;
 
 export interface ContentMessage {
     content: string;
-    files?: File[];
+    files?: Attachment[];
 }
 
 export interface ContentReasoning {
     content: string;
+}
+
+export interface ContentToolCall {
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+}
+
+export interface ContentToolResult {
+    id: string;
+    name: string;
+    content: string;
+    is_error?: boolean;
 }
 
 // Tree structure
@@ -38,13 +51,14 @@ export interface MessageRequest {
     messagePath: string[];
     prompt: string;
     tools: string[];
+    mcpTools: MCPTool[];
     files: string[];
 }
 
 export interface StreamResponse {
     message_id: string;
     type: string;
-    data: ContentMessage | ContentReasoning | MessageMetaInfo | GoogleGroundingData | OpenaiGroundingData[];
+    data: ContentMessage | ContentReasoning | ContentToolCall | ContentToolResult | MessageMetaInfo | GoogleGroundingData | OpenaiGroundingData[];
 }
 
 // Meta info types
@@ -95,7 +109,7 @@ export interface OpenaiGroundingData {
 }
 
 // File type
-export interface File {
+export interface Attachment {
     id: string;
     file_name: string;
     mime_type: string;
@@ -103,4 +117,24 @@ export interface File {
     path: string;
     public_url: string;
     created_at: Date;
+}
+
+// MCP Types
+export interface MCPConfig {
+    id: string;
+    name: string;
+    connection_type: string;
+    endpoint: string;
+    headers?: Record<string, string>;
+    tools?: MCPTool[];
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface MCPTool {
+    mcp_id: string;
+    name: string;
+    description?: string;
+    input_schema?: Record<string, unknown>;
 }

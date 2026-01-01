@@ -10,15 +10,15 @@ import (
 
 // Provider is the golang structure for table provider.
 type Provider struct {
-	Id           string      `json:"id"           orm:"id"            description:""` //
-	Name         string      `json:"name"         orm:"name"          description:""` //
-	ApiKey       string      `json:"apiKey"       orm:"api_key"       description:""` //
-	ProviderType string      `json:"providerType" orm:"provider_type" description:""` //
-	BaseUrl      string      `json:"baseUrl"      orm:"base_url"      description:""` //
-	Model        string      `json:"model"        orm:"model"         description:""` //
-	CreatedAt    *gtime.Time `json:"createdAt"    orm:"created_at"    description:""` //
-	UpdatedAt    *gtime.Time `json:"updatedAt"    orm:"updated_at"    description:""` //
-	DeletedAt    *gtime.Time `json:"deletedAt"    orm:"deleted_at"    description:""` //
-	Logo         string      `json:"logo"         orm:"logo"          description:""` //
-	IsActive     int         `json:"isActive"     orm:"is_active"     description:""` //
+	Id           string      `json:"id"            orm:"id"            description:""` //
+	Name         string      `json:"name"          orm:"name"          description:""` //
+	ApiKey       string      `json:"api_key"       orm:"api_key"       description:""` //
+	ProviderType string      `json:"provider_type" orm:"provider_type" description:""` //
+	BaseUrl      string      `json:"base_url"      orm:"base_url"      description:""` //
+	Model        string      `json:"model"         orm:"model"         description:""` //
+	CreatedAt    *gtime.Time `json:"created_at"    orm:"created_at"    description:""` //
+	UpdatedAt    *gtime.Time `json:"updated_at"    orm:"updated_at"    description:""` //
+	DeletedAt    *gtime.Time `json:"deleted_at"    orm:"deleted_at"    description:""` //
+	Logo         string      `json:"logo"          orm:"logo"          description:""` //
+	IsActive     int         `json:"is_active"     orm:"is_active"     description:""` //
 }

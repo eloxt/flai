@@ -9,5 +9,5 @@ export type {
     ContentMessage,
     ContentReasoning,
     MessageMetaInfo,
-    File,
+    Attachment as File,
 } from "./types";

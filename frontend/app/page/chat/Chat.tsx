@@ -73,6 +73,12 @@ export default function Chat() {
         },
     });
 
+    // Sync message path to app store for sharing
+    const setCurrentMessagePath = useAppStore((state) => state.setCurrentMessagePath);
+    useEffect(() => {
+        setCurrentMessagePath(path.map((msg) => msg.id));
+    }, [path, setCurrentMessagePath]);
+
     // Scroll to bottom when path changes
     useEffect(() => {
         if (!showScrollButton) {

@@ -94,7 +94,8 @@
         "settings": {
             "title": "设置",
             "tabs": {
-                "account": "账户与安全"
+                "account": "账户与安全",
+                "mcp": "MCP 服务器"
             },
             "account": {
                 "title": "个人资料",
@@ -121,6 +122,40 @@
                 "success": "密码更新成功",
                 "error": "更新密码失败",
                 "fillAll": "请填写所有密码字段"
+            },
+            "mcp": {
+                "title": "MCP 服务器",
+                "description": "配置模型上下文协议 (MCP) 服务器以扩展 AI 能力。",
+                "add": "添加服务器",
+                "addTitle": "添加 MCP 服务器",
+                "editTitle": "编辑 MCP 服务器",
+                "dialogDescription": "配置 MCP 服务器端点以启用工具调用。",
+                "name": "服务器名称",
+                "namePlaceholder": "我的 MCP 服务器",
+                "connectionType": "连接类型",
+                "endpoint": "端点地址",
+                "endpointPlaceholder": "https://mcp.example.com/sse",
+                "headers": "自定义请求头 (JSON)",
+                "headersPlaceholder": "{\n  \"Authorization\": \"Bearer xxx\"\n}",
+                "enableOnCreate": "创建后启用",
+                "active": "已启用",
+                "inactive": "已禁用",
+                "activate": "启用",
+                "deactivate": "禁用",
+                "refreshTools": "刷新工具",
+                "empty": "暂无 MCP 服务器配置。添加一个开始使用。",
+                "fetchError": "获取 MCP 配置失败",
+                "createSuccess": "MCP 服务器创建成功",
+                "updateSuccess": "MCP 服务器更新成功",
+                "deleteSuccess": "MCP 服务器删除成功",
+                "saveError": "保存 MCP 服务器失败",
+                "deleteError": "删除 MCP 服务器失败",
+                "refreshSuccess": "已刷新 {{count}} 个工具",
+                "refreshError": "刷新工具失败",
+                "toggleError": "切换服务器状态失败",
+                "fillRequired": "请填写必填字段",
+                "invalidHeaders": "请求头 JSON 格式无效",
+                "confirmDelete": "确定要删除此 MCP 服务器吗？"
             }
         },
         "admin": {
@@ -258,7 +293,7 @@
         },
         "share": {
             "title": "分享对话",
-            "description": "创建此对话的分享链接。任何拥有链接的人都可以查看。后续添加的消息不会被分享。",
+            "description": "创建此对话的分享链接。任何拥有链接的人都可以查看。只分享当前页面展示的消息，不包含其他分支，后续添加的消息不会被分享。",
             "updateDescription": "此对话已分享。您可以更新会话内容和过期时间或复制链接。",
             "expirationLabel": "链接有效期",
             "expiration": {
@@ -276,6 +311,14 @@
             "error": "创建分享链接失败",
             "updateError": "更新分享链接失败",
             "copied": "链接已复制到剪贴板"
+        },
+        "chatInput": {
+            "mcpTools": "MCP 工具"
+        },
+        "toolCall": {
+            "callingTool": "正在调用工具：",
+            "completed": "已完成",
+            "failed": "失败"
         }
     }
 }

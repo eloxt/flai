@@ -12,7 +12,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/os/gtime"
 
-	"flai/api/share/v1"
+	v1 "flai/api/share/v1"
 )
 
 func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (res *v1.UpdateRes, err error) {
@@ -58,11 +58,18 @@ func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (res *v1.U
 		return nil, err
 	}
 
-	// fetch fresh messages
+	// fetch messages by path if provided, otherwise fetch all
 	var messages []*entity.Message
-	err = dao.Message.Ctx(ctx).
-		Where(dao.Message.Columns().ConversationId, existingConversation.Id).
-		Scan(&messages)
+	if len(req.MessagePath) > 0 {
+		err = dao.Message.Ctx(ctx).
+			Where(dao.Message.Columns().ConversationId, existingConversation.Id).
+			WhereIn(dao.Message.Columns().Id, req.MessagePath).
+			Scan(&messages)
+	} else {
+		err = dao.Message.Ctx(ctx).
+			Where(dao.Message.Columns().ConversationId, existingConversation.Id).
+			Scan(&messages)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -32,7 +32,7 @@ export function MessageItem({
     const isLastMessage = messageIndex === pathLength - 1;
 
     return (
-        <div key={message.id} className="flex flex-col gap-1 group min-w-0 w-full">
+        <div key={message.id} className="flex flex-col gap-2 group min-w-0 w-full">
             {message.content !== null &&
                 message.content.map((content, index) => (
                     <div

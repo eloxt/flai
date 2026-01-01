@@ -94,7 +94,8 @@
         "settings": {
             "title": "Settings",
             "tabs": {
-                "account": "Account & Security"
+                "account": "Account & Security",
+                "mcp": "MCP Servers"
             },
             "account": {
                 "title": "Profile",
@@ -121,6 +122,39 @@
                 "success": "Password updated successfully",
                 "error": "Failed to update password",
                 "fillAll": "Please fill in both password fields"
+            },
+            "mcp": {
+                "title": "MCP Servers",
+                "description": "Configure Model Context Protocol (MCP) servers to extend AI capabilities.",
+                "add": "Add Server",
+                "addTitle": "Add MCP Server",
+                "editTitle": "Edit MCP Server",
+                "dialogDescription": "Configure an MCP server endpoint to enable tool calling.",
+                "name": "Server Name",
+                "namePlaceholder": "My MCP Server",
+                "connectionType": "Connection Type",
+                "endpoint": "Endpoint",
+                "endpointPlaceholder": "https://mcp.example.com/sse",
+                "headers": "Custom Headers (JSON)",
+                "headersPlaceholder": "{\n  \"Authorization\": \"Bearer xxx\"\n}",
+                "active": "Active",
+                "inactive": "Inactive",
+                "activate": "Activate",
+                "deactivate": "Deactivate",
+                "refreshTools": "Refresh Tools",
+                "empty": "No MCP servers configured. Add one to get started.",
+                "fetchError": "Failed to fetch MCP configurations",
+                "createSuccess": "MCP server created successfully",
+                "updateSuccess": "MCP server updated successfully",
+                "deleteSuccess": "MCP server deleted successfully",
+                "saveError": "Failed to save MCP server",
+                "deleteError": "Failed to delete MCP server",
+                "refreshSuccess": "Refreshed {{count}} tools",
+                "refreshError": "Failed to refresh tools",
+                "toggleError": "Failed to toggle server status",
+                "fillRequired": "Please fill in required fields",
+                "invalidHeaders": "Invalid headers JSON format",
+                "confirmDelete": "Are you sure you want to delete this MCP server?"
             }
         },
         "admin": {
@@ -258,7 +292,7 @@
         },
         "share": {
             "title": "Share Conversation",
-            "description": "Create a shareable link for this conversation. Anyone with the link can view it. Future messages will not be shared.",
+            "description": "Create a shareable link for this conversation. Anyone with the link can view it. Only messages in the current branch will be shared, future messages will not be shared.",
             "updateDescription": "This conversation is already shared. You can update session content and expiration time, or copy the link.",
             "expirationLabel": "Link Expiration",
             "expiration": {
@@ -276,6 +310,14 @@
             "error": "Failed to create share link",
             "updateError": "Failed to update share link",
             "copied": "Link copied to clipboard"
+        },
+        "chatInput": {
+            "mcpTools": "MCP Tools"
+        },
+        "toolCall": {
+            "callingTool": "Calling tool:",
+            "completed": "completed",
+            "failed": "failed"
         }
     }
 }

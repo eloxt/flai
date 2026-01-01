@@ -1,14 +1,23 @@
-import { ArrowUpIcon, Globe, Paperclip, X, FileIcon } from "lucide-react";
+import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
 import { useInputStore } from "@/store/input-store";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import { Attachment, MCPConfig } from "@/page/chat/types";
 
 // Allowed file types: plain text, PDF, and images
 const ALLOWED_MIME_TYPES = [
@@ -69,12 +78,31 @@ export function ChatInput({
     const { t } = useTranslation();
     const selectedTools = useInputStore((state) => state.selectedTools);
     const setSelectedTools = useInputStore((state) => state.setSelectedTools);
+    const selectedMcpTools = useInputStore((state) => state.selectedMcpTools);
+    const addMcpTool = useInputStore((state) => state.addMcpTool);
+    const removeMcpTool = useInputStore((state) => state.removeMcpTool);
     const attachments = useInputStore((state) => state.attachments);
     const addAttachment = useInputStore((state) => state.addAttachment);
     const removeAttachment = useInputStore((state) => state.removeAttachment);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const dragCounterRef = useRef(0);
+
+    // MCP configs state
+    const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
+
+    // Fetch MCP configs on mount
+    useEffect(() => {
+        const fetchMcpConfigs = async () => {
+            try {
+                const result = await api.get<MCPConfig[]>("/api/mcp");
+                setMcpConfigs(result?.filter(c => c.is_active && c.tools && c.tools.length > 0) || []);
+            } catch (error) {
+                console.error("Failed to fetch MCP configs:", error);
+            }
+        };
+        fetchMcpConfigs();
+    }, []);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -97,7 +125,7 @@ export function ChatInput({
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const res = await api.post<File>("/api/user/file", formData);
+            const res = await api.post<Attachment>("/api/user/file", formData);
 
             addAttachment(res);
             toast.success(t("common.fileUploaded"), { id: toastId });
@@ -156,6 +184,24 @@ export function ChatInput({
         }
     }, [uploadFile]);
 
+    const isToolSelected = (mcpId: string, toolName: string) => {
+        return selectedMcpTools.some(t => t.mcp_id === mcpId && t.name === toolName);
+    };
+
+    const handleToolToggle = (mcpConfig: MCPConfig, tool: { name: string; description?: string }) => {
+        if (isToolSelected(mcpConfig.id, tool.name)) {
+            removeMcpTool(mcpConfig.id, tool.name);
+        } else {
+            addMcpTool({
+                mcp_id: mcpConfig.id,
+                name: tool.name,
+                description: tool.description,
+            });
+        }
+    };
+
+    const totalAvailableTools = mcpConfigs.reduce((acc, config) => acc + (config.tools?.length || 0), 0);
+
     return (
         <div
             className={`flex flex-col w-full gap-2 ${className || ""} relative`}
@@ -197,6 +243,46 @@ export function ChatInput({
                     />
                     <div className="flex flex-col gap-2 flex-1 min-w-0">
                         <ToggleGroup type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
+                            {/* MCP Tool Selector */}
+                            {totalAvailableTools > 0 && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            <Wrench className="size-4" />
+                                            <span>{t("components.chatInput.mcpTools")}</span>
+                                            <ChevronDown className="size-3 ml-1" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="w-72" align="start">
+                                        {mcpConfigs.map((config, index) => (
+                                            <div key={config.id}>
+                                                {index > 0 && <DropdownMenuSeparator />}
+                                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                                    {config.name}
+                                                </DropdownMenuLabel>
+                                                {config.tools?.map((tool) => (
+                                                    <DropdownMenuCheckboxItem
+                                                        key={`${config.id}-${tool.name}`}
+                                                        checked={isToolSelected(config.id, tool.name)}
+                                                        onCheckedChange={() => handleToolToggle(config, tool)}
+                                                        onSelect={(e) => e.preventDefault()}
+                                                    >
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-sm font-medium truncate">{tool.name}</div>
+                                                            {tool.description && (
+                                                                <div className="text-xs text-muted-foreground truncate">
+                                                                    {tool.description}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </DropdownMenuCheckboxItem>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+
                             <Button
                                 variant="outline"
                                 onClick={handleUploadClick}
@@ -214,11 +300,24 @@ export function ChatInput({
                             </ToggleGroupItem>
                         </ToggleGroup>
 
-                        {attachments.length > 0 && (
+                        {/* Selected MCP Tools and Attachments Display */}
+                        {(selectedMcpTools.length > 0 || attachments.length > 0) && (
                             <ScrollArea>
                                 <div className="flex gap-2">
+                                    {selectedMcpTools.map((tool) => (
+                                        <Button key={`${tool.mcp_id}-${tool.name}`} variant="outline" title={tool.name}>
+                                            <Wrench className="size-4 opacity-70" />
+                                            <span className="truncate max-w-[150px]">{tool.name}</span>
+                                            <button
+                                                onClick={() => removeMcpTool(tool.mcp_id, tool.name)}
+                                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                            >
+                                                <X className="size-3" />
+                                            </button>
+                                        </Button>
+                                    ))}
                                     {attachments.map((file) => (
-                                        <Button key={file.id} variant="outline">
+                                        <Button key={file.id} variant="outline" title={file.file_name}>
                                             <FileIcon className="size-4 opacity-70" />
                                             <span className="truncate max-w-[150px]">{file.file_name}</span>
                                             <button
@@ -248,3 +347,4 @@ export function ChatInput({
         </div>
     );
 }
+

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flai/internal/consts"
 	"flai/internal/logic"
+	"flai/internal/logic/mcp"
 	"flai/internal/model/entity"
 	"strings"
 
@@ -43,7 +44,7 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // Stream Chat
 // ============================================================================
 
-func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, files []*entity.File) error {
+func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
 	client, err := c.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
@@ -56,19 +57,25 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	}
 
 	// Build tools
-	genaiTools := c.buildTools(tools)
+	genaiTools := c.buildTools(tools, mcpTools)
 
-	// Create chat config
+	// Build MCP tool map for quick lookup
+	mcpToolMap := make(map[string]*MCPToolInfo)
+	if len(mcpTools) > 0 {
+		for _, tool := range mcpTools {
+			mcpToolMap[tool.Name] = tool
+		}
+	}
+
+	// MCP client cache - reuse clients for same endpoint
+	mcpClientCache := make(map[string]*mcp.MCPClient)
+
+	// Create content config
 	config := &genai.GenerateContentConfig{
 		ThinkingConfig: &genai.ThinkingConfig{
 			IncludeThoughts: true,
 		},
 		Tools: genaiTools,
-	}
-
-	chat, err := client.Chats.Create(ctx, modelConfig.ID, config, history)
-	if err != nil {
-		return err
 	}
 
 	// Build message parts
@@ -77,8 +84,21 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		return err
 	}
 
-	// Start streaming
-	iter := chat.SendMessageStream(ctx, parts...)
+	// Build full contents including history and new message
+	var contents []*genai.Content
+	for _, h := range history {
+		contents = append(contents, h)
+	}
+	// Convert parts to pointer slice for Content.Parts
+	var userParts []*genai.Part
+	for _, p := range parts {
+		partCopy := p
+		userParts = append(userParts, &partCopy)
+	}
+	contents = append(contents, &genai.Content{
+		Role:  "user",
+		Parts: userParts,
+	})
 
 	// Initialize stream state
 	var currentMessageType string
@@ -97,55 +117,117 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		ModelName:    modelConfig.Name,
 	}
 
-	// Process stream
-	for resp, err := range iter {
-		if err != nil {
-			if errors.Is(ctx.Err(), context.Canceled) {
-				c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-				return nil
+	// Tool call loop - continues until model finishes without requesting tools
+	maxToolRounds := 10 // Prevent infinite loops
+
+	for round := 0; round < maxToolRounds; round++ {
+		// Start streaming with full content history
+		iter := client.Models.GenerateContentStream(ctx, modelConfig.ID, contents, config)
+
+		var functionCalls []*genai.FunctionCall
+		var thoughtSignature []byte
+		var modelParts []*genai.Part // Collect model's response parts for history
+
+		// Process stream
+		for resp, err := range iter {
+			if err != nil {
+				if errors.Is(ctx.Err(), context.Canceled) {
+					c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+					return nil
+				}
+				return err
 			}
-			return err
-		}
 
-		for _, candidate := range resp.Candidates {
-			var thoughtSignature []byte
+			for _, candidate := range resp.Candidates {
+				if candidate.Content != nil {
+					for _, part := range candidate.Content.Parts {
+						// Handle text content
+						if part.Text != "" {
+							partType := consts.MessageType.Message
+							if part.Thought {
+								partType = consts.MessageType.Reasoning
+							}
 
-			if candidate.Content != nil {
-				for _, part := range candidate.Content.Parts {
-					if part.Text != "" {
-						partType := consts.MessageType.Message
-						if part.Thought {
-							partType = consts.MessageType.Reasoning
+							// Update usage metadata
+							metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
+							metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
+							metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
+							metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
+							metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
+
+							// If type switched, save previous block
+							if currentMessageType != "" && currentMessageType != partType {
+								appendContent(&currentContentBuilder, currentMessageType, &contentList)
+								currentContentBuilder.Reset()
+							}
+
+							currentMessageType = partType
+							currentContentBuilder.WriteString(part.Text)
+
+							// Stream to client
+							streamResponse := StreamResponse{
+								MessageId: messageId,
+								Type:      partType,
+							}
+							if partType == consts.MessageType.Reasoning {
+								streamResponse.Data = ContentReasoning{Content: part.Text}
+							} else {
+								streamResponse.Data = ContentMessage{Content: part.Text}
+							}
+
+							if err := StreamToClient(response, streamResponse); err != nil {
+								if errors.Is(ctx.Err(), context.Canceled) {
+									c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+									return nil
+								}
+								return err
+							}
+
+							// Only add non-thought text to history
+							if !part.Thought {
+								modelParts = append(modelParts, &genai.Part{Text: part.Text})
+							}
 						}
 
-						// Update usage metadata
-						metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
-						metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
-						metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
-						metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
-						metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
-
-						// If type switched, save previous block
-						if currentMessageType != "" && currentMessageType != partType {
-							appendContent(&currentContentBuilder, currentMessageType, &contentList)
-							currentContentBuilder.Reset()
+						// Handle function calls
+						if len(part.ThoughtSignature) > 0 {
+							thoughtSignature = part.ThoughtSignature
 						}
 
-						currentMessageType = partType
-						currentContentBuilder.WriteString(part.Text)
+						if part.FunctionCall != nil {
+							functionCalls = append(functionCalls, part.FunctionCall)
+							modelParts = append(modelParts, &genai.Part{FunctionCall: part.FunctionCall, ThoughtSignature: thoughtSignature})
+						}
+					}
+				}
 
-						// Stream to client
-						streamResponse := StreamResponse{
+				// Handle completion
+				if candidate.FinishReason == genai.FinishReasonStop {
+					metaInfo.ThoughtSignature = base64.StdEncoding.EncodeToString(thoughtSignature)
+
+					// Send meta info
+					metaResponse := StreamResponse{
+						MessageId: messageId,
+						Type:      consts.MessageType.MetaInfo,
+						Data:      metaInfo,
+					}
+					if err := StreamToClient(response, metaResponse); err != nil {
+						if errors.Is(ctx.Err(), context.Canceled) {
+							c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+							return nil
+						}
+						return err
+					}
+
+					// Send grounding data if present
+					if candidate.GroundingMetadata != nil && len(candidate.GroundingMetadata.GroundingChunks) > 0 {
+						metaInfo.GoogleGroundingData = candidate.GroundingMetadata
+						groundingResponse := StreamResponse{
 							MessageId: messageId,
-							Type:      partType,
+							Type:      consts.MessageType.GoogleGroundingData,
+							Data:      candidate.GroundingMetadata,
 						}
-						if partType == consts.MessageType.Reasoning {
-							streamResponse.Data = ContentReasoning{Content: part.Text}
-						} else {
-							streamResponse.Data = ContentMessage{Content: part.Text}
-						}
-
-						if err := StreamToClient(response, streamResponse); err != nil {
+						if err := StreamToClient(response, groundingResponse); err != nil {
 							if errors.Is(ctx.Err(), context.Canceled) {
 								c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 								return nil
@@ -153,23 +235,52 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 							return err
 						}
 					}
-
-					if len(part.ThoughtSignature) > 0 {
-						thoughtSignature = part.ThoughtSignature
-					}
 				}
 			}
+		}
 
-			if candidate.FinishReason == genai.FinishReasonStop {
-				metaInfo.ThoughtSignature = base64.StdEncoding.EncodeToString(thoughtSignature)
+		// Check if we need to execute function calls
+		if len(functionCalls) > 0 {
+			// Save any pending content before adding tool calls (ensures correct order: reasoning -> tool_call)
+			if currentContentBuilder.Len() > 0 {
+				appendContent(&currentContentBuilder, currentMessageType, &contentList)
+				currentContentBuilder.Reset()
+				currentMessageType = ""
+			}
 
-				// Send meta info
-				metaResponse := StreamResponse{
-					MessageId: messageId,
-					Type:      consts.MessageType.MetaInfo,
-					Data:      metaInfo,
+			// Add model's response to history (with function calls and thought signature)
+			if len(modelParts) > 0 {
+				contents = append(contents, &genai.Content{
+					Role:  "model",
+					Parts: modelParts,
+				})
+			}
+
+			// Process function calls and build responses
+			var functionResponseParts []*genai.Part
+
+			for _, fc := range functionCalls {
+				callId := uuid.New().String()
+
+				toolCall := MCPToolCall{
+					Id:        callId,
+					Name:      fc.Name,
+					Arguments: fc.Args,
 				}
-				if err := StreamToClient(response, metaResponse); err != nil {
+
+				// Add tool call to content list for saving
+				contentList = append(contentList, Content{
+					Type: consts.MessageType.ToolCall,
+					Data: toolCall,
+				})
+
+				// Stream tool call to client
+				toolCallResponse := StreamResponse{
+					MessageId: messageId,
+					Type:      consts.MessageType.ToolCall,
+					Data:      toolCall,
+				}
+				if err := StreamToClient(response, toolCallResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
 						c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 						return nil
@@ -177,24 +288,58 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 					return err
 				}
 
-				// Send grounding data if present
-				if candidate.GroundingMetadata != nil && len(candidate.GroundingMetadata.GroundingChunks) > 0 {
-					metaInfo.GoogleGroundingData = candidate.GroundingMetadata
-					groundingResponse := StreamResponse{
-						MessageId: messageId,
-						Type:      consts.MessageType.GoogleGroundingData,
-						Data:      candidate.GroundingMetadata,
-					}
-					if err := StreamToClient(response, groundingResponse); err != nil {
-						if errors.Is(ctx.Err(), context.Canceled) {
-							c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-							return nil
-						}
-						return err
-					}
+				// Execute the tool call
+				toolResult := c.executeMCPToolCallByName(ctx, mcpToolMap, mcpClientCache, fc.Name, fc.Args)
+
+				toolResultData := MCPToolResult{
+					Id:      callId,
+					Name:    fc.Name,
+					Content: toolResult.Content,
+					IsError: toolResult.IsError,
 				}
+
+				// Add tool result to content list for saving
+				contentList = append(contentList, Content{
+					Type: consts.MessageType.ToolResult,
+					Data: toolResultData,
+				})
+
+				// Stream tool result to client
+				toolResultResponse := StreamResponse{
+					MessageId: messageId,
+					Type:      consts.MessageType.ToolResult,
+					Data:      toolResultData,
+				}
+				if err := StreamToClient(response, toolResultResponse); err != nil {
+					if errors.Is(ctx.Err(), context.Canceled) {
+						c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+						return nil
+					}
+					return err
+				}
+
+				// Build function response part
+				functionResponseParts = append(functionResponseParts, &genai.Part{
+					FunctionResponse: &genai.FunctionResponse{
+						Name: fc.Name,
+						Response: map[string]any{
+							"result": toolResult.Content,
+							"error":  toolResult.IsError,
+						},
+					},
+				})
 			}
+
+			// Add function responses as user content (function responses are sent as user role)
+			contents = append(contents, &genai.Content{
+				Role:  "user",
+				Parts: functionResponseParts,
+			})
+			continue
 		}
+
+		// Model finished without requesting more tools
+		break
 	}
 
 	// Save final message
@@ -202,6 +347,54 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	StreamDone(response)
 
 	return nil
+}
+
+// executeMCPToolCallByName executes an MCP tool by name and returns the result
+func (c *GeminiClient) executeMCPToolCallByName(ctx context.Context, mcpToolMap map[string]*MCPToolInfo, mcpClientCache map[string]*mcp.MCPClient, toolName string, args map[string]any) *MCPToolResult {
+	result := &MCPToolResult{
+		Name: toolName,
+	}
+
+	// Look up tool info
+	toolInfo, ok := mcpToolMap[toolName]
+	if !ok {
+		result.Content = "Tool not found: " + toolName
+		result.IsError = true
+		return result
+	}
+
+	// Get or create MCP client for this endpoint
+	mcpClient, ok := mcpClientCache[toolInfo.Endpoint]
+	if !ok {
+		// Create new client for this endpoint
+		mcpClient = mcp.NewMCPClient(&mcp.MCPClientOption{
+			Endpoint: toolInfo.Endpoint,
+			Headers:  toolInfo.Headers,
+		})
+		mcpClientCache[toolInfo.Endpoint] = mcpClient
+	}
+
+	callResult, err := mcpClient.CallTool(ctx, &mcp.CallToolParams{
+		Name:      toolName,
+		Arguments: args,
+	})
+	if err != nil {
+		result.Content = err.Error()
+		result.IsError = true
+		return result
+	}
+
+	// Combine all text content from the result
+	var contentBuilder strings.Builder
+	for _, item := range callResult.Content {
+		if item.Type == "text" && item.Text != "" {
+			contentBuilder.WriteString(item.Text)
+		}
+	}
+
+	result.Content = contentBuilder.String()
+	result.IsError = callResult.IsError
+	return result
 }
 
 func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
@@ -240,7 +433,22 @@ func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai
 				return nil, err
 			}
 
-			history = append(history, genai.NewContentFromText(data.Content, role))
+			genaiContent := genai.NewContentFromText(data.Content, role)
+			if msg.MetaInfo != "" {
+				var metaInfo MessageMetaInfo
+				if err := json.Unmarshal([]byte(msg.MetaInfo), &metaInfo); err != nil {
+					return nil, err
+				}
+				if metaInfo.ThoughtSignature != "" {
+					// decode base64
+					decoded, err := base64.StdEncoding.DecodeString(metaInfo.ThoughtSignature)
+					if err != nil {
+						return nil, err
+					}
+					genaiContent.Parts[0].ThoughtSignature = decoded
+				}
+			}
+			history = append(history, genaiContent)
 
 			// Add file references
 			for _, file := range data.Files {
@@ -256,9 +464,9 @@ func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai
 // Tool Building
 // ============================================================================
 
-func (c *GeminiClient) buildTools(tools []string) []*genai.Tool {
+func (c *GeminiClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []*genai.Tool {
 	genaiTools := []*genai.Tool{
-		{URLContext: &genai.URLContext{}},
+		//{URLContext: &genai.URLContext{}},
 	}
 
 	for _, tool := range tools {
@@ -269,7 +477,74 @@ func (c *GeminiClient) buildTools(tools []string) []*genai.Tool {
 		}
 	}
 
+	// Add MCP tools as function declarations
+	if len(mcpTools) > 0 {
+		functionDeclarations := c.buildMCPFunctionDeclarations(mcpTools)
+		if len(functionDeclarations) > 0 {
+			genaiTools = append(genaiTools, &genai.Tool{
+				FunctionDeclarations: functionDeclarations,
+			})
+		}
+	}
+
 	return genaiTools
+}
+
+// buildMCPFunctionDeclarations converts MCP tools to Gemini FunctionDeclarations
+func (c *GeminiClient) buildMCPFunctionDeclarations(mcpTools []*MCPToolInfo) []*genai.FunctionDeclaration {
+	var declarations []*genai.FunctionDeclaration
+
+	for _, tool := range mcpTools {
+		decl := &genai.FunctionDeclaration{
+			Name:        tool.Name,
+			Description: tool.Description,
+		}
+
+		// Convert InputSchema to genai.Schema
+		if tool.InputSchema != nil {
+			schemaJSON, err := json.Marshal(tool.InputSchema)
+			if err == nil {
+				var schema genai.Schema
+				if json.Unmarshal(schemaJSON, &schema) == nil {
+					decl.Parameters = &schema
+				}
+			}
+		}
+
+		declarations = append(declarations, decl)
+	}
+
+	return declarations
+}
+
+// executeMCPToolCall executes an MCP tool and returns the result
+func (c *GeminiClient) executeMCPToolCall(ctx context.Context, mcpClient *mcp.MCPClient, toolCall *MCPToolCall) *MCPToolResult {
+	result := &MCPToolResult{
+		Id:   toolCall.Id,
+		Name: toolCall.Name,
+	}
+
+	callResult, err := mcpClient.CallTool(ctx, &mcp.CallToolParams{
+		Name:      toolCall.Name,
+		Arguments: toolCall.Arguments,
+	})
+	if err != nil {
+		result.Content = err.Error()
+		result.IsError = true
+		return result
+	}
+
+	// Combine all text content from the result
+	var contentBuilder strings.Builder
+	for _, item := range callResult.Content {
+		if item.Type == "text" && item.Text != "" {
+			contentBuilder.WriteString(item.Text)
+		}
+	}
+
+	result.Content = contentBuilder.String()
+	result.IsError = callResult.IsError
+	return result
 }
 
 // ============================================================================
