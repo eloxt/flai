@@ -62,3 +62,18 @@ type GenerateTitleRes struct {
 }
 
 // TODO: rename
+
+type SearchReq struct {
+	g.Meta `path:"/conversation/search" method:"get" tag:"Conversation" Summary:"Search conversations"`
+	Query  string `v:"required"`
+}
+
+type SearchRes []SearchResponse
+
+type SearchResponse struct {
+	ConversationId string      `json:"conversation_id"`
+	Title          string      `json:"title"`
+	Icon           string      `json:"icon"`
+	CreatedAt      *gtime.Time `json:"created_at"`
+	Highlight      string      `json:"highlight"`
+}

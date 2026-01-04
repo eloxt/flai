@@ -44,6 +44,16 @@ import {
 import SettingsPanel from "./settings-panel";
 import AdminPanel from "./admin-panel";
 import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { api } from "@/lib/api";
+
+interface SearchResponse {
+    conversation_id: string;
+    title: string;
+    icon: string;
+    created_at: string;
+    highlight: string;
+}
 
 export default function AppSidebar() {
     const { t } = useTranslation();
@@ -60,7 +70,10 @@ export default function AppSidebar() {
     const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
     const [showAdminDialog, setShowAdminDialog] = useState(false);
-    const { toggleSidebar } = useSidebar()
+    const [showSearchDialog, setShowSearchDialog] = useState(false);
+    const { toggleSidebar } = useSidebar();
+    const [queryParam, setQueryParam] = useState<string>("");
+    const [searchResults, setSearchResults] = useState<SearchResponse[]>([]);
 
     useEffect(() => {
         if (tokens?.access_token) {
@@ -68,14 +81,19 @@ export default function AppSidebar() {
         }
     }, [tokens?.access_token]);
 
-
-    const quickActions = [
-        { label: t("components.sidebar.newChat"), icon: Plus, to: "/" },
-        { label: t("components.sidebar.searchChat"), icon: Search, to: "/search" },
-    ];
-
     const handleDelete = (id: string) => {
         setConversationToDelete(id);
+    }
+
+    const handleSearch = async () => {
+        try {
+            const result = await api.get<SearchResponse[]>(`/api/conversation/search?query=${queryParam}`)
+            console.log(result)
+            setSearchResults(result);
+        } catch (error) {
+            setSearchResults([]);
+            console.error(error);
+        }
     }
 
     return (
@@ -101,16 +119,23 @@ export default function AppSidebar() {
                         </Button>
                     </div>
                     <SidebarMenu>
-                        {quickActions.map((action) => (
-                            <SidebarMenuItem key={action.label}>
-                                <SidebarMenuButton asChild tooltip={action.label} isActive={location.pathname === action.to}>
-                                    <NavLink to={action.to} >
-                                        <action.icon />
-                                        <span>{action.label}</span>
-                                    </NavLink>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
+                        <SidebarMenuItem key={t("components.sidebar.newChat")}>
+                            <SidebarMenuButton asChild tooltip={t("components.sidebar.newChat")} isActive={location.pathname === "/"}>
+                                <NavLink to="/" >
+                                    <Plus />
+                                    <span>{t("components.sidebar.newChat")}</span>
+                                </NavLink>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem key={t("components.sidebar.searchChat")}>
+                            <SidebarMenuButton asChild tooltip={t("components.sidebar.searchChat")} isActive={location.pathname === "/search"}>
+                                <div className="cursor-pointer group" onClick={() => setShowSearchDialog(true)}>
+                                    <Search />
+                                    <span>{t("components.sidebar.searchChat")}</span>
+                                </div>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarHeader>
 
@@ -274,6 +299,43 @@ export default function AppSidebar() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={showSearchDialog} onOpenChange={(open) => {
+                setShowSearchDialog(open);
+                if (!open) {
+                    setQueryParam("");
+                    setSearchResults([]);
+                }
+            }}>
+                <DialogContent className="overflow-hidden p-0">
+                    <DialogTitle className="sr-only">{t("components.sidebar.command.searchPlaceholder")}</DialogTitle>
+                    <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3">
+                        <CommandInput value={queryParam} onValueChange={setQueryParam} onKeyDown={(e) => e.key === "Enter" && handleSearch()} placeholder={t("components.sidebar.command.searchPlaceholder")} />
+                        <CommandList>
+                            <CommandEmpty>{t("components.sidebar.command.empty")}</CommandEmpty>
+                            <CommandGroup>
+                                {searchResults.map((result, index) => (
+                                    <CommandItem key={`${result.conversation_id}-${index}`} asChild>
+                                        <NavLink to={`/chat/${result.conversation_id}`} className="flex flex-col items-start gap-1 w-full" onClick={() => setShowSearchDialog(false)}>
+                                            <div className="flex items-center gap-2 w-full">
+                                                {result.icon && <span>{result.icon}</span>}
+                                                <span className="font-medium truncate">{result.title}</span>
+                                                <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                                                    {new Date(result.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <span
+                                                className="text-sm text-muted-foreground line-clamp-2 [&_em]:not-italic [&_em]:font-semibold [&_em]:text-foreground"
+                                                dangerouslySetInnerHTML={{ __html: result.highlight }}
+                                            />
+                                        </NavLink>
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

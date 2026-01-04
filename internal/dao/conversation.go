@@ -6,6 +6,8 @@ package dao
 
 import (
 	"flai/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 // conversationDao is the data access object for the table conversation.
@@ -20,3 +22,10 @@ var (
 )
 
 // Add your custom methods and functionality below.
+type ConversationSearch struct {
+	Highlight      string      `json:"highlight"`
+	ConversationId string      `json:"conversation_id"`
+	Title          string      `json:"title"`
+	Icon           string      `json:"icon"`
+	CreatedAt      *gtime.Time `json:"created_at"`
+}

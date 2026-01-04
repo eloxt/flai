@@ -267,6 +267,10 @@
                 "deleteDescription": "此操作无法撤销。这将永久删除您的对话并从我们的服务器中删除。",
                 "adminConstructionTitle": "设置正在建设中",
                 "adminConstructionDesc": "我们正在努力为您提供最佳的设置体验。请稍后再来检查。"
+            },
+            "command": {
+                "searchPlaceholder": "按回车搜索...",
+                "empty": "未查询到结果"
             }
         },
         "modelSelector": {

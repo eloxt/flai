@@ -16,4 +16,5 @@ type IConversationV1 interface {
 	GetList(ctx context.Context, req *v1.GetListReq) (res *v1.GetListRes, err error)
 	Detail(ctx context.Context, req *v1.DetailReq) (res *v1.DetailRes, err error)
 	GenerateTitle(ctx context.Context, req *v1.GenerateTitleReq) (res *v1.GenerateTitleRes, err error)
+	Search(ctx context.Context, req *v1.SearchReq) (res *v1.SearchRes, err error)
 }

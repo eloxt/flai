@@ -266,6 +266,10 @@
                 "deleteDescription": "This action cannot be undone. This will permanently delete your conversation and remove it from our servers.",
                 "adminConstructionTitle": "Settings Under Construction",
                 "adminConstructionDesc": "We are working hard to bring you the best settings experience. Please check back later."
+            },
+            "command": {
+                "searchPlaceholder": "Press Enter to search...",
+                "empty": "No results found."
             }
         },
         "modelSelector": {
