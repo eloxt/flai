@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
@@ -96,6 +97,8 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 			Tools: openaiTools,
 		}
 
+		a, _ := params.MarshalJSON()
+		g.Log().Debugf(ctx, "OpenAI request params: %s", string(a))
 		stream := client.Responses.NewStreaming(ctx, params)
 
 		var functionCalls []responses.ResponseFunctionToolCall
@@ -216,7 +219,12 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 				contentType = ""
 			}
 
-			// Process function calls
+			// First, add all function call items to input history
+			for _, fc := range functionCalls {
+				currentInputItems = append(currentInputItems, responses.ResponseInputItemParamOfFunctionCall(fc.Arguments, fc.CallID, fc.Name))
+			}
+
+			// Process function calls and build outputs
 			var toolOutputItems []responses.ResponseInputItemUnionParam
 
 			for _, fc := range functionCalls {
