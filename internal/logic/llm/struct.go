@@ -2,10 +2,49 @@ package llm
 
 import (
 	"flai/internal/model/entity"
+	"reflect"
 
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/openai/openai-go/v3/responses"
 	"google.golang.org/genai"
 )
+
+// StringToGTimeHookFunc returns a DecodeHookFunc that converts strings to *gtime.Time.
+func StringToGTimeHookFunc() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+		if t != reflect.TypeOf(&gtime.Time{}) {
+			return data, nil
+		}
+
+		str := data.(string)
+		if str == "" {
+			return nil, nil
+		}
+		return gtime.StrToTime(str)
+	}
+}
+
+// DecodeWithJSONTags decodes input into output using json tags for field mapping.
+// This is needed because mapstructure defaults to field names, but our structs
+// use snake_case json tags (e.g., public_url) while Go fields are camelCase.
+// Includes a custom hook for converting strings to *gtime.Time.
+func DecodeWithJSONTags(input any, output any) error {
+	config := &mapstructure.DecoderConfig{
+		Result:           output,
+		TagName:          "json",
+		WeaklyTypedInput: true,
+		DecodeHook:       StringToGTimeHookFunc(),
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(input)
+}
 
 type StreamResponse struct {
 	MessageId string `json:"message_id"`

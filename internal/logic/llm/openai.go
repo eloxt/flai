@@ -10,7 +10,6 @@ import (
 	"flai/internal/model/entity"
 	"strings"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
@@ -398,7 +397,7 @@ func (c *OpenAIClient) buildInputItems(historyMessages []*entity.Message, newMes
 			}
 
 			var data ContentMessage
-			if err := mapstructure.Decode(content.Data, &data); err != nil {
+			if err := DecodeWithJSONTags(content.Data, &data); err != nil {
 				return nil, err
 			}
 

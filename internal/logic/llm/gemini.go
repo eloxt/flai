@@ -11,7 +11,6 @@ import (
 	"flai/internal/model/entity"
 	"strings"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcfg"
@@ -429,7 +428,7 @@ func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai
 			}
 
 			var data ContentMessage
-			if err := mapstructure.Decode(content.Data, &data); err != nil {
+			if err := DecodeWithJSONTags(content.Data, &data); err != nil {
 				return nil, err
 			}
 
@@ -452,7 +451,7 @@ func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai
 
 			// Add file references
 			for _, file := range data.Files {
-				history = append(history, genai.NewContentFromURI(file.Path, file.MimeType, role))
+				history = append(history, genai.NewContentFromURI(file.PublicUrl, file.MimeType, role))
 			}
 		}
 	}

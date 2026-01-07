@@ -54,9 +54,9 @@ export function MessageItem({
 
                         {/* Content */}
                         <div
-                            className={`px-4 rounded-2xl min-w-0 w-full ${message.role === "user"
+                            className={`px-4 rounded-2xl min-w-0 ${message.role === "user"
                                 ? "bg-[var(--color-user-msg-bg)] py-2"
-                                : ""
+                                : "w-full"
                                 }`}
                         >
                             <MessageContent
