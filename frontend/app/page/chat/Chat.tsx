@@ -47,7 +47,7 @@ export default function Chat() {
     const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set());
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [inputHeight, setInputHeight] = useState(0);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
     const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
 
     // Chat hook
@@ -87,7 +87,10 @@ export default function Chat() {
     }, [path]);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
+        if (viewport) {
+            viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+        }
     };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -117,10 +120,11 @@ export default function Chat() {
     return (
         <>
             <ScrollArea
-                className="flex-1 px-4 pb-0 overflow-y-hidden h-full"
+                ref={scrollAreaRef}
+                className="flex-1 px-4 overflow-y-hidden h-full"
                 onScroll={handleScroll}
                 style={{
-                    paddingBottom: `${inputHeight + 66 + (attachments.length > 0 ? 36 : 0)}px`,
+                    paddingBottom: `${inputHeight + 74 + (attachments.length > 0 ? 36 : 0)}px`,
                 }}
             >
                 <div className="pt-4 mx-auto max-w-5xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
@@ -143,7 +147,7 @@ export default function Chat() {
                             />
                         ))
                     )}
-                    <div ref={messagesEndRef} />
+
                 </div>
 
                 <ScrollBar orientation="horizontal" />
