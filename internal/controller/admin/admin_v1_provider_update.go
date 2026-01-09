@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"flai/internal/logic"
 
 	v1 "flai/api/admin/v1"
 	"flai/internal/dao"
@@ -49,5 +50,6 @@ func (c *ControllerV1) ProviderUpdate(ctx context.Context, req *v1.ProviderUpdat
 		return nil, err
 	}
 
+	logic.UpdateProviderCache(ctx)
 	return &v1.ProviderUpdateRes{}, nil
 }
