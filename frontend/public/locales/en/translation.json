@@ -95,7 +95,8 @@
             "title": "Settings",
             "tabs": {
                 "account": "Account & Security",
-                "mcp": "MCP Servers"
+                "mcp": "MCP Servers",
+                "share": "Shared Links"
             },
             "account": {
                 "title": "Profile",
@@ -155,6 +156,29 @@
                 "fillRequired": "Please fill in required fields",
                 "invalidHeaders": "Invalid headers JSON format",
                 "confirmDelete": "Are you sure you want to delete this MCP server?"
+            },
+            "share": {
+                "title": "Shared Links",
+                "description": "Manage your shared conversation links.",
+                "empty": "No shared links yet. Share a conversation to see it here.",
+                "fetchError": "Failed to fetch shared links",
+                "deleteSuccess": "Shared link deleted successfully",
+                "deleteError": "Failed to delete shared link",
+                "updateSuccess": "Shared link updated successfully",
+                "updateError": "Failed to update shared link",
+                "confirmDelete": "Are you sure you want to delete this shared link?",
+                "untitled": "Untitled Conversation",
+                "expired": "Expired",
+                "never": "Never",
+                "createdAt": "Created",
+                "expiresAt": "Expires",
+                "copyLink": "Copy Link",
+                "openLink": "Open Link",
+                "copied": "Link copied to clipboard",
+                "editTitle": "Update Share Link",
+                "editDescription": "Update the expiration time and refresh the conversation content.",
+                "conversation": "Conversation",
+                "newExpiration": "New Expiration"
             }
         },
         "admin": {

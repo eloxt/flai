@@ -95,7 +95,8 @@
             "title": "设置",
             "tabs": {
                 "account": "账户与安全",
-                "mcp": "MCP 服务器"
+                "mcp": "MCP 服务器",
+                "share": "分享链接"
             },
             "account": {
                 "title": "个人资料",
@@ -156,6 +157,29 @@
                 "fillRequired": "请填写必填字段",
                 "invalidHeaders": "请求头 JSON 格式无效",
                 "confirmDelete": "确定要删除此 MCP 服务器吗？"
+            },
+            "share": {
+                "title": "分享链接",
+                "description": "管理您分享的对话链接。",
+                "empty": "暂无分享链接。分享一个对话后即可在此看到。",
+                "fetchError": "获取分享链接失败",
+                "deleteSuccess": "分享链接删除成功",
+                "deleteError": "删除分享链接失败",
+                "updateSuccess": "分享链接更新成功",
+                "updateError": "更新分享链接失败",
+                "confirmDelete": "确定要删除此分享链接吗？",
+                "untitled": "无标题对话",
+                "expired": "已过期",
+                "never": "永不过期",
+                "createdAt": "创建时间",
+                "expiresAt": "过期时间",
+                "copyLink": "复制链接",
+                "openLink": "打开链接",
+                "copied": "链接已复制到剪贴板",
+                "editTitle": "更新分享链接",
+                "editDescription": "更新过期时间并刷新对话内容。",
+                "conversation": "对话",
+                "newExpiration": "新的有效期"
             }
         },
         "admin": {
