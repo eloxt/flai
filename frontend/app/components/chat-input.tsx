@@ -87,6 +87,7 @@ export function ChatInput({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const dragCounterRef = useRef(0);
+    const isComposingRef = useRef(false);
 
     // MCP configs state
     const [mcpConfigs, setMcpConfigs] = useState<MCPConfig[]>([]);
@@ -104,8 +105,16 @@ export function ChatInput({
         fetchMcpConfigs();
     }, []);
 
+    const handleCompositionStart = () => {
+        isComposingRef.current = true;
+    };
+
+    const handleCompositionEnd = () => {
+        isComposingRef.current = false;
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
             e.preventDefault();
             onSend();
         }
@@ -228,6 +237,8 @@ export function ChatInput({
                     onChange={(e) => onChange(e.target.value)}
                     onHeightChange={onHeightChange}
                     onKeyDown={handleKeyDown}
+                    onCompositionStart={handleCompositionStart}
+                    onCompositionEnd={handleCompositionEnd}
                     disabled={isLoading}
                     maxRows={7}
                     minRows={1}

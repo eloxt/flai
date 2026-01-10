@@ -36,8 +36,8 @@ func (c *ControllerV1) GenerateTitle(ctx context.Context, req *v1.GenerateTitleR
 	var messages []*entity.Message
 	err = dao.Message.Ctx(ctx).
 		Where(do.Message{ConversationId: conversation.Id}).
-		OrderDesc("created_at").
-		Limit(2).
+		OrderAsc("created_at").
+		Limit(1).
 		Scan(&messages)
 	if err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch messages")

@@ -115,6 +115,7 @@ export default function Chat() {
     const handleSend = () => {
         if (!input.trim()) return;
         sendMessage({ text: input });
+        scrollToBottom();
     };
 
     return (
