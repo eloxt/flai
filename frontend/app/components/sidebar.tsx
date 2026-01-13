@@ -46,6 +46,7 @@ import AdminPanel from "./admin-panel";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { api } from "@/lib/api";
+import { useAppStore } from "@/store/app-store";
 
 interface SearchResponse {
     conversation_id: string;
@@ -55,7 +56,7 @@ interface SearchResponse {
     highlight: string;
 }
 
-export default function AppSidebar() {
+export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { t } = useTranslation();
     const location = useLocation();
     const user = useAuthStore((state) => state.user);
@@ -71,15 +72,22 @@ export default function AppSidebar() {
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
     const [showAdminDialog, setShowAdminDialog] = useState(false);
     const [showSearchDialog, setShowSearchDialog] = useState(false);
-    const { toggleSidebar } = useSidebar();
     const [queryParam, setQueryParam] = useState<string>("");
     const [searchResults, setSearchResults] = useState<SearchResponse[]>([]);
+    const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
+    const { open, toggleSidebar } = useSidebar();
 
     useEffect(() => {
         if (tokens?.access_token) {
             fetchConversations();
         }
     }, [tokens?.access_token]);
+
+    useEffect(() => {
+        if (isSidebarOpen !== open) {
+            toggleSidebar();
+        }
+    }, [isSidebarOpen]);
 
     const handleDelete = (id: string) => {
         setConversationToDelete(id);
@@ -98,7 +106,7 @@ export default function AppSidebar() {
 
     return (
         <>
-            <Sidebar collapsible="icon" variant="sidebar">
+            <Sidebar collapsible="icon" variant="sidebar" {...props}>
                 <SidebarHeader className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
                     <div
                         className="flex items-center justify-between overflow-hidden w-full transition-[width,height,padding] x text-sm"

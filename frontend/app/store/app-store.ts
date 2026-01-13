@@ -3,36 +3,47 @@ import {
   createJSONStorage,
   persist,
 } from "zustand/middleware";
+import type { TreeNode } from "@/page/chat/types";
 
 interface AppState {
-  isSidebarCollapsed: boolean;
+  isSidebarOpen: boolean;
   toggleSidebar: () => void;
-  setSidebarCollapsed: (collapsed: boolean) => void;
   showHeaderBorder: boolean;
   setShowHeaderBorder: (show: boolean) => void;
-  currentMessagePath: string[];
-  setCurrentMessagePath: (path: string[]) => void;
+  currentMessagePath: TreeNode[];
+  setCurrentMessagePath: (path: TreeNode[]) => void;
+  isInspectionPanelOpen: boolean;
+  toggleInspectionPanel: () => void;
+  scrollToMessageId: string | null;
+  setScrollToMessageId: (id: string | null) => void;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      isSidebarCollapsed: false,
+      isSidebarOpen: true,
       toggleSidebar: () =>
         set((state) => ({
-          isSidebarCollapsed: !state.isSidebarCollapsed,
+          isSidebarOpen: !state.isSidebarOpen,
         })),
-      setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
       showHeaderBorder: false,
       setShowHeaderBorder: (show) => set({ showHeaderBorder: show }),
       currentMessagePath: [],
       setCurrentMessagePath: (path) => set({ currentMessagePath: path }),
+      isInspectionPanelOpen: false,
+      toggleInspectionPanel: () =>
+        set((state) => ({
+          isInspectionPanelOpen: !state.isInspectionPanelOpen,
+        })),
+      scrollToMessageId: null,
+      setScrollToMessageId: (id) => set({ scrollToMessageId: id }),
     }),
     {
       name: "flai-app-store",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        isSidebarCollapsed: state.isSidebarCollapsed,
+        isSidebarOpen: state.isSidebarOpen,
+        isRightSidebarOpen: state.isInspectionPanelOpen,
       }),
     }
   )

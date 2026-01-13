@@ -347,6 +347,12 @@
             "callingTool": "正在调用工具：",
             "completed": "已完成",
             "failed": "失败"
+        },
+        "inspectionPanel": {
+            "title": "时间线",
+            "empty": "暂无消息",
+            "responded": "已回复",
+            "end": "对话结束"
         }
     }
 }

@@ -9,7 +9,6 @@ import { api, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "./ui/badge";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface ModelCardDetailProps {
     model: Model;
@@ -45,65 +44,62 @@ export default function ModelSelector() {
     };
 
     return (
-        <>
-            <SidebarTrigger className="md:hidden" />
-            <DropdownMenu onOpenChange={setShowModelMenu}>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        disabled={isLoading}
-                        className="text-lg font-normal"
-                    >
-                        {currentModel ? currentModel.name : t("components.modelSelector.select")}
-                        <ChevronDown
-                            className={`size-4 text-muted-foreground transition-transform duration-200 ${showModelMenu ? "rotate-180" : ""}`}
-                        />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-3xs" align="start">
-                    {providers.map((provider, index) => (
-                        <DropdownMenuGroup key={provider.id}>
-                            <DropdownMenuLabel
-                                className="font-normal text-neutral-500 flex items-center"
-                                key={provider.id}>
-                                {provider.logo && (
-                                    provider.logo.startsWith("<svg") ? (
-                                        <div
-                                            className="size-4 mr-2 [&>svg]:w-full [&>svg]:h-full"
-                                            dangerouslySetInnerHTML={{ __html: provider.logo }}
-                                        />
-                                    ) : (
-                                        <img
-                                            src={provider.logo}
-                                            alt={provider.name}
-                                            className="size-4 mr-2 object-contain"
-                                        />
-                                    )
-                                )}
-                                {provider.name}
-                            </DropdownMenuLabel>
-                            {provider.model.map((model) => (
-                                <HoverCard key={model.id} openDelay={150} closeDelay={150}>
-                                    <HoverCardTrigger>
-                                        <DropdownMenuCheckboxItem
-                                            className="font-normal"
-                                            key={model.id}
-                                            checked={currentModel?.id === model.id}
-                                            onCheckedChange={() => setCurrentModel({ ...model, provider_id: provider.id })}>
-                                            {model.name}
-                                        </DropdownMenuCheckboxItem>
-                                    </HoverCardTrigger>
-                                    <HoverCardContent className="min-w-2xs max-w-sm" side="right" align="start" sideOffset={15}>
-                                        <ModelCardDetail model={model} />
-                                    </HoverCardContent>
-                                </HoverCard>
-                            ))}
-                            {index < providers.length - 1 && <DropdownMenuSeparator />}
-                        </DropdownMenuGroup>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </>
+        <DropdownMenu onOpenChange={setShowModelMenu}>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    disabled={isLoading}
+                    className="text-lg font-normal"
+                >
+                    {currentModel ? currentModel.name : t("components.modelSelector.select")}
+                    <ChevronDown
+                        className={`size-4 text-muted-foreground transition-transform duration-200 ${showModelMenu ? "rotate-180" : ""}`}
+                    />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-3xs" align="start">
+                {providers.map((provider, index) => (
+                    <DropdownMenuGroup key={provider.id}>
+                        <DropdownMenuLabel
+                            className="font-normal text-neutral-500 flex items-center"
+                            key={provider.id}>
+                            {provider.logo && (
+                                provider.logo.startsWith("<svg") ? (
+                                    <div
+                                        className="size-4 mr-2 [&>svg]:w-full [&>svg]:h-full"
+                                        dangerouslySetInnerHTML={{ __html: provider.logo }}
+                                    />
+                                ) : (
+                                    <img
+                                        src={provider.logo}
+                                        alt={provider.name}
+                                        className="size-4 mr-2 object-contain"
+                                    />
+                                )
+                            )}
+                            {provider.name}
+                        </DropdownMenuLabel>
+                        {provider.model.map((model) => (
+                            <HoverCard key={model.id} openDelay={150} closeDelay={150}>
+                                <HoverCardTrigger>
+                                    <DropdownMenuCheckboxItem
+                                        className="font-normal"
+                                        key={model.id}
+                                        checked={currentModel?.id === model.id}
+                                        onCheckedChange={() => setCurrentModel({ ...model, provider_id: provider.id })}>
+                                        {model.name}
+                                    </DropdownMenuCheckboxItem>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="min-w-2xs max-w-sm" side="right" align="start" sideOffset={15}>
+                                    <ModelCardDetail model={model} />
+                                </HoverCardContent>
+                            </HoverCard>
+                        ))}
+                        {index < providers.length - 1 && <DropdownMenuSeparator />}
+                    </DropdownMenuGroup>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 

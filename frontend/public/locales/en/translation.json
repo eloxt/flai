@@ -346,6 +346,12 @@
             "callingTool": "Calling tool:",
             "completed": "completed",
             "failed": "failed"
+        },
+        "inspectionPanel": {
+            "title": "Timeline",
+            "empty": "No messages yet",
+            "responded": "Responded",
+            "end": "End of conversation"
         }
     }
 }

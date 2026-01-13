@@ -24,7 +24,6 @@ import type {
     Attachment,
     MCPTool,
 } from "./types";
-import { applyGoogleCitations, applyOpenaiCitations } from "./utils";
 
 // ============================================================================
 // Constants
@@ -67,26 +66,6 @@ interface StreamContext {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Apply grounding citations to a message node
- */
-function applyGroundingToNode(node: TreeNode): void {
-    if (node.content.length === 0) return;
-    const lastContent = node.content[node.content.length - 1];
-    if (lastContent.type !== "message") return;
-
-    const contentData = lastContent.data as ContentMessage;
-
-    if (node.meta_info?.google_grounding_data) {
-        const { groundingSupports, groundingChunks } = node.meta_info.google_grounding_data;
-        contentData.content = applyGoogleCitations(contentData.content, groundingSupports, groundingChunks);
-    }
-
-    if (node.meta_info?.openai_grounding_data) {
-        contentData.content = applyOpenaiCitations(contentData.content, node.meta_info.openai_grounding_data);
-    }
-}
 
 /**
  * Create an optimistic user message for immediate UI update
@@ -258,7 +237,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         // First pass: create nodes and find the latest message
         for (const message of messages) {
             const node: TreeNode = { ...message, children: [] };
-            applyGroundingToNode(node);
             map.set(message.id, node);
 
             if (!lastMessage || message.created_at >= lastMessage.created_at) {
@@ -389,16 +367,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             const groundingData = streamResponse.data as GoogleGroundingData;
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
                 msg.meta_info = { ...(msg.meta_info || DEFAULT_META_INFO), google_grounding_data: groundingData };
-                if (msg.content.length > 0) {
-                    const lastContent = msg.content[msg.content.length - 1];
-                    if (lastContent.type === "message") {
-                        (lastContent.data as ContentMessage).content = applyGoogleCitations(
-                            (lastContent.data as ContentMessage).content,
-                            groundingData.groundingSupports,
-                            groundingData.groundingChunks
-                        );
-                    }
-                }
             });
             setPathFn(ctx.newPath);
             return;
@@ -409,15 +377,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             const groundingData = streamResponse.data as OpenaiGroundingData[];
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
                 msg.meta_info = { ...(msg.meta_info || DEFAULT_META_INFO), openai_grounding_data: groundingData };
-                if (msg.content.length > 0) {
-                    const lastContent = msg.content[msg.content.length - 1];
-                    if (lastContent.type === "message") {
-                        (lastContent.data as ContentMessage).content = applyOpenaiCitations(
-                            (lastContent.data as ContentMessage).content,
-                            groundingData
-                        );
-                    }
-                }
             });
             setPathFn(ctx.newPath);
             return;

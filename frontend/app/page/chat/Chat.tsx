@@ -5,7 +5,7 @@ import type { MetaFunction } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat-input";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { useAppStore } from "@/store/app-store";
@@ -76,7 +76,7 @@ export default function Chat() {
     // Sync message path to app store for sharing
     const setCurrentMessagePath = useAppStore((state) => state.setCurrentMessagePath);
     useEffect(() => {
-        setCurrentMessagePath(path.map((msg) => msg.id));
+        setCurrentMessagePath(path);
     }, [path, setCurrentMessagePath]);
 
     // Scroll to bottom when path changes
@@ -85,6 +85,20 @@ export default function Chat() {
             scrollToBottom();
         }
     }, [path]);
+
+    // Scroll to specific message when triggered from timeline
+    const scrollToMessageId = useAppStore((state) => state.scrollToMessageId);
+    const setScrollToMessageId = useAppStore((state) => state.setScrollToMessageId);
+    useEffect(() => {
+        if (scrollToMessageId) {
+            const messageElement = document.querySelector(`[data-message-id="${scrollToMessageId}"]`);
+            if (messageElement) {
+                messageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            // Reset the scroll target
+            setScrollToMessageId(null);
+        }
+    }, [scrollToMessageId, setScrollToMessageId]);
 
     const scrollToBottom = () => {
         const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
@@ -128,7 +142,7 @@ export default function Chat() {
                     paddingBottom: `${inputHeight + 74 + (attachments.length > 0 ? 36 : 0)}px`,
                 }}
             >
-                <div className="pt-4 mx-auto max-w-5xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
+                <div className="pt-4 mx-auto max-w-7xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
                     {isLoading ? (
                         <ChatSkeleton />
                     ) : (
@@ -150,8 +164,6 @@ export default function Chat() {
                     )}
 
                 </div>
-
-                <ScrollBar orientation="horizontal" />
             </ScrollArea>
 
             <div className="absolute bottom-4 left-0 right-0 z-50 px-4 pointer-events-none">
@@ -173,7 +185,7 @@ export default function Chat() {
                         <ArrowDown className="size-4" />
                     </Button>
                 </div>
-                <div className="mx-auto max-w-5xl pointer-events-auto bg-background">
+                <div className="mx-auto max-w-7xl pointer-events-auto bg-background">
                     <ChatInput
                         value={input}
                         onChange={setInput}

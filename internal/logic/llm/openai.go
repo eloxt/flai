@@ -10,7 +10,6 @@ import (
 	"flai/internal/model/entity"
 	"strings"
 
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
@@ -96,8 +95,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 			Tools: openaiTools,
 		}
 
-		a, _ := params.MarshalJSON()
-		g.Log().Debugf(ctx, "OpenAI request params: %s", string(a))
 		stream := client.Responses.NewStreaming(ctx, params)
 
 		var functionCalls []responses.ResponseFunctionToolCall
