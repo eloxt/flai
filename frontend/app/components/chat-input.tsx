@@ -193,6 +193,22 @@ export function ChatInput({
         }
     }, [uploadFile]);
 
+    const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    await uploadFile(file);
+                }
+                return;
+            }
+        }
+    }, [uploadFile]);
+
     const isToolSelected = (mcpId: string, toolName: string) => {
         return selectedMcpTools.some(t => t.mcp_id === mcpId && t.name === toolName);
     };
@@ -239,6 +255,7 @@ export function ChatInput({
                     onKeyDown={handleKeyDown}
                     onCompositionStart={handleCompositionStart}
                     onCompositionEnd={handleCompositionEnd}
+                    onPaste={handlePaste}
                     disabled={isLoading}
                     maxRows={7}
                     minRows={1}
