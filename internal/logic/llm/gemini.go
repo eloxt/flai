@@ -71,6 +71,9 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 
 	// Create content config
 	config := &genai.GenerateContentConfig{
+		SystemInstruction: &genai.Content{
+			Parts: []*genai.Part{genai.NewPartFromText(ComposeSystemPrompt())},
+		},
 		ThinkingConfig: &genai.ThinkingConfig{
 			IncludeThoughts: true,
 		},

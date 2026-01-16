@@ -6,7 +6,8 @@ import { useModelStore } from "./store/model-store";
 import { useInputStore } from "./store/input-store";
 import { api } from "./lib/api";
 import { toast } from "sonner";
-
+import { useAppStore } from "./store/app-store";
+import { useEffect } from "react";
 
 export default function Main() {
     const { t } = useTranslation();
@@ -16,6 +17,18 @@ export default function Main() {
     const setInputValue = useInputStore((state) => state.setMainInput);
     const [isLoading, setIsLoading] = useState(false);
     const setSendMainInput = useInputStore((state) => state.setSendMainInput);
+    const toggleInspectionPanel = useAppStore(
+        (state) => state.toggleInspectionPanel,
+    );
+    const isInspectionPanelOpen = useAppStore(
+        (state) => state.isInspectionPanelOpen,
+    );
+    const setCurrentMessagePath = useAppStore(
+        (state) => state.setCurrentMessagePath,
+    );
+    const setShowHeaderBorder = useAppStore(
+        (state) => state.setShowHeaderBorder,
+    );
 
     const handleSend = async () => {
         if (!inputValue.trim()) return;
@@ -26,7 +39,10 @@ export default function Main() {
 
         setIsLoading(true);
         try {
-            const conversationRes = await api.post<{ id: string }>("/api/conversation", {});
+            const conversationRes = await api.post<{ id: string }>(
+                "/api/conversation",
+                {},
+            );
             const conversationId = conversationRes.id;
             setSendMainInput(true);
             navigate(`/chat/${conversationId}`);
@@ -42,11 +58,17 @@ export default function Main() {
         }
     };
 
+    useEffect(() => {
+        if (isInspectionPanelOpen) {
+            toggleInspectionPanel();
+        }
+        setCurrentMessagePath([]);
+        setShowHeaderBorder(false);
+    }, []);
+
     return (
         <div className="flex h-full flex-col items-center justify-center gap-12 px-4">
-            <p className="font-medium text-3xl">
-                {t("pages.chat.greeting")}
-            </p>
+            <p className="font-medium text-3xl">{t("pages.chat.greeting")}</p>
             <ChatInput
                 className="max-w-3xl"
                 value={inputValue}

@@ -85,6 +85,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	for round := 0; round < maxToolRounds; round++ {
 		// Create stream params
 		params := responses.ResponseNewParams{
+			Instructions: openai.String(ComposeSystemPrompt()),
 			Model: modelConfig.ID,
 			Input: responses.ResponseNewParamsInputUnion{
 				OfInputItemList: currentInputItems,
@@ -93,6 +94,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 				Summary: shared.ReasoningSummaryAuto,
 			},
 			Tools: openaiTools,
+			Store: openai.Bool(false),
 		}
 
 		stream := client.Responses.NewStreaming(ctx, params)

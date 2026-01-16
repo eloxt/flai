@@ -10,6 +10,7 @@ import (
 	"flai/internal/model/entity"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -197,4 +198,21 @@ func ParseHistoryContents(msg *entity.Message) ([]Content, error) {
 		return nil, err
 	}
 	return contents, nil
+}
+
+func ComposeSystemPrompt() string {
+	systemPromptObject, ok := logic.SystemConfigMap[consts.SystemConfig.SystemPrompt]
+	if !ok {
+		return ""
+	}
+	systemPromptString, ok := systemPromptObject["prompt"].(string)
+	if !ok {
+		return ""
+	}
+	
+	// inject currentTime
+	currentTimeString := time.Now().Format(time.RFC3339)
+	systemPromptString = strings.ReplaceAll(systemPromptString, "{{currentDateTime}}", currentTimeString)
+	
+	return systemPromptString
 }
