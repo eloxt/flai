@@ -1,0 +1,15 @@
+# Nixpacks configuration for flai
+
+[phases.setup]
+nixPkgs = ["go_1_24", "nodejs_22", "pnpm", "gnumake", "wget"]
+
+[phases.install]
+cmds = [
+    "cd frontend && pnpm install"
+]
+
+[phases.build]
+cmds = ["make"]
+
+[start]
+cmd = "./bin/0.0.1/linux_amd64/flai"
