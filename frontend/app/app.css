@@ -144,6 +144,10 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  code {
+    font-size: 1.07em;
+  }
 }
 
 .shimmer {

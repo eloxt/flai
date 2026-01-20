@@ -40,9 +40,13 @@ func (c *ControllerV1) Login(ctx context.Context, req *v1.LoginReq) (res *v1.Log
 	}
 
 	var preference map[string]any
-	err = json.Unmarshal([]byte(user.Preference), &preference)
-	if err != nil {
-		return nil, err
+	if user.Preference == "" {
+		preference = make(map[string]any)
+	} else {
+		err = json.Unmarshal([]byte(user.Preference), &preference)
+		if err != nil {
+			return nil, err
+		}
 	}
 	res = &v1.LoginRes{
 		User: v1.LoginUser{
