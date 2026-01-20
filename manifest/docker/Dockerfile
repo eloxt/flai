@@ -11,7 +11,7 @@ WORKDIR /src
 COPY . .
 
 # Install gf CLI and build
-RUN make build
+RUN make
 
 ###############################################################################
 #                              FINAL IMAGE
