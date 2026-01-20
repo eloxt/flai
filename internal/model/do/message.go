@@ -20,5 +20,4 @@ type Message struct {
 	DeletedAt      *gtime.Time //
 	Role           any         //
 	MetaInfo       any         //
-	TsvContent     any         //
 }
