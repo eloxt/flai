@@ -5,6 +5,7 @@ import (
 	"flai/utility"
 
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 type RegisterReq struct {
@@ -26,6 +27,20 @@ type LoginReq struct {
 }
 
 type LoginRes struct {
-	User  *entity.User       `json:"user"`
+	User  LoginUser          `json:"user"`
 	Token *utility.TokenPair `json:"token"`
+}
+
+type LoginUser struct {
+	Id         string         `json:"id"         ` //
+	Email      string         `json:"email"      ` //
+	Username   string         `json:"username"   ` //
+	Password   string         `json:"password"   ` //
+	Role       string         `json:"role"       ` //
+	IsActive   int            `json:"is_active"  ` // IsActive indicates whether the user account is active, represented as an integer flag (e.g., 0 for inactive, 1 for active).
+	CreatedAt  *gtime.Time    `json:"created_at" ` //
+	UpdatedAt  *gtime.Time    `json:"updated_at" ` //
+	DeletedAt  *gtime.Time    `json:"deleted_at" ` //
+	Avatar     string         `json:"avatar"     ` //
+	Preference map[string]any `json:"preference" ` //
 }

@@ -18,4 +18,5 @@ type Message struct {
 	DeletedAt      *gtime.Time `json:"deleted_at"      orm:"deleted_at"      description:""` //
 	Role           string      `json:"role"            orm:"role"            description:""` //
 	MetaInfo       string      `json:"meta_info"       orm:"meta_info"       description:""` //
+	TsvContent     string      `json:"tsv_content"     orm:"tsv_content"     description:""` //
 }

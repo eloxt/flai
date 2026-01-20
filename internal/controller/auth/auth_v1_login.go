@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"flai/internal/consts"
 	"flai/internal/dao"
 	"flai/internal/model/do"
@@ -38,8 +39,24 @@ func (c *ControllerV1) Login(ctx context.Context, req *v1.LoginReq) (res *v1.Log
 		return nil, gerror.Wrap(err, `Generate access token failed`)
 	}
 
+	var preference map[string]any
+	err = json.Unmarshal([]byte(user.Preference), &preference)
+	if err != nil {
+		return nil, err
+	}
 	res = &v1.LoginRes{
-		User:  user,
+		User: v1.LoginUser{
+			Id:         user.Id,
+			Email:      user.Email,
+			Username:   user.Username,
+			Role:       user.Role,
+			IsActive:   user.IsActive,
+			CreatedAt:  user.CreatedAt,
+			UpdatedAt:  user.UpdatedAt,
+			DeletedAt:  user.DeletedAt,
+			Avatar:     user.Avatar,
+			Preference: preference,
+		},
 		Token: token,
 	}
 	return res, nil
