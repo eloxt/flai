@@ -16,16 +16,16 @@ export function MessageAttachments({ files }: MessageAttachmentsProps) {
     const others = files.filter((f) => !f.mime_type.startsWith("image/"));
 
     return (
-        <div className="flex flex-col gap-2 w-full my-2">
+        <div className="flex flex-col items-end gap-2 w-full my-2">
             {images.length > 0 && (
-                <ScrollArea className="w-full whitespace-nowrap">
+                <ScrollArea className="whitespace-nowrap">
                     <PhotoProvider>
                         {images.map((file, fileIndex) => (
                             <PhotoView src={file.public_url} key={fileIndex}>
                                 <img
                                     src={file.public_url}
                                     alt={file.file_name}
-                                    className="h-48 w-auto rounded-lg border border-border"
+                                    className="max-h-40 max-w-80 rounded-lg border border-border"
                                     loading="lazy"
                                 />
                             </PhotoView>
