@@ -75,7 +75,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const [queryParam, setQueryParam] = useState<string>("");
     const [searchResults, setSearchResults] = useState<SearchResponse[]>([]);
     const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
-    const { open, toggleSidebar } = useSidebar();
+    const { open, setOpen, toggleSidebar } = useSidebar();
 
     useEffect(() => {
         if (tokens?.access_token) {
@@ -86,6 +86,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     useEffect(() => {
         if (isSidebarOpen !== open) {
             toggleSidebar();
+            setOpen(isSidebarOpen);
         }
     }, [isSidebarOpen]);
 

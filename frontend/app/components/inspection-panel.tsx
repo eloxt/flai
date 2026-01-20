@@ -1,10 +1,10 @@
 import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslation } from "react-i18next";
-import { User, Bot, Clock } from "lucide-react";
+import { User, Clock } from "lucide-react";
 import type { TreeNode, ContentMessage } from "@/page/chat/types";
 import { useAppStore } from "@/store/app-store";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 interface InspectionPanelProps {
     messagePath: TreeNode[];
