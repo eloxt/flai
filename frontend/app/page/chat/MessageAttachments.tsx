@@ -1,33 +1,12 @@
-import { useState } from "react";
 import { FileIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Spinner } from "@/components/ui/spinner";
-import { formatBytes } from "@/lib/utils";
 import type { Attachment } from "./types";
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import 'react-photo-view/dist/react-photo-view.css';
+import { formatBytes } from "@/lib/utils";
 
 interface MessageAttachmentsProps {
     files: Attachment[];
-}
-
-function ImageWithSpinner({ file }: { file: Attachment }) {
-    const [isLoading, setIsLoading] = useState(true);
-
-    return (
-        <div className="relative h-48 min-w-[192px] flex items-center justify-center">
-            {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted rounded-lg border border-border">
-                    <Spinner className="size-6 text-muted-foreground" />
-                </div>
-            )}
-            <img
-                src={file.public_url}
-                alt={file.file_name}
-                className={`h-48 w-auto rounded-lg border border-border object-contain bg-muted transition-opacity duration-300 ${isLoading ? "opacity-0" : "opacity-100"}`}
-                loading="lazy"
-                onLoad={() => setIsLoading(false)}
-            />
-        </div>
-    );
 }
 
 export function MessageAttachments({ files }: MessageAttachmentsProps) {
@@ -40,11 +19,18 @@ export function MessageAttachments({ files }: MessageAttachmentsProps) {
         <div className="flex flex-col gap-2 w-full my-2">
             {images.length > 0 && (
                 <ScrollArea className="w-full whitespace-nowrap">
-                    <div className="flex gap-2">
+                    <PhotoProvider>
                         {images.map((file, fileIndex) => (
-                            <ImageWithSpinner key={fileIndex} file={file} />
+                            <PhotoView src={file.public_url} key={fileIndex}>
+                                <img
+                                    src={file.public_url}
+                                    alt={file.file_name}
+                                    className="h-48 w-auto rounded-lg border border-border"
+                                    loading="lazy"
+                                />
+                            </PhotoView>
                         ))}
-                    </div>
+                    </PhotoProvider>
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             )}
