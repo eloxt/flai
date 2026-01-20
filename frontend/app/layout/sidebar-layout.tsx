@@ -4,6 +4,8 @@ import InspectionPanel from "../components/inspection-panel";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAppStore } from "../store/app-store";
 import ChatHeader from "@/components/chat-header";
+import "@fontsource/iosevka";
+import "@fontsource/ibm-plex-sans";
 
 export default function SidebarLayout() {
     const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
