@@ -80,6 +80,9 @@ export default function Chat() {
 
     // Scroll to bottom when path changes
     useEffect(() => {
+        if (!isStreaming) {
+            return;
+        }
         if (!showScrollButton) {
             scrollToBottom();
         }
@@ -100,9 +103,11 @@ export default function Chat() {
     }, [scrollToMessageId, setScrollToMessageId]);
 
     const scrollToBottom = () => {
-        if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: "smooth" });
-        }
+        requestAnimationFrame(() => {
+            if (scrollAreaRef.current) {
+                scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: "smooth" });
+            }
+        });
     };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

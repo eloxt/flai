@@ -32,9 +32,11 @@ export function MessageItem({
     onRetry,
     onDelete,
 }: MessageItemProps) {
+    const [streamed, setStreamed] = useState(false);
+
     const isLastMessage = messageIndex === pathLength - 1;
 
-    const shouldExpandToFillViewport = isLastMessage && message.role === "assistant";
+    const shouldExpandToFillViewport = isLastMessage && message.role === "assistant" && streamed;
 
     const [dynamicMinHeight, setDynamicMinHeight] = useState<string | undefined>(undefined);
 
@@ -51,7 +53,13 @@ export function MessageItem({
         } else {
             setDynamicMinHeight(undefined);
         }
-    }, [shouldExpandToFillViewport, previousMessageId]);
+    }, [shouldExpandToFillViewport, previousMessageId, window.innerHeight]);
+
+    useEffect(() => {
+        if (isStreaming) {
+            setStreamed(true);
+        }
+    }, [isStreaming]);
 
     return (
         <div
