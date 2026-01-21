@@ -108,7 +108,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     return (
         <>
             <Sidebar collapsible="icon" variant="sidebar" {...props}>
-                <SidebarHeader className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
+                <SidebarHeader className="transition-colors group-data-[collapsible=icon]:bg-background">
                     <div
                         className="flex items-center justify-between overflow-hidden w-full transition-[width,height,padding] x text-sm"
                     >
@@ -123,7 +123,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                             FlaiChat
                         </span>
 
-                        <Button variant="ghost" onClick={toggleSidebar} className="hidden p-2! md:block group-data-[collapsible=icon]:opacity-0 transition-[width,opacity] duration-200">
+                        <Button variant="ghost" onClick={toggleSidebar} className="hidden p-2! md:block group-data-[collapsible=icon]:opacity-0 transition-[width,opacity]">
                             <PanelLeft className="size-4" />
                         </Button>
                     </div>
@@ -148,8 +148,8 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                     </SidebarMenu>
                 </SidebarHeader>
 
-                <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
-                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100 duration-200">
+                <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background">
+                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100">
                         <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">
                             {t("components.sidebar.chats")}
                         </SidebarGroupLabel>
@@ -203,7 +203,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                     </SidebarGroup>
                 </SidebarContent>
 
-                <SidebarFooter className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
+                <SidebarFooter className="transition-colors group-data-[collapsible=icon]:bg-background">
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <DropdownMenu>

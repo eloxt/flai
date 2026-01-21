@@ -64,7 +64,7 @@ export function MessageContent({
                         : "grid-rows-[0fr] opacity-0"
                         }`}
                 >
-                    <div className="overflow-hidden border-l-1 border-[var(--border)] pl-4">
+                    <div className="overflow-hidden border-l border-border pl-4">
                         <div className="markdown-body pb-2">
                             <Streamdown caret="circle" isAnimating={isStreaming} plugins={{cjk: cjk, math: math}}>
                                 {(content.data as ContentReasoning).content}

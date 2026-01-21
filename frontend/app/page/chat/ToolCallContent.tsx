@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, ArrowDownRight, ChevronRight, Check } from "lucide-react";
+import { XCircle, ArrowDownRight, ChevronRight, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ContentToolCall, ContentToolResult } from "./types";
 import { ItemMedia, ItemContent, ItemTitle, Item } from "@/components/ui/item";

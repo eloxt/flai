@@ -498,7 +498,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 attachments
             );
             newPath.push(userMessage);
-            setPath(newPath);
 
             if (userMessage.parent_id) {
                 nodeMap.get(userMessage.parent_id)?.children.push(userMessage);

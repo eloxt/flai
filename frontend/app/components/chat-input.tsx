@@ -237,7 +237,7 @@ export function ChatInput({
         >
             {/* Drag overlay */}
             {isDragging && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-1 border-dashed border-primary rounded-lg backdrop-blur-sm">
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border border-dashed border-primary rounded-lg backdrop-blur-sm">
                     <div className="flex flex-col items-center gap-2 text-primary">
                         <Paperclip className="size-6" />
                         <p className="text-sm font-medium">{t("common.dropFilesHere")}</p>

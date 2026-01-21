@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { TreeNode, ContentMessage } from "./types";
 import { MessageContent } from "./MessageContent";
 import { MessageAttachments } from "./MessageAttachments";
@@ -11,6 +12,7 @@ interface MessageItemProps {
     isStreaming: boolean;
     expandedReasoning: Set<string>;
     nodeMap: Map<string, TreeNode>;
+    previousMessageId?: string;
     onToggleReasoning: (messageId: string) => void;
     onSwitchNode: (message: TreeNode, isNext: boolean) => void;
     onRetry: (message: TreeNode) => void;
@@ -24,6 +26,7 @@ export function MessageItem({
     isStreaming,
     expandedReasoning,
     nodeMap,
+    previousMessageId,
     onToggleReasoning,
     onSwitchNode,
     onRetry,
@@ -31,8 +34,34 @@ export function MessageItem({
 }: MessageItemProps) {
     const isLastMessage = messageIndex === pathLength - 1;
 
+    const shouldExpandToFillViewport = isLastMessage && message.role === "assistant";
+
+    const [dynamicMinHeight, setDynamicMinHeight] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (shouldExpandToFillViewport && previousMessageId) {
+            const previousMessageElement = document.querySelector(
+                `[data-message-id="${previousMessageId}"]`
+            );
+            if (previousMessageElement) {
+                const previousMessageHeight = previousMessageElement.getBoundingClientRect().height;
+                const calculatedHeight = window.innerHeight - previousMessageHeight - 32 - 240;
+                setDynamicMinHeight(`${Math.max(calculatedHeight, 100)}px`);
+            }
+        } else {
+            setDynamicMinHeight(undefined);
+        }
+    }, [shouldExpandToFillViewport, previousMessageId]);
+
     return (
-        <div key={message.id} data-message-id={message.id} className="flex flex-col gap-2 group min-w-0 w-full">
+        <div
+            key={message.id}
+            data-message-id={message.id}
+            className="flex flex-col gap-2 group min-w-0 w-full"
+            style={{
+                minHeight: dynamicMinHeight,
+            }}
+        >
             {message.content !== null &&
                 message.content.map((content, index) => (
                     <div
@@ -55,7 +84,7 @@ export function MessageItem({
                         {/* Content */}
                         <div
                             className={`px-4 rounded-2xl min-w-0 ${message.role === "user"
-                                ? "bg-[var(--color-user-msg-bg)] py-2"
+                                ? "bg-(--color-user-msg-bg) py-2"
                                 : "w-full"
                                 }`}
                         >

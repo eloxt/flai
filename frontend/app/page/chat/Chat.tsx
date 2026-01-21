@@ -107,7 +107,7 @@ export default function Chat() {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        const isBottom = scrollHeight - scrollTop - clientHeight < 50;
+        const isBottom = scrollHeight - scrollTop - clientHeight < 500;
         setShowScrollButton(!isBottom);
         setShowHeaderBorder(scrollTop > 20);
     };
@@ -154,6 +154,7 @@ export default function Chat() {
                                 isStreaming={isStreaming && message.id === path[path.length - 1].id}
                                 expandedReasoning={expandedReasoning}
                                 nodeMap={nodeMap}
+                                previousMessageId={messageIndex > 0 ? path[messageIndex - 1].id : undefined}
                                 onToggleReasoning={toggleReasoning}
                                 onSwitchNode={switchNode}
                                 onRetry={retryMessage}
@@ -166,7 +167,7 @@ export default function Chat() {
 
             <div className="absolute bottom-4 left-0 right-0 z-50 px-4 md:px-8 pointer-events-none">
                 <div
-                    className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-opacity duration-200 ${showScrollButton
+                    className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-opacity ${showScrollButton
                         ? "opacity-100 pointer-events-auto"
                         : "opacity-0 pointer-events-none"
                         }`}

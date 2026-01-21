@@ -85,7 +85,7 @@ export default function InspectionPanel({ messagePath }: InspectionPanelProps) {
                         ) : (
                             <div className="relative">
                                 {/* Timeline line */}
-                                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/50 via-primary/30 to-transparent" />
+                                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-linear-to-b from-primary/50 via-primary/30 to-transparent" />
 
                                 {/* Timeline items */}
                                 <div className="flex flex-col gap-4">

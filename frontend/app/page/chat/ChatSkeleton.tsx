@@ -4,7 +4,7 @@ export function ChatSkeleton() {
     return (
         <div className="flex flex-col gap-6 w-full">
             <div className="flex flex-col items-end gap-2 max-w-[80%] self-end">
-                <div className="px-4 py-3 rounded-2xl w-full bg-[var(--secondary)]">
+                <div className="px-4 py-3 rounded-2xl w-full bg-secondary">
                     <Skeleton className="h-4 w-[200px]" />
                 </div>
             </div>
