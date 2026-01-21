@@ -112,7 +112,7 @@ export default function Chat() {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        const isBottom = scrollHeight - scrollTop - clientHeight < 50;
+        const isBottom = scrollHeight - scrollTop - clientHeight < 100;
         setShowScrollButton(!isBottom);
         setShowHeaderBorder(scrollTop > 20);
     };

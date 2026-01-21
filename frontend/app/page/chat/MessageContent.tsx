@@ -10,6 +10,7 @@ import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import "katex/dist/katex.min.css";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 
 interface MessageContentProps {
     content: Content;
@@ -24,7 +25,6 @@ interface MessageContentProps {
 
 export function MessageContent({
     content,
-    messageId,
     isLastMessage,
     isLastContent,
     isStreaming,
@@ -32,6 +32,10 @@ export function MessageContent({
     onToggleReasoning,
 }: MessageContentProps) {
     const { t } = useTranslation();
+
+    if (content.type === "pending" && isStreaming) {
+        return <Shimmer>{t("pages.chat.pending")}</Shimmer>;
+    }
 
     // Tool call content
     if (content.type === "tool_call") {
@@ -53,7 +57,7 @@ export function MessageContent({
                         <ChevronRight className="size-3" />
                     )}
                     {isLastMessage && isLastContent ? (
-                        <span className="shimmer">{t("pages.chat.reasoning.process")}</span>
+                        <Shimmer>{t("pages.chat.reasoning.process")}</Shimmer>
                     ) : (
                         <span>{t("pages.chat.reasoning.done")}</span>
                     )}
@@ -74,11 +78,6 @@ export function MessageContent({
                 </div>
             </div>
         );
-    }
-
-    // Regular message content
-    if (messageId === "") {
-        return <span className="shimmer">{t("common.generating")}</span>;
     }
 
     return (

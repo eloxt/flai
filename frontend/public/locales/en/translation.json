@@ -70,6 +70,7 @@
             "backToLogin": "Back to Login"
         },
         "chat": {
+            "pending": "Thinking...",
             "greeting": "How can I help you?",
             "placeholder": "Ask anything...",
             "reasoning": {

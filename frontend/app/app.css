@@ -150,24 +150,6 @@
   }
 }
 
-.shimmer {
-  background: linear-gradient(135deg, #ffffff, #5E5E5E, #ffffff);
-  background-clip: text;
-  color: transparent;
-  background-size: 200% 100%;
-  animation: shimmer 4s linear infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
-}
-
 /* Prevent horizontal overflow in chat messages */
 .markdown-body {
   overflow-wrap: break-word;

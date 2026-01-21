@@ -20,7 +20,6 @@ import type {
     MessageMetaInfo,
     GoogleGroundingData,
     OpenaiGroundingData,
-    Content,
     Attachment,
     MCPTool,
 } from "./types";
@@ -74,7 +73,8 @@ function createUserMessage(
     id: string,
     parentId: string,
     text: string,
-    files: Attachment[]
+    files: Attachment[],
+    children?: TreeNode[]
 ): TreeNode {
     return {
         id,
@@ -82,19 +82,19 @@ function createUserMessage(
         role: "user",
         content: [{ type: "message", data: { content: text, files } }],
         created_at: new Date(),
-        children: [],
+        children: children || [],
     };
 }
 
 /**
  * Create a placeholder assistant message while waiting for response
  */
-function createPlaceholderAssistantMessage(id: string, parentId: string, isReasoning: boolean): TreeNode {
+function createPlaceholderAssistantMessage(id: string, parentId: string): TreeNode {
     return {
         id,
         parent_id: parentId,
         role: "assistant",
-        content: [{ type: isReasoning ? "reasoning" : "message", data: { content: "" } }],
+        content: [{ type: "pending", data: { content: "" } }],
         created_at: new Date(),
         children: [],
     };
@@ -122,7 +122,7 @@ function buildMessageRequest(
         provider_id: providerId,
         model_name: modelName,
         messagePath: newPath
-            .filter((msg) => msg.id !== userMsgId && msg.id !== "")
+            .filter((msg) => msg.id !== userMsgId)
             .map((msg) => msg.id),
         prompt: text,
         tools: selectedTools,
@@ -145,36 +145,6 @@ function parseStreamContent(streamResponse: StreamResponse): string {
     return "";
 }
 
-/**
- * Update path with new assistant node
- */
-function initializeAssistantNode(
-    ctx: StreamContext,
-    streamResponse: StreamResponse,
-    assistantContent: string
-): TreeNode {
-    const content: Content[] = [
-        { type: streamResponse.type, data: { content: assistantContent } },
-    ];
-
-    ctx.newPath.pop();
-
-    const assistantNode: TreeNode = {
-        id: streamResponse.message_id,
-        parent_id: ctx.userMsgId,
-        role: "assistant",
-        content,
-        created_at: new Date(),
-        children: [],
-    };
-
-    ctx.newPath = [...ctx.newPath, assistantNode];
-    ctx.newMap.set(streamResponse.message_id, assistantNode);
-    ctx.newMap.get(ctx.userMsgId)?.children.push(assistantNode);
-    ctx.assistantMessageId = streamResponse.message_id;
-    ctx.lastMessageType = streamResponse.type;
-    return assistantNode;
-}
 
 /**
  * Update message in path with a modifier function
@@ -330,10 +300,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
     const handleStreamChunk = useCallback((
         ctx: StreamContext,
         streamResponse: StreamResponse,
-        setPathFn: (path: TreeNode[]) => void,
-        setNodeMapFn: (map: Map<string, TreeNode>) => void
-    ): void => {
-        const { type: streamContentType, message_id } = streamResponse;
+        setPathFn: (path: TreeNode[]) => void    ): void => {
+        const { type: streamContentType } = streamResponse;
         const assistantContent = parseStreamContent(streamResponse);
 
         if (streamContentType === "reasoning") {
@@ -410,6 +378,11 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
                 msg.content.push({ type: streamContentType, data: { content: assistantContent } });
             });
+            ctx.newPath.map((path) => {
+                if (path.id === ctx.assistantMessageId) {
+                    path.content = path.content.filter((content) => content.type !== "pending");
+                }
+            })
             setPathFn(ctx.newPath);
             ctx.lastMessageType = streamContentType;
             return;
@@ -449,7 +422,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
                 try {
                     const streamResponse: StreamResponse = JSON.parse(dataStr);
-                    handleStreamChunk(ctx, streamResponse, setPath, setNodeMap);
+                    handleStreamChunk(ctx, streamResponse, setPath);
                 } catch (e) {
                     console.error("Error parsing SSE:", e);
                 }
@@ -465,7 +438,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
         const providerId = useModelStore.getState().currentModel?.provider_id;
         const modelName = useModelStore.getState().currentModel?.id;
-        const isReasoning = useModelStore.getState().currentModel?.reasoning ?? false;
 
         if (!providerId || !modelName) {
             toast.error(t("common.error.modelProviderNotFound"));
@@ -479,13 +451,17 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         let newPath = pathParam || [...path];
         const newMap = new Map(nodeMap);
 
+        // Add placeholder assistant message
+        const assistantPlaceholder = createPlaceholderAssistantMessage(assistantMessageId, userMsgId);
+
         // Optimistic update for new messages
         if (!retry) {
             const userMessage = createUserMessage(
                 userMsgId,
                 path.length > 0 ? path[path.length - 1].id : "",
                 text,
-                attachments
+                attachments,
+                [assistantPlaceholder]
             );
             newPath.push(userMessage);
             setPath(newPath);
@@ -496,10 +472,10 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             newMap.set(userMsgId, userMessage);
             setNodeMap(newMap);
             setChatInput(conversationId, "");
+        } else {
+            nodeMap.get(userMsgId)?.children.push(assistantPlaceholder);
         }
 
-        // Add placeholder assistant message
-        const assistantPlaceholder = createPlaceholderAssistantMessage(assistantMessageId, userMsgId, isReasoning);
         newPath.push(assistantPlaceholder);
         setPath(newPath);
 

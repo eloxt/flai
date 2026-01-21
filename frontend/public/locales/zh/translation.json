@@ -70,6 +70,7 @@
             "backToLogin": "返回登录"
         },
         "chat": {
+            "pending": "思考中...",
             "greeting": "有什么可以帮忙的?",
             "placeholder": "问点什么...",
             "reasoning": {

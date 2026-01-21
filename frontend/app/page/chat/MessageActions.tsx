@@ -89,7 +89,7 @@ export function MessageActions({
             </Button>
 
             {/* Meta info popover */}
-            {message.meta_info && message.meta_info?.model_name !== "" && (
+            {message.meta_info && !isStreaming && (
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon-sm">
