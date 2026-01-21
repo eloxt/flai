@@ -119,7 +119,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                             <TentTree className="size-4 group-hover/toggle:hidden" />
                             <PanelLeft className="size-4 hidden group-hover/toggle:block" />
                         </Button>
-                        <span className="text-base font-semibold w-full pl-2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pl-0 transition-[width,opacity,padding] duration-200">
+                        <span className="text-base font-semibold w-full pl-2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pl-0 transition-[width,opacity,padding]">
                             FlaiChat
                         </span>
 
@@ -149,7 +149,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                 </SidebarHeader>
 
                 <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background">
-                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100">
+                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100 duration-200">
                         <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">
                             {t("components.sidebar.chats")}
                         </SidebarGroupLabel>

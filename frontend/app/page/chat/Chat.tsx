@@ -44,7 +44,7 @@ export default function Chat() {
 
     // UI state
     const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set());
-    const [showScrollButton, setShowScrollButton] = useState(true);
+    const [showScrollButton, setShowScrollButton] = useState(false);
     const [inputHeight, setInputHeight] = useState(0);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
@@ -112,7 +112,7 @@ export default function Chat() {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        const isBottom = scrollHeight - scrollTop - clientHeight < 500;
+        const isBottom = scrollHeight - scrollTop - clientHeight < 50;
         setShowScrollButton(!isBottom);
         setShowHeaderBorder(scrollTop > 20);
     };
