@@ -89,9 +89,9 @@ function createUserMessage(
 /**
  * Create a placeholder assistant message while waiting for response
  */
-function createPlaceholderAssistantMessage(parentId: string, isReasoning: boolean): TreeNode {
+function createPlaceholderAssistantMessage(id: string, parentId: string, isReasoning: boolean): TreeNode {
     return {
-        id: "",
+        id,
         parent_id: parentId,
         role: "assistant",
         content: [{ type: isReasoning ? "reasoning" : "message", data: { content: "" } }],
@@ -105,6 +105,7 @@ function createPlaceholderAssistantMessage(parentId: string, isReasoning: boolea
  */
 function buildMessageRequest(
     userMsgId: string,
+    assistantMsgId: string,
     conversationId: string,
     providerId: string,
     modelName: string,
@@ -116,6 +117,7 @@ function buildMessageRequest(
 ): MessageRequest {
     return {
         id: userMsgId,
+        assistant_message_id: assistantMsgId,
         conversation_id: conversationId,
         provider_id: providerId,
         model_name: modelName,
@@ -155,7 +157,7 @@ function initializeAssistantNode(
         { type: streamResponse.type, data: { content: assistantContent } },
     ];
 
-    ctx.newPath.pop(); // Remove placeholder
+    ctx.newPath.pop();
 
     const assistantNode: TreeNode = {
         id: streamResponse.message_id,
@@ -170,8 +172,7 @@ function initializeAssistantNode(
     ctx.newMap.set(streamResponse.message_id, assistantNode);
     ctx.newMap.get(ctx.userMsgId)?.children.push(assistantNode);
     ctx.assistantMessageId = streamResponse.message_id;
-    ctx.lastMessageType = streamResponse.type; // 关键：设置初始消息类型
-
+    ctx.lastMessageType = streamResponse.type;
     return assistantNode;
 }
 
@@ -341,18 +342,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             options?.onCollapseReasoning?.(ctx.assistantMessageId);
         }
 
-        // New message initialization
-        if (ctx.assistantMessageId !== message_id) {
-            initializeAssistantNode(ctx, streamResponse, assistantContent);
-            setPathFn(ctx.newPath);
-            setNodeMapFn(ctx.newMap);
-
-            if (streamContentType === "reasoning") {
-                options?.onExpandReasoning?.(message_id);
-            }
-            return;
-        }
-
         // Handle meta info
         if (streamContentType === "meta_info") {
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
@@ -486,6 +475,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         setIsStreaming(true);
 
         const userMsgId = messageId || crypto.randomUUID();
+        const assistantMessageId = crypto.randomUUID();
         let newPath = pathParam || [...path];
         const newMap = new Map(nodeMap);
 
@@ -498,6 +488,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 attachments
             );
             newPath.push(userMessage);
+            setPath(newPath);
 
             if (userMessage.parent_id) {
                 nodeMap.get(userMessage.parent_id)?.children.push(userMessage);
@@ -508,7 +499,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         }
 
         // Add placeholder assistant message
-        const assistantPlaceholder = createPlaceholderAssistantMessage(userMsgId, isReasoning);
+        const assistantPlaceholder = createPlaceholderAssistantMessage(assistantMessageId, userMsgId, isReasoning);
         newPath.push(assistantPlaceholder);
         setPath(newPath);
 
@@ -520,10 +511,11 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
             const messageRequest = buildMessageRequest(
                 userMsgId,
+                assistantMessageId,
                 conversationId,
                 providerId,
                 modelName,
-                newPath,
+                newPath.slice(0, newPath.length - 1),
                 text,
                 selectedTools,
                 selectedMcpTools,
@@ -545,7 +537,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 newPath,
                 newMap,
                 userMsgId,
-                assistantMessageId: "",
+                assistantMessageId,
                 lastMessageType: "",
             };
 

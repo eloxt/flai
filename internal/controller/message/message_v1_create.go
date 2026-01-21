@@ -47,7 +47,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, err
 	}
 
-	// Create and save user message
+	// Create and save a user message
 	newMessage, err := c.createUserMessage(ctx, req, historyMessages, files)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	}
 
 	// Stream chat response
-	if err := llm.StreamChat(ctx, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpToolInfos, files); err != nil {
+	if err := llm.StreamChat(ctx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpToolInfos, files); err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
 	}
 

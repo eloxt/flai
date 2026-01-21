@@ -46,6 +46,7 @@ export interface TreeNode extends Message {
 // API request/response types
 export interface MessageRequest {
     id: string;
+    assistant_message_id: string;
     conversation_id: string;
     provider_id: string;
     model_name: string;

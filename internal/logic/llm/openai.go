@@ -38,7 +38,7 @@ func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // Stream Chat
 // ============================================================================
 
-func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
+func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
 	client := c.getClient(ctx, providerInfo)
 
 	// Build input items from history and new message
@@ -67,7 +67,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	var currentImages []string
 	var contentType string
 
-	messageId := uuid.New().String()
 	message := &entity.Message{
 		Id:             messageId,
 		ConversationId: newMessage.ConversationId,

@@ -5,16 +5,17 @@ import (
 )
 
 type CreateReq struct {
-	g.Meta         `path:"/messages" method:"post" tag:"" summary:"Create message"`
-	Id             string           `json:"id" v:"required"`
-	ConversationId string           `json:"conversation_id" v:"required"`
-	ProviderId     string           `json:"provider_id" v:"required"`
-	ModelName      string           `json:"model_name" v:"required"`
-	MessagePath    []string         `json:"message_path"`
-	Prompt         string           `json:"prompt" v:"required"`
-	Tools          []string         `json:"tools"`
-	McpTools       []McpToolRequest `json:"mcp_tools"`
-	Files          []string         `json:"files"`
+	g.Meta             `path:"/messages" method:"post" tag:"" summary:"Create message"`
+	Id                 string           `json:"id" v:"required"`
+	AssistantMessageId string           `json:"assistant_message_id" v:"required"`
+	ConversationId     string           `json:"conversation_id" v:"required"`
+	ProviderId         string           `json:"provider_id" v:"required"`
+	ModelName          string           `json:"model_name" v:"required"`
+	MessagePath        []string         `json:"message_path"`
+	Prompt             string           `json:"prompt" v:"required"`
+	Tools              []string         `json:"tools"`
+	McpTools           []McpToolRequest `json:"mcp_tools"`
+	Files              []string         `json:"files"`
 }
 
 type McpToolRequest struct {

@@ -48,7 +48,7 @@ export function MessageItem({
             if (previousMessageElement) {
                 const previousMessageHeight = previousMessageElement.getBoundingClientRect().height;
                 const calculatedHeight = window.innerHeight - previousMessageHeight - 32 - 240;
-                setDynamicMinHeight(`${Math.max(calculatedHeight, 100)}px`);
+                setDynamicMinHeight(`${calculatedHeight}px`);
             }
         } else {
             setDynamicMinHeight(undefined);

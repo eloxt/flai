@@ -45,7 +45,7 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // Stream Chat
 // ============================================================================
 
-func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
+func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
 	client, err := c.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
@@ -110,7 +110,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	var currentImages []string
 	var contentList []Content
 
-	messageId := uuid.New().String()
 	message := &entity.Message{
 		Id:             messageId,
 		ConversationId: newMessage.ConversationId,

@@ -156,7 +156,7 @@ export default function Chat() {
                                 message={message}
                                 messageIndex={messageIndex}
                                 pathLength={path.length}
-                                isStreaming={isStreaming && message.id === path[path.length - 1].id}
+                                isStreaming={isStreaming && message.id === path[path.length - 1].id && message.role === "assistant"}
                                 expandedReasoning={expandedReasoning}
                                 nodeMap={nodeMap}
                                 previousMessageId={messageIndex > 0 ? path[messageIndex - 1].id : undefined}
