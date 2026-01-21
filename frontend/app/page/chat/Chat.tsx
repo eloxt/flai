@@ -5,7 +5,6 @@ import type { MetaFunction } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat-input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { useAppStore } from "@/store/app-store";
@@ -45,7 +44,7 @@ export default function Chat() {
 
     // UI state
     const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set());
-    const [showScrollButton, setShowScrollButton] = useState(false);
+    const [showScrollButton, setShowScrollButton] = useState(true);
     const [inputHeight, setInputHeight] = useState(0);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
@@ -101,15 +100,14 @@ export default function Chat() {
     }, [scrollToMessageId, setScrollToMessageId]);
 
     const scrollToBottom = () => {
-        const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]');
-        if (viewport) {
-            viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+        if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: "smooth" });
         }
     };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        const isBottom = scrollHeight - scrollTop - clientHeight < 200;
+        const isBottom = scrollHeight - scrollTop - clientHeight < 50;
         setShowScrollButton(!isBottom);
         setShowHeaderBorder(scrollTop > 20);
     };
@@ -134,15 +132,16 @@ export default function Chat() {
 
     return (
         <>
-            <ScrollArea
+            <div
                 ref={scrollAreaRef}
-                className="flex-1 px-4 overflow-y-hidden h-full"
+                className="flex-1 min-h-0 px-4 md:px-8 overflow-y-auto"
                 onScroll={handleScroll}
-                style={{
-                    paddingBottom: `${inputHeight + 74 + (attachments.length > 0 ? 36 : 0)}px`,
-                }}
             >
-                <div className="pt-4 mx-auto max-w-7xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
+                <div className="pt-4 mx-auto max-w-7xl flex flex-col gap-8 w-full min-w-0 overflow-hidden"
+                    style={{
+                        paddingBottom: `${inputHeight + 128 + (attachments.length > 0 ? 36 : 0)}px`,
+                    }}
+                >
                     {isLoading ? (
                         <ChatSkeleton />
                     ) : (
@@ -152,7 +151,7 @@ export default function Chat() {
                                 message={message}
                                 messageIndex={messageIndex}
                                 pathLength={path.length}
-                                isStreaming={isStreaming}
+                                isStreaming={isStreaming && message.id === path[path.length - 1].id}
                                 expandedReasoning={expandedReasoning}
                                 nodeMap={nodeMap}
                                 onToggleReasoning={toggleReasoning}
@@ -162,13 +161,12 @@ export default function Chat() {
                             />
                         ))
                     )}
-
                 </div>
-            </ScrollArea>
+            </div>
 
-            <div className="absolute bottom-4 left-0 right-0 z-50 px-4 pointer-events-none">
+            <div className="absolute bottom-4 left-0 right-0 z-50 px-4 md:px-8 pointer-events-none">
                 <div
-                    className={`absolute left-1/2 mb-4 transition-opacity duration-200 ${showScrollButton
+                    className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-opacity duration-200 ${showScrollButton
                         ? "opacity-100 pointer-events-auto"
                         : "opacity-0 pointer-events-none"
                         }`}
@@ -195,6 +193,7 @@ export default function Chat() {
                     />
                 </div>
             </div>
+            <div className="absolute bottom-0 left-0 right-0 h-4 z-40 mx-4 md:mx-8 bg-background" />
         </>
     );
 }

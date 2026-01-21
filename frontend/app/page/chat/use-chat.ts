@@ -404,6 +404,18 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             return;
         }
 
+        // Handle image
+        if (streamContentType === "image") {
+            const imageUrl = streamResponse.data as string;
+            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
+                const lastContent = msg.content[msg.content.length - 1];
+                (lastContent.data as ContentMessage).image_urls = [imageUrl];
+            });
+            setPathFn(ctx.newPath);
+            ctx.lastMessageType = "message";
+            return;
+        }
+
         // Content type changed - add new content block
         if (ctx.lastMessageType !== streamContentType) {
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {

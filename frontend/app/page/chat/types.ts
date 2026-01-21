@@ -18,6 +18,7 @@ export type ContentData = ContentMessage | ContentReasoning | ContentToolCall | 
 export interface ContentMessage {
     content: string;
     files?: Attachment[];
+    image_urls?: string[];
 }
 
 export interface ContentReasoning {
@@ -58,7 +59,7 @@ export interface MessageRequest {
 export interface StreamResponse {
     message_id: string;
     type: string;
-    data: ContentMessage | ContentReasoning | ContentToolCall | ContentToolResult | MessageMetaInfo | GoogleGroundingData | OpenaiGroundingData[];
+    data: ContentMessage | ContentReasoning | ContentToolCall | ContentToolResult | MessageMetaInfo | GoogleGroundingData | OpenaiGroundingData[] | string;
 }
 
 // Meta info types

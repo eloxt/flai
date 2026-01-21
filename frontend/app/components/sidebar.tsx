@@ -149,8 +149,8 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                 </SidebarHeader>
 
                 <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background duration-200">
-                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none transition-opacity opacity-100 duration-200">
-                        <SidebarGroupLabel>
+                    <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100 duration-200">
+                        <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">
                             {t("components.sidebar.chats")}
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
@@ -316,10 +316,9 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                     setSearchResults([]);
                 }
             }}>
-                <DialogContent className="overflow-hidden p-0">
-                    <DialogTitle className="sr-only">{t("components.sidebar.command.searchPlaceholder")}</DialogTitle>
-                    <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3">
-                        <CommandInput value={queryParam} onValueChange={setQueryParam} onKeyDown={(e) => e.key === "Enter" && handleSearch()} placeholder={t("components.sidebar.command.searchPlaceholder")} />
+                <DialogContent className="p-2">
+                    <Command shouldFilter={false}>
+                        <CommandInput value={queryParam} onValueChange={setQueryParam} onKeyDown={(e: { key: string; }) => e.key === "Enter" && handleSearch()} placeholder={t("components.sidebar.command.searchPlaceholder")} />
                         <CommandList>
                             <CommandEmpty>{t("components.sidebar.command.empty")}</CommandEmpty>
                             <CommandGroup>

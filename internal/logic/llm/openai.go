@@ -64,6 +64,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	// Initialize stream state
 	var currentContentBuilder strings.Builder
 	var contentList []Content
+	var currentImages []string
 	var contentType string
 
 	messageId := uuid.New().String()
@@ -86,7 +87,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		// Create stream params
 		params := responses.ResponseNewParams{
 			Instructions: openai.String(ComposeSystemPrompt()),
-			Model: modelConfig.ID,
+			Model:        modelConfig.ID,
 			Input: responses.ResponseNewParamsInputUnion{
 				OfInputItemList: currentInputItems,
 			},
@@ -139,7 +140,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 					})
 				}
 
-				appendContent(&currentContentBuilder, contentType, &contentList)
+				appendContent(&currentContentBuilder, contentType, currentImages, &contentList)
 				currentContentBuilder.Reset()
 
 				// Handle annotations
@@ -159,7 +160,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 					}
 					if err := StreamToClient(response, annotationResponse); err != nil {
 						if errors.Is(ctx.Err(), context.Canceled) {
-							c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+							c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
 							return nil
 						}
 						return err
@@ -192,7 +193,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 			if shouldSend {
 				if err := StreamToClient(response, streamResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
 						return nil
 					}
 					return err
@@ -202,7 +203,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 
 		if err := stream.Err(); err != nil {
 			if errors.Is(ctx.Err(), context.Canceled) {
-				c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+				c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
 				return nil
 			}
 			return err
@@ -212,7 +213,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		if len(functionCalls) > 0 {
 			// Save any pending content before adding tool calls
 			if currentContentBuilder.Len() > 0 {
-				appendContent(&currentContentBuilder, contentType, &contentList)
+				appendContent(&currentContentBuilder, contentType, currentImages, &contentList)
 				currentContentBuilder.Reset()
 				contentType = ""
 			}
@@ -254,7 +255,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 				}
 				if err := StreamToClient(response, toolCallResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
 						return nil
 					}
 					return err
@@ -284,7 +285,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 				}
 				if err := StreamToClient(response, toolResultResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
 						return nil
 					}
 					return err
@@ -311,14 +312,14 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	}
 
 	// Save final message
-	c.saveAndClose(ctx, message, &currentContentBuilder, contentType, &contentList, metaInfo)
+	c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
 	StreamDone(response)
 
 	return nil
 }
 
-func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
-	appendContent(contentBuilder, contentType, contentList)
+func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+	appendContent(contentBuilder, contentType, imageUrls, contentList)
 	SaveAssistantMessage(ctx, message, *contentList, metaInfo)
 }
 

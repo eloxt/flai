@@ -9,6 +9,8 @@ import (
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
 	"flai/internal/model/entity"
+	"flai/internal/utility/s3"
+	"fmt"
 	"strings"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -74,9 +76,9 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		SystemInstruction: &genai.Content{
 			Parts: []*genai.Part{genai.NewPartFromText(ComposeSystemPrompt())},
 		},
-		ThinkingConfig: &genai.ThinkingConfig{
-			IncludeThoughts: true,
-		},
+		// ThinkingConfig: &genai.ThinkingConfig{
+		// 	IncludeThoughts: true,
+		// },
 		Tools: genaiTools,
 	}
 
@@ -105,6 +107,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	// Initialize stream state
 	var currentMessageType string
 	var currentContentBuilder strings.Builder
+	var currentImages []string
 	var contentList []Content
 
 	messageId := uuid.New().String()
@@ -134,32 +137,34 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		for resp, err := range iter {
 			if err != nil {
 				if errors.Is(ctx.Err(), context.Canceled) {
-					c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+					c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 					return nil
 				}
 				return err
 			}
 
+			// Update usage metadata
+			metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
+			metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
+			metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
+			metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
+			metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
+
 			for _, candidate := range resp.Candidates {
 				if candidate.Content != nil {
 					for _, part := range candidate.Content.Parts {
+						var partType string
+
 						// Handle text content
 						if part.Text != "" {
-							partType := consts.MessageType.Message
+							partType = consts.MessageType.Message
 							if part.Thought {
 								partType = consts.MessageType.Reasoning
 							}
 
-							// Update usage metadata
-							metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
-							metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
-							metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
-							metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
-							metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
-
 							// If type switched, save previous block
 							if currentMessageType != "" && currentMessageType != partType {
-								appendContent(&currentContentBuilder, currentMessageType, &contentList)
+								appendContent(&currentContentBuilder, currentMessageType, currentImages, &contentList)
 								currentContentBuilder.Reset()
 							}
 
@@ -179,7 +184,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 
 							if err := StreamToClient(response, streamResponse); err != nil {
 								if errors.Is(ctx.Err(), context.Canceled) {
-									c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+									c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 									return nil
 								}
 								return err
@@ -188,6 +193,54 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 							// Only add non-thought text to history
 							if !part.Thought {
 								modelParts = append(modelParts, &genai.Part{Text: part.Text})
+							}
+						}
+
+						if part.InlineData != nil && len(part.InlineData.Data) > 0 && strings.HasPrefix(part.InlineData.MIMEType, "image/") {
+							// Initialize S3 client for image upload
+							s3Client, err := s3.New(ctx)
+							if err != nil {
+								return err
+							}
+
+							inlineData := part.InlineData
+
+							// Generate unique filename for the image
+							ext := ".png" // Default extension
+							if strings.Contains(inlineData.MIMEType, "jpeg") {
+								ext = ".jpg"
+							} else if strings.Contains(inlineData.MIMEType, "webp") {
+								ext = ".webp"
+							}
+
+							// Path format: {userId}/generated/{uuid}{ext}
+							// Since we don't have userId easily accessible here without context extraction,
+							// we can use a "generated" folder prefix.
+							// However, ideally we should get userId from context if possible, but let's stick to a safe path.
+							imageKey := fmt.Sprintf("generated/%s%s", uuid.New().String(), ext)
+
+							// Upload to S3
+							if err := s3Client.UploadBytes(ctx, imageKey, inlineData.Data, inlineData.MIMEType); err != nil {
+								return err
+							}
+
+							// Get public URL
+							imageUrl := s3.GetPublicUrl(ctx, imageKey)
+							currentImages = append(currentImages, imageUrl)
+
+							// Stream to client
+							streamResponse := StreamResponse{
+								MessageId: messageId,
+								Type:      consts.MessageType.Image,
+								Data:      imageUrl,
+							}
+
+							if err := StreamToClient(response, streamResponse); err != nil {
+								if errors.Is(ctx.Err(), context.Canceled) {
+									c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+									return nil
+								}
+								return err
 							}
 						}
 
@@ -215,7 +268,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 					}
 					if err := StreamToClient(response, metaResponse); err != nil {
 						if errors.Is(ctx.Err(), context.Canceled) {
-							c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+							c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 							return nil
 						}
 						return err
@@ -231,7 +284,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 						}
 						if err := StreamToClient(response, groundingResponse); err != nil {
 							if errors.Is(ctx.Err(), context.Canceled) {
-								c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+								c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 								return nil
 							}
 							return err
@@ -245,7 +298,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 		if len(functionCalls) > 0 {
 			// Save any pending content before adding tool calls (ensures correct order: reasoning -> tool_call)
 			if currentContentBuilder.Len() > 0 {
-				appendContent(&currentContentBuilder, currentMessageType, &contentList)
+				appendContent(&currentContentBuilder, currentMessageType, currentImages, &contentList)
 				currentContentBuilder.Reset()
 				currentMessageType = ""
 			}
@@ -284,7 +337,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 				}
 				if err := StreamToClient(response, toolCallResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 						return nil
 					}
 					return err
@@ -314,7 +367,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 				}
 				if err := StreamToClient(response, toolResultResponse); err != nil {
 					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 						return nil
 					}
 					return err
@@ -345,7 +398,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, response *ghttp.Response,
 	}
 
 	// Save final message
-	c.saveAndClose(ctx, message, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+	c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 	StreamDone(response)
 
 	return nil
@@ -399,9 +452,9 @@ func (c *GeminiClient) executeMCPToolCallByName(ctx context.Context, mcpToolMap 
 	return result
 }
 
-func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
 	if contentType != "" && contentBuilder.Len() > 0 {
-		appendContent(contentBuilder, contentType, contentList)
+		appendContent(contentBuilder, contentType, imageUrls, contentList)
 	}
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }

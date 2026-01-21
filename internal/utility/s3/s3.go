@@ -1,8 +1,10 @@
 package s3
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -61,4 +63,27 @@ func (c *Client) DeleteFile(ctx context.Context, key string) error {
 		return gerror.Wrap(err, "failed to delete file from s3")
 	}
 	return nil
+}
+
+// UploadBytes uploads raw byte data to S3 with the specified content type
+func (c *Client) UploadBytes(ctx context.Context, key string, data []byte, contentType string) error {
+	_, err := c.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(c.bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(data),
+		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return gerror.Wrap(err, "failed to upload bytes to s3")
+	}
+	return nil
+}
+
+// GetPublicUrl returns the public URL for a given S3 key
+func GetPublicUrl(ctx context.Context, key string) string {
+	publicUrl := gcfg.Instance().MustGet(ctx, "s3.publicUrl").String()
+	if !strings.HasSuffix(publicUrl, "/") {
+		publicUrl += "/"
+	}
+	return publicUrl + key
 }

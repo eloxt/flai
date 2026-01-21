@@ -57,8 +57,9 @@ type ContentReasoning struct {
 }
 
 type ContentMessage struct {
-	Content string         `json:"content"`
-	Files   []*entity.File `json:"files"`
+	Content   string         `json:"content"`
+	Files     []*entity.File `json:"files"`
+	ImageUrls []string       `json:"image_urls"`
 }
 
 type Content struct {
