@@ -89,7 +89,6 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
 		}
 	case <-ctx.Done():
-		// Client disconnected; generation continues in the background.
 		response.BufferWriter = nil
 	}
 

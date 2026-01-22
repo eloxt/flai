@@ -108,6 +108,7 @@ func StreamToClient(response *ghttp.Response, content any) error {
 		return nil
 	}
 	if response.Request.Context().Err() != nil {
+		response.BufferWriter = nil
 		return nil
 	}
 	data, err := json.Marshal(content)
@@ -135,6 +136,7 @@ func StreamDone(response *ghttp.Response) {
 		return
 	}
 	if response.Request.Context().Err() != nil {
+		response.BufferWriter = nil
 		return
 	}
 	defer func() {
