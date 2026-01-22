@@ -33,26 +33,28 @@ export default function ChatHeader() {
                     <PanelLeft />
                 </Button>
                 <ModelSelector />
-                {location.pathname.startsWith("/chat/") && (
-                    <div className="flex gap-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            title={t("common.shareConversation")}
-                            onClick={() => setShowShareDialog(true)}
-                        >
-                            <MessageSquareShare />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            title={t("common.settings")}
-                            onClick={toggleInspectionPanel}
-                        >
-                            <PanelRight />
-                        </Button>
-                    </div>
-                )}
+                <div className="flex gap-2">
+                    {location.pathname.startsWith("/chat/") && (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.shareConversation")}
+                                onClick={() => setShowShareDialog(true)}
+                            >
+                                <MessageSquareShare />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.settings")}
+                                onClick={toggleInspectionPanel}
+                            >
+                                <PanelRight />
+                            </Button>
+                        </>
+                    )}
+                </div>
             </header>
 
             <ShareDialog

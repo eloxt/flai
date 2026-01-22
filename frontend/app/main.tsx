@@ -8,6 +8,9 @@ import { api } from "./lib/api";
 import { toast } from "sonner";
 import { useAppStore } from "./store/app-store";
 import { useEffect } from "react";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { AlertTriangleIcon, Info, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Main() {
     const { t } = useTranslation();
@@ -67,16 +70,46 @@ export default function Main() {
     }, []);
 
     return (
-        <div className="flex h-full flex-col items-center justify-center gap-12 px-4">
-            <p className="font-medium text-3xl">{t("pages.chat.greeting")}</p>
-            <ChatInput
-                className="max-w-3xl"
-                value={inputValue}
-                onChange={setInputValue}
-                onSend={handleSend}
-                isLoading={isLoading}
-                autoFocus
-            />
+        <div className="relative flex h-full flex-col">
+            <div className="absolute left-0 right-0 top-4 z-10 flex flex-col items-center gap-1 px-4 md:px-2">
+                <Alert className="max-w-3xl">
+                    <Info />
+                    <AlertTitle>Default</AlertTitle>
+                    <AlertDescription>
+                        This is a default test.
+                    </AlertDescription>
+                    <AlertAction>
+                        <Button size="icon-sm" variant="ghost">
+                            <X />
+                        </Button>
+                    </AlertAction>
+                </Alert>
+
+                <Alert className="max-w-3xl border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
+                    <AlertTriangleIcon />
+                    <AlertTitle>Warning</AlertTitle>
+                    <AlertDescription>
+                        This is a warning test.
+                    </AlertDescription>
+                    <AlertAction>
+                        <Button size="icon-sm" variant="ghost" className="hover:bg-amber-100">
+                            <X />
+                        </Button>
+                    </AlertAction>
+                </Alert>
+            </div>
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-12 px-4">
+                <p className="font-medium text-3xl">{t("pages.chat.greeting")}</p>
+                <ChatInput
+                    className="max-w-3xl"
+                    value={inputValue}
+                    onChange={setInputValue}
+                    onSend={handleSend}
+                    isLoading={isLoading}
+                    autoFocus
+                />
+            </div>
         </div>
     );
 }
