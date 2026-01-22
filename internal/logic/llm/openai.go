@@ -319,7 +319,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 
 func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
 	appendContent(contentBuilder, contentType, imageUrls, contentList)
-	SaveAssistantMessage(ctx, message, *contentList, metaInfo)
+	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
 // executeMCPToolCallByName executes an MCP tool by name and returns the result
