@@ -9,8 +9,11 @@ import (
 )
 
 func (c *ControllerV1) NotificationList(ctx context.Context, req *v1.NotificationListReq) (res *v1.NotificationListRes, err error) {
-	notificationConfig, ok := logic.SystemConfigMap[consts.SystemConfig.Notification]
-	if !ok {
+	notificationConfig, err := logic.GetSystemConfigFromDB(ctx, consts.SystemConfig.Notification)
+	if err != nil {
+		return &v1.NotificationListRes{List: []v1.NotificationItem{}}, nil
+	}
+	if notificationConfig == nil {
 		return &v1.NotificationListRes{List: []v1.NotificationItem{}}, nil
 	}
 

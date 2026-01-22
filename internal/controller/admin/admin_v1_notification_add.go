@@ -7,18 +7,21 @@ import (
 
 	"github.com/google/uuid"
 
-	"flai/api/admin/v1"
+	v1 "flai/api/admin/v1"
 )
 
 func (c *ControllerV1) NotificationAdd(ctx context.Context, req *v1.NotificationAddReq) (res *v1.NotificationAddRes, err error) {
-	notificationConfig, ok := logic.SystemConfigMap[consts.SystemConfig.Notification]
-	if !ok {
+	notificationConfig, err := logic.GetSystemConfigFromDB(ctx, consts.SystemConfig.Notification)
+	if err != nil {
+		return nil, err
+	}
+	if notificationConfig == nil {
 		notificationConfig = make(map[string]any)
 	}
 
-	notificationList, ok := notificationConfig["list"].([]map[string]any)
+	notificationList, ok := notificationConfig["list"].([]any)
 	if !ok {
-		notificationList = make([]map[string]any, 0)
+		notificationList = make([]any, 0)
 	}
 
 	newNotification := map[string]any{
@@ -30,7 +33,11 @@ func (c *ControllerV1) NotificationAdd(ctx context.Context, req *v1.Notification
 
 	notificationList = append(notificationList, newNotification)
 	notificationConfig["list"] = notificationList
-	logic.UpdateSystemConfig(ctx, consts.SystemConfig.Notification, notificationConfig)
+
+	err = logic.SaveSystemConfigToDB(ctx, consts.SystemConfig.Notification, notificationConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	res = &v1.NotificationAddRes{
 		Id:      newNotification["id"].(string),

@@ -12,8 +12,11 @@ import (
 )
 
 func (c *ControllerV1) NotificationUpdate(ctx context.Context, req *v1.NotificationUpdateReq) (res *v1.NotificationUpdateRes, err error) {
-	notificationConfig, ok := logic.SystemConfigMap[consts.SystemConfig.Notification]
-	if !ok {
+	notificationConfig, err := logic.GetSystemConfigFromDB(ctx, consts.SystemConfig.Notification)
+	if err != nil {
+		return nil, err
+	}
+	if notificationConfig == nil {
 		return nil, gerror.NewCode(gcode.CodeNotFound, "Notification config not found")
 	}
 
@@ -50,7 +53,10 @@ func (c *ControllerV1) NotificationUpdate(ctx context.Context, req *v1.Notificat
 	}
 
 	notificationConfig["list"] = notificationList
-	logic.UpdateSystemConfig(ctx, consts.SystemConfig.Notification, notificationConfig)
+	err = logic.SaveSystemConfigToDB(ctx, consts.SystemConfig.Notification, notificationConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	res = &v1.NotificationUpdateRes{
 		Id:      req.Id,

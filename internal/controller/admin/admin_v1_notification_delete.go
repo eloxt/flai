@@ -8,12 +8,15 @@ import (
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 
-	"flai/api/admin/v1"
+	v1 "flai/api/admin/v1"
 )
 
 func (c *ControllerV1) NotificationDelete(ctx context.Context, req *v1.NotificationDeleteReq) (res *v1.NotificationDeleteRes, err error) {
-	notificationConfig, ok := logic.SystemConfigMap[consts.SystemConfig.Notification]
-	if !ok {
+	notificationConfig, err := logic.GetSystemConfigFromDB(ctx, consts.SystemConfig.Notification)
+	if err != nil {
+		return nil, err
+	}
+	if notificationConfig == nil {
 		return nil, gerror.NewCode(gcode.CodeNotFound, "Notification config not found")
 	}
 
@@ -42,7 +45,10 @@ func (c *ControllerV1) NotificationDelete(ctx context.Context, req *v1.Notificat
 	}
 
 	notificationConfig["list"] = newList
-	logic.UpdateSystemConfig(ctx, consts.SystemConfig.Notification, notificationConfig)
+	err = logic.SaveSystemConfigToDB(ctx, consts.SystemConfig.Notification, notificationConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	res = &v1.NotificationDeleteRes{}
 	return
