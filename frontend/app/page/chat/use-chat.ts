@@ -456,8 +456,11 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         let newPath = pathParam || [...path];
         const newMap = new Map(nodeMap);
 
+        console.log("sendMessage start", newPath, newMap);
+
         // Add placeholder assistant message
         const assistantPlaceholder = createPlaceholderAssistantMessage(assistantMessageId, userMsgId);
+        newMap.set(assistantMessageId, assistantPlaceholder);
 
         // Optimistic update for new messages
         if (!retry) {
@@ -472,16 +475,15 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             setPath(newPath);
 
             if (userMessage.parent_id) {
-                nodeMap.get(userMessage.parent_id)?.children.push(userMessage);
+                newMap.get(userMessage.parent_id)?.children.push(userMessage);
             }
             newMap.set(userMsgId, userMessage);
-            setNodeMap(newMap);
             setChatInput(conversationId, "");
-        } else {
-            nodeMap.get(userMsgId)?.children.push(assistantPlaceholder);
         }
 
+        newMap.get(userMsgId)?.children.push(assistantPlaceholder);
         newPath.push(assistantPlaceholder);
+        setNodeMap(newMap);
         setPath(newPath);
 
         try {
@@ -531,6 +533,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             console.error(error);
             toast.error(t("common.error.sendMessage"));
         } finally {
+            console.log("sendMessage end", newPath, newMap);
             if (assistantMessageIdRef.current === assistantMessageId) {
                 assistantMessageIdRef.current = null;
                 streamAbortRef.current = null;

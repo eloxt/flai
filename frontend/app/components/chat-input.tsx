@@ -352,12 +352,12 @@ export function ChatInput({
                                         <Button key={file.id} variant="outline" title={file.file_name}>
                                             <FileIcon className="size-4 opacity-70" />
                                             <span className="truncate max-w-[150px]">{file.file_name}</span>
-                                            <button
+                                            <div
                                                 onClick={() => removeAttachment(file.id)}
                                                 className="text-muted-foreground hover:text-destructive transition-colors"
                                             >
                                                 <X className="size-3" />
-                                            </button>
+                                            </div>
                                         </Button>
                                     ))}
                                 </div>

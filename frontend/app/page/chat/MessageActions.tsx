@@ -89,7 +89,7 @@ export function MessageActions({
             </Button>
 
             {/* Meta info popover */}
-            {message.meta_info && !isStreaming && (
+            {message.meta_info && !isStreaming && message.role === "assistant" && (
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon-sm">
