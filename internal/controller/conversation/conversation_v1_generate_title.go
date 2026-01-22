@@ -8,10 +8,10 @@ import (
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
 
+	v1 "flai/api/conversation/v1"
+
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
-
-	v1 "flai/api/conversation/v1"
 )
 
 func (c *ControllerV1) GenerateTitle(ctx context.Context, req *v1.GenerateTitleReq) (res *v1.GenerateTitleRes, err error) {
@@ -43,19 +43,43 @@ func (c *ControllerV1) GenerateTitle(ctx context.Context, req *v1.GenerateTitleR
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch messages")
 	}
 
-	title, err := llm.GenerateTitle(ctx, messages)
-	if err != nil {
-		return nil, err
+	type titleResult struct {
+		res *v1.GenerateTitleRes
+		err error
 	}
 
-	// update conversation in db
-	_, err = dao.Conversation.Ctx(ctx).Data(do.Conversation{Title: title.Title, Icon: title.Icon}).Where(do.Conversation{Id: conversation.Id}).Update()
-	if err != nil {
-		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to update conversation")
-	}
+	generationCtx := context.WithoutCancel(ctx)
+	done := make(chan titleResult, 1)
 
-	return &v1.GenerateTitleRes{
-		Title: title.Title,
-		Icon:  title.Icon,
-	}, nil
+	go func() {
+		title, err := llm.GenerateTitle(generationCtx, messages)
+		if err != nil {
+			done <- titleResult{err: err}
+			return
+		}
+
+		_, err = dao.Conversation.Ctx(generationCtx).
+			Data(do.Conversation{Title: title.Title, Icon: title.Icon}).
+			Where(do.Conversation{Id: conversation.Id}).
+			Update()
+		if err != nil {
+			done <- titleResult{err: gerror.WrapCode(gcode.CodeInternalError, err, "Failed to update conversation")}
+			return
+		}
+
+		done <- titleResult{res: &v1.GenerateTitleRes{
+			Title: title.Title,
+			Icon:  title.Icon,
+		}}
+	}()
+
+	select {
+	case result := <-done:
+		if result.err != nil {
+			return nil, result.err
+		}
+		return result.res, nil
+	case <-ctx.Done():
+		return nil, nil
+	}
 }

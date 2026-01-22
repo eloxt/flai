@@ -1,4 +1,4 @@
-import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown } from "lucide-react";
+import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -58,7 +58,9 @@ interface ChatInputProps {
     value: string;
     onChange: (value: string) => void;
     onSend: () => void;
+    onCancel?: () => void;
     isLoading?: boolean;
+    isStreaming?: boolean;
     placeholder?: string;
     className?: string;
     onHeightChange?: (height: number) => void;
@@ -69,7 +71,9 @@ export function ChatInput({
     value,
     onChange,
     onSend,
+    onCancel,
     isLoading = false,
+    isStreaming = false,
     placeholder,
     className,
     onHeightChange,
@@ -361,18 +365,29 @@ export function ChatInput({
                             </ScrollArea>
                         )}
                     </div>
-                    <InputGroupButton
-                        variant="default"
-                        className="rounded-full ml-auto"
-                        size="icon-xs"
-                        onClick={onSend}
-                        disabled={isLoading || (!value.trim() && attachments.length === 0)}
-                    >
-                        <ArrowUpIcon />
-                    </InputGroupButton>
+                    {isStreaming ? (
+                        <InputGroupButton
+                            variant="destructive"
+                            className="rounded-full ml-auto"
+                            size="icon-xs"
+                            onClick={onCancel}
+                            title={t("common.cancel")}
+                        >
+                            <Square className="size-3" />
+                        </InputGroupButton>
+                    ) : (
+                        <InputGroupButton
+                            variant="default"
+                            className="rounded-full ml-auto"
+                            size="icon-xs"
+                            onClick={onSend}
+                            disabled={isLoading || (!value.trim() && attachments.length === 0)}
+                        >
+                            <ArrowUpIcon className="size-3"/>
+                        </InputGroupButton>
+                    )}
                 </InputGroupAddon>
             </InputGroup>
         </div>
     );
 }
-

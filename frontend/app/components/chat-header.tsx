@@ -13,7 +13,7 @@ export default function ChatHeader() {
     const [showShareDialog, setShowShareDialog] = useState(false);
     const showHeaderBorder = useAppStore((state) => state.showHeaderBorder);
     const currentMessagePath = useAppStore((state) => state.currentMessagePath);
-    const toggleRightSidebar = useAppStore((state) => state.toggleInspectionPanel);
+    const toggleInspectionPanel = useAppStore((state) => state.toggleInspectionPanel);
     const toggleSidebar = useAppStore((state) => state.toggleSidebar);
 
     const conversationId = location.pathname.startsWith("/chat/")
@@ -47,7 +47,7 @@ export default function ChatHeader() {
                             variant="ghost"
                             size="icon"
                             title={t("common.settings")}
-                            onClick={toggleRightSidebar}
+                            onClick={toggleInspectionPanel}
                         >
                             <PanelRight />
                         </Button>

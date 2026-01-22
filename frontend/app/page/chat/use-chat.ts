@@ -177,6 +177,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
     const [isStreaming, setIsStreaming] = useState(false);
+    const assistantMessageIdRef = useRef<string | null>(null);
+    const streamAbortRef = useRef<AbortController | null>(null);
 
     // Store selectors
     const setChatInput = useInputStore((state) => state.setChatInput);
@@ -448,6 +450,9 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
         const userMsgId = messageId || crypto.randomUUID();
         const assistantMessageId = crypto.randomUUID();
+        assistantMessageIdRef.current = assistantMessageId;
+        const abortController = new AbortController();
+        streamAbortRef.current = abortController;
         let newPath = pathParam || [...path];
         const newMap = new Map(nodeMap);
 
@@ -502,6 +507,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             const response = await api.stream(`/api/messages`, {
                 method: "POST",
                 body: JSON.stringify(messageRequest),
+                signal: abortController.signal,
             });
 
             if (!response.ok) throw new Error("Failed to send message");
@@ -519,15 +525,45 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
             await processStream(reader, ctx);
         } catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+                return;
+            }
             console.error(error);
             toast.error(t("common.error.sendMessage"));
         } finally {
-            setIsStreaming(false);
+            if (assistantMessageIdRef.current === assistantMessageId) {
+                assistantMessageIdRef.current = null;
+                streamAbortRef.current = null;
+                setIsStreaming(false);
+            }
         }
     }, [
         conversationId, tokens?.access_token, path, nodeMap, attachments,
         selectedTools, setChatInput, clearAttachments, processStream, t
     ]);
+
+    const cancelGeneration = useCallback(async () => {
+        if (!conversationId || !assistantMessageIdRef.current) return;
+
+        const assistantMessageId = assistantMessageIdRef.current;
+        streamAbortRef.current?.abort();
+
+        try {
+            await api.post("/api/messages/cancel", {
+                conversation_id: conversationId,
+                assistant_message_id: assistantMessageId,
+            });
+        } catch (error) {
+            const message = error instanceof ApiError ? error.message : t("common.error.network");
+            toast.error(message);
+        } finally {
+            if (assistantMessageIdRef.current === assistantMessageId) {
+                assistantMessageIdRef.current = null;
+                streamAbortRef.current = null;
+                setIsStreaming(false);
+            }
+        }
+    }, [conversationId, t]);
 
     /**
      * Retry message from a specific point
@@ -642,6 +678,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         sendMessage,
         retryMessage,
         deleteMessage,
+        cancelGeneration,
         switchNode,
     };
 }

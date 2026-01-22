@@ -15,4 +15,5 @@ type IMessageV1 interface {
 	Retry(ctx context.Context, req *v1.RetryReq) (res *v1.RetryRes, err error)
 	Edit(ctx context.Context, req *v1.EditReq) (res *v1.EditRes, err error)
 	Delete(ctx context.Context, req *v1.DeleteReq) (res *v1.DeleteRes, err error)
+	Cancel(ctx context.Context, req *v1.CancelReq) (res *v1.CancelRes, err error)
 }

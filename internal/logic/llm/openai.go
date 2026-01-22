@@ -3,7 +3,6 @@ package llm
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"flai/internal/consts"
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
@@ -24,7 +23,7 @@ type OpenAIClient struct{}
 // Client Creation
 // ============================================================================
 
-func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo) openai.Client {
+func (c *OpenAIClient) getClient(providerInfo *logic.SimpleProviderInfo) openai.Client {
 	opts := []option.RequestOption{
 		option.WithAPIKey(providerInfo.ApiKey),
 	}
@@ -39,7 +38,7 @@ func (c *OpenAIClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // ============================================================================
 
 func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
-	client := c.getClient(ctx, providerInfo)
+	client := c.getClient(providerInfo)
 
 	// Build input items from history and new message
 	inputItems, err := c.buildInputItems(historyMessages, newMessage, files)
@@ -158,10 +157,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 						Data:      annotations,
 					}
 					if err := StreamToClient(response, annotationResponse); err != nil {
-						if errors.Is(ctx.Err(), context.Canceled) {
-							c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
-							return nil
-						}
 						return err
 					}
 				}
@@ -191,18 +186,13 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 
 			if shouldSend {
 				if err := StreamToClient(response, streamResponse); err != nil {
-					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
-						return nil
-					}
 					return err
 				}
 			}
 		}
 
 		if err := stream.Err(); err != nil {
-			if errors.Is(ctx.Err(), context.Canceled) {
-				c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
+			if HandleStreamError(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo) {
 				return nil
 			}
 			return err
@@ -253,10 +243,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					Data:      toolCall,
 				}
 				if err := StreamToClient(response, toolCallResponse); err != nil {
-					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
-						return nil
-					}
 					return err
 				}
 
@@ -283,10 +269,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					Data:      toolResultData,
 				}
 				if err := StreamToClient(response, toolResultResponse); err != nil {
-					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
-						return nil
-					}
 					return err
 				}
 
@@ -494,7 +476,7 @@ func (c *OpenAIClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []res
 // ============================================================================
 
 func (c *OpenAIClient) GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error) {
-	client := c.getClient(ctx, providerInfo)
+	client := c.getClient(providerInfo)
 
 	jsonSchema := c.getTitleSchema()
 

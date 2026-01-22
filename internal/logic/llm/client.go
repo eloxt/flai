@@ -101,10 +101,26 @@ func buildChatHistoryXML(messages []*entity.Message) string {
 
 // StreamToClient sends SSE data to the client.
 func StreamToClient(response *ghttp.Response, content any) error {
+	if response == nil || response.Request == nil || response.BufferWriter == nil {
+		return nil
+	}
+	if response.BufferWriter.Writer == nil || response.BufferWriter.Writer.ResponseWriter == nil {
+		return nil
+	}
+	if response.Request.Context().Err() != nil {
+		return nil
+	}
 	data, err := json.Marshal(content)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if recover() != nil {
+			if response != nil {
+				response.BufferWriter = nil
+			}
+		}
+	}()
 	response.Writef("data: %s\n\n", data)
 	response.Flush()
 	return nil
@@ -112,6 +128,22 @@ func StreamToClient(response *ghttp.Response, content any) error {
 
 // StreamDone sends the SSE done signal to the client.
 func StreamDone(response *ghttp.Response) {
+	if response == nil || response.Request == nil || response.BufferWriter == nil {
+		return
+	}
+	if response.BufferWriter.Writer == nil || response.BufferWriter.Writer.ResponseWriter == nil {
+		return
+	}
+	if response.Request.Context().Err() != nil {
+		return
+	}
+	defer func() {
+		if recover() != nil {
+			if response != nil {
+				response.BufferWriter = nil
+			}
+		}
+	}()
 	response.Writef("data: [DONE]\n\n")
 	response.Flush()
 }
@@ -160,7 +192,7 @@ func SaveAssistantMessage(ctx context.Context, message *entity.Message, contentL
 
 // HandleStreamError checks if the error is due to context cancellation
 // and saves the message accordingly. Returns true if the caller should return nil.
-func HandleStreamError(ctx context.Context, err error, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) bool {
+func HandleStreamError(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) bool {
 	if errors.Is(ctx.Err(), context.Canceled) {
 		if contentBuilder != nil && contentBuilder.Len() > 0 {
 			appendContent(contentBuilder, contentType, imageUrls, contentList)

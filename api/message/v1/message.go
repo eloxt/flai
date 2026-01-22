@@ -58,3 +58,11 @@ type DeleteReq struct {
 }
 
 type DeleteRes struct{}
+
+type CancelReq struct {
+	g.Meta             `path:"/messages/cancel" method:"post" tag:"" summary:"Cancel message generation"`
+	ConversationId     string `json:"conversation_id" v:"required"`
+	AssistantMessageId string `json:"assistant_message_id" v:"required"`
+}
+
+type CancelRes struct{}

@@ -75,6 +75,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const [queryParam, setQueryParam] = useState<string>("");
     const [searchResults, setSearchResults] = useState<SearchResponse[]>([]);
     const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
+    const toggleSidebarState = useAppStore((state) => state.toggleSidebar);
     const { open, setOpen, toggleSidebar } = useSidebar();
 
     useEffect(() => {
@@ -89,6 +90,12 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
             setOpen(isSidebarOpen);
         }
     }, [isSidebarOpen]);
+
+    useEffect(() => {
+        if (isSidebarOpen !== open) {
+            toggleSidebarState();
+        }
+    }, [open])
 
     const handleDelete = (id: string) => {
         setConversationToDelete(id);

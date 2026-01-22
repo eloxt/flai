@@ -74,9 +74,23 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		}
 	}
 
-	// Stream chat response
-	if err := llm.StreamChat(ctx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpToolInfos, files); err != nil {
-		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
+	// Stream chat response in a separate goroutine; keep generation running even if the client disconnects.
+	generationCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	llm.RegisterGeneration(req.AssistantMessageId, cancel)
+	done := make(chan error, 1)
+	go func() {
+		defer llm.UnregisterGeneration(req.AssistantMessageId)
+		done <- llm.StreamChat(generationCtx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpToolInfos, files)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
+		}
+	case <-ctx.Done():
+		// Client disconnected; generation continues in the background.
+		response.BufferWriter = nil
 	}
 
 	return nil, nil

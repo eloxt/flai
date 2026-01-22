@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"flai/internal/consts"
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
@@ -135,8 +134,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		// Process stream
 		for resp, err := range iter {
 			if err != nil {
-				if errors.Is(ctx.Err(), context.Canceled) {
-					c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+				if HandleStreamError(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo) {
 					return nil
 				}
 				return err
@@ -182,10 +180,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 							}
 
 							if err := StreamToClient(response, streamResponse); err != nil {
-								if errors.Is(ctx.Err(), context.Canceled) {
-									c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-									return nil
-								}
 								return err
 							}
 
@@ -235,10 +229,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 							}
 
 							if err := StreamToClient(response, streamResponse); err != nil {
-								if errors.Is(ctx.Err(), context.Canceled) {
-									c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-									return nil
-								}
 								return err
 							}
 						}
@@ -266,10 +256,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 						Data:      metaInfo,
 					}
 					if err := StreamToClient(response, metaResponse); err != nil {
-						if errors.Is(ctx.Err(), context.Canceled) {
-							c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-							return nil
-						}
 						return err
 					}
 
@@ -282,10 +268,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 							Data:      candidate.GroundingMetadata,
 						}
 						if err := StreamToClient(response, groundingResponse); err != nil {
-							if errors.Is(ctx.Err(), context.Canceled) {
-								c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-								return nil
-							}
 							return err
 						}
 					}
@@ -335,10 +317,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 					Data:      toolCall,
 				}
 				if err := StreamToClient(response, toolCallResponse); err != nil {
-					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-						return nil
-					}
 					return err
 				}
 
@@ -365,10 +343,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 					Data:      toolResultData,
 				}
 				if err := StreamToClient(response, toolResultResponse); err != nil {
-					if errors.Is(ctx.Err(), context.Canceled) {
-						c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-						return nil
-					}
 					return err
 				}
 

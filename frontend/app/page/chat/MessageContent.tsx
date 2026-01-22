@@ -56,7 +56,7 @@ export function MessageContent({
                     ) : (
                         <ChevronRight className="size-3" />
                     )}
-                    {isLastMessage && isLastContent ? (
+                    {isLastMessage && isLastContent && isStreaming ? (
                         <Shimmer>{t("pages.chat.reasoning.process")}</Shimmer>
                     ) : (
                         <span>{t("pages.chat.reasoning.done")}</span>

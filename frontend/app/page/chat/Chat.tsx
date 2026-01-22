@@ -58,6 +58,7 @@ export default function Chat() {
         sendMessage,
         retryMessage,
         deleteMessage,
+        cancelGeneration,
         switchNode,
     } = useChat(conversationId, {
         onExpandReasoning: (messageId) => {
@@ -194,6 +195,8 @@ export default function Chat() {
                         value={input}
                         onChange={setInput}
                         onSend={handleSend}
+                        onCancel={cancelGeneration}
+                        isStreaming={isStreaming}
                         onHeightChange={setInputHeight}
                         autoFocus={true}
                     />
