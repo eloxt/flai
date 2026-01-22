@@ -464,6 +464,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
         // Optimistic update for new messages
         if (!retry) {
+            // add user message to path
             const userMessage = createUserMessage(
                 userMsgId,
                 path.length > 0 ? path[path.length - 1].id : "",
@@ -473,15 +474,18 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             );
             newPath.push(userMessage);
             setPath(newPath);
-
+            // append to parent's chilren
             if (userMessage.parent_id) {
                 newMap.get(userMessage.parent_id)?.children.push(userMessage);
             }
+            // add to map
             newMap.set(userMsgId, userMessage);
+            // clear input
             setChatInput(conversationId, "");
+        } else {
+            newMap.get(userMsgId)?.children.push(assistantPlaceholder);
         }
 
-        newMap.get(userMsgId)?.children.push(assistantPlaceholder);
         newPath.push(assistantPlaceholder);
         setNodeMap(newMap);
         setPath(newPath);
