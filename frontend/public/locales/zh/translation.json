@@ -187,7 +187,8 @@
             "title": "管理员设置",
             "tabs": {
                 "users": "用户管理",
-                "providers": "服务商管理"
+                "providers": "服务商管理",
+                "notification": "站内通知"
             },
             "users": {
                 "title": "用户",
@@ -274,6 +275,30 @@
                     "isActive": "激活"
                 },
                 "modelsCount": "个模型"
+            },
+            "notification": {
+                "title": "站内通知",
+                "description": "管理显示给所有用户的站内通知横幅。",
+                "add": "添加通知",
+                "addTitle": "添加通知",
+                "editTitle": "编辑通知",
+                "dialogDescription": "创建将显示在主页顶部的通知横幅。",
+                "titleLabel": "标题",
+                "titlePlaceholder": "通知标题",
+                "contentLabel": "内容",
+                "contentPlaceholder": "通知消息内容",
+                "levelLabel": "类型",
+                "levelDefault": "信息",
+                "levelWarning": "警告",
+                "empty": "暂无通知配置。添加一个以显示站内通知横幅。",
+                "fetchError": "获取通知失败",
+                "createSuccess": "通知创建成功",
+                "updateSuccess": "通知更新成功",
+                "deleteSuccess": "通知删除成功",
+                "saveError": "保存通知失败",
+                "deleteError": "删除通知失败",
+                "fillRequired": "请填写标题和内容",
+                "confirmDelete": "确定要删除此通知吗？"
             }
         }
     },

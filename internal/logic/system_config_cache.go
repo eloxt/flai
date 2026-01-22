@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"encoding/json"
+	"flai/internal/model/do"
 	"flai/internal/model/entity"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -27,4 +28,21 @@ func UpdateSystemConfigCache(ctx context.Context) {
 		SystemConfigMap[config.Key] = configValue
 	}
 	g.Log().Infof(ctx, "System config cache updated")
+}
+
+func UpdateSystemConfig(ctx context.Context, key string, value map[string]any) {
+	SystemConfigMap[key] = value
+	jsonBytes, err := json.Marshal(value)
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
+	jsonString := string(jsonBytes)
+	_, err = g.DB().Model(&entity.SystemConfig{}).Where(do.SystemConfig{
+		Key: key,
+	}).Update(g.Map{"value": jsonString})
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
 }

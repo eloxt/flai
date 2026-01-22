@@ -8,6 +8,7 @@ import (
 	"flai/internal/controller/file"
 	"flai/internal/controller/mcp"
 	"flai/internal/controller/message"
+	"flai/internal/controller/notification"
 	"flai/internal/controller/provider"
 	"flai/internal/controller/public"
 	"flai/internal/controller/share"
@@ -54,6 +55,7 @@ func RegisterRouter(s *ghttp.Server) {
 			file.NewV1(),
 			share.NewV1(),
 			mcp.NewV1(),
+			notification.NewV1(),
 		)
 	})
 	s.Group("/auth", func(group *ghttp.RouterGroup) {

@@ -1,5 +1,5 @@
 import { ChatInput } from "@/components/chat-input";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useModelStore } from "./store/model-store";
@@ -7,10 +7,16 @@ import { useInputStore } from "./store/input-store";
 import { api } from "./lib/api";
 import { toast } from "sonner";
 import { useAppStore } from "./store/app-store";
-import { useEffect } from "react";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertTriangleIcon, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+interface Notification {
+    id: string;
+    title: string;
+    content: string;
+    level: string;
+}
 
 export default function Main() {
     const { t } = useTranslation();
@@ -32,6 +38,23 @@ export default function Main() {
     const setShowHeaderBorder = useAppStore(
         (state) => state.setShowHeaderBorder,
     );
+    const dismissedNotifications = useAppStore(
+        (state) => state.dismissedNotifications,
+    );
+    const dismissNotification = useAppStore(
+        (state) => state.dismissNotification,
+    );
+
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const res = await api.get<{ list: Notification[] }>("/api/notification");
+            setNotifications(res.list || []);
+        } catch (error) {
+            console.error("Failed to fetch notifications:", error);
+        }
+    }, []);
 
     const handleSend = async () => {
         if (!inputValue.trim()) return;
@@ -67,37 +90,53 @@ export default function Main() {
         }
         setCurrentMessagePath([]);
         setShowHeaderBorder(false);
+        fetchNotifications();
     }, []);
+
+    const visibleNotifications = notifications.filter(
+        (n) => !dismissedNotifications.includes(n.id)
+    );
 
     return (
         <div className="relative flex h-full flex-col">
-            <div className="absolute left-0 right-0 top-4 z-10 flex flex-col items-center gap-1 px-4 md:px-2">
-                <Alert className="max-w-3xl">
-                    <Info />
-                    <AlertTitle>Default</AlertTitle>
-                    <AlertDescription>
-                        This is a default test.
-                    </AlertDescription>
-                    <AlertAction>
-                        <Button size="icon-sm" variant="ghost">
-                            <X />
-                        </Button>
-                    </AlertAction>
-                </Alert>
-
-                <Alert className="max-w-3xl border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
-                    <AlertTriangleIcon />
-                    <AlertTitle>Warning</AlertTitle>
-                    <AlertDescription>
-                        This is a warning test.
-                    </AlertDescription>
-                    <AlertAction>
-                        <Button size="icon-sm" variant="ghost" className="hover:bg-amber-100">
-                            <X />
-                        </Button>
-                    </AlertAction>
-                </Alert>
-            </div>
+            {visibleNotifications.length > 0 && (
+                <div className="absolute left-0 right-0 top-4 z-10 flex flex-col items-center gap-1 px-4 md:px-2">
+                    {visibleNotifications.map((notification) => (
+                        <Alert
+                            key={notification.id}
+                            className={
+                                notification.level === "warning"
+                                    ? "max-w-3xl border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50"
+                                    : "max-w-3xl"
+                            }
+                        >
+                            {notification.level === "warning" ? (
+                                <AlertTriangleIcon />
+                            ) : (
+                                <Info />
+                            )}
+                            <AlertTitle>{notification.title}</AlertTitle>
+                            <AlertDescription>
+                                {notification.content}
+                            </AlertDescription>
+                            <AlertAction>
+                                <Button
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    className={
+                                        notification.level === "warning"
+                                            ? "hover:bg-amber-100 dark:hover:bg-amber-900"
+                                            : ""
+                                    }
+                                    onClick={() => dismissNotification(notification.id)}
+                                >
+                                    <X />
+                                </Button>
+                            </AlertAction>
+                        </Alert>
+                    ))}
+                </div>
+            )}
 
             <div className="flex flex-1 flex-col items-center justify-center gap-12 px-4">
                 <p className="font-medium text-3xl">{t("pages.chat.greeting")}</p>

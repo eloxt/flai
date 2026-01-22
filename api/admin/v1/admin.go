@@ -120,3 +120,54 @@ type UserDeleteReq struct {
 }
 
 type UserDeleteRes struct{}
+
+type NotificationAddReq struct {
+	g.Meta  `path:"/notification" method:"post" tag:"Notification(Admin)" summary:"Add notification"`
+	Title   string `json:"title" v:"required"`
+	Content string `json:"content" v:"required"`
+	Level   string `json:"level"`
+}
+
+type NotificationAddRes struct {
+	Id      string `json:"id" dc:"Notification ID"`
+	Title   string `json:"title" dc:"Notification title"`
+	Content string `json:"content" dc:"Notification content"`
+	Level   string `json:"level" dc:"Notification level"`
+}
+
+type NotificationUpdateReq struct {
+	g.Meta  `path:"/notification/{id}" method:"put" tag:"Notification(Admin)" summary:"Update notification"`
+	Id      string `json:"id" v:"required"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Level   string `json:"level"`
+}
+
+type NotificationUpdateRes struct {
+	Id      string `json:"id" dc:"Notification ID"`
+	Title   string `json:"title" dc:"Notification title"`
+	Content string `json:"content" dc:"Notification content"`
+	Level   string `json:"level" dc:"Notification level"`
+}
+
+type NotificationDeleteReq struct {
+	g.Meta `path:"/notification/{id}" method:"delete" tag:"Notification(Admin)" summary:"Delete notification"`
+	Id     string `json:"id" v:"required"`
+}
+
+type NotificationDeleteRes struct{}
+
+type NotificationListReq struct {
+	g.Meta `path:"/notification" method:"get" tag:"Notification(Admin)" summary:"List notifications"`
+}
+
+type NotificationListRes struct {
+	List []NotificationItem `json:"list"`
+}
+
+type NotificationItem struct {
+	Id      string `json:"id" dc:"Notification ID"`
+	Title   string `json:"title" dc:"Notification title"`
+	Content string `json:"content" dc:"Notification content"`
+	Level   string `json:"level" dc:"Notification level"`
+}

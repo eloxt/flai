@@ -61,10 +61,12 @@ var ProviderType = struct {
 // System config keys
 var SystemConfig = struct {
 	TitleGeneration string
-	SystemPrompt string
+	SystemPrompt    string
+	Notification    string
 }{
 	TitleGeneration: "title_generation",
-	SystemPrompt: "system_prompt",
+	SystemPrompt:    "system_prompt",
+	Notification:    "notification",
 }
 
 // Internal tools

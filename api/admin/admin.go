@@ -7,7 +7,7 @@ package admin
 import (
 	"context"
 
-	"flai/api/admin/v1"
+	v1 "flai/api/admin/v1"
 )
 
 type IAdminV1 interface {
@@ -21,4 +21,8 @@ type IAdminV1 interface {
 	UserGet(ctx context.Context, req *v1.UserGetReq) (res *v1.UserGetRes, err error)
 	UserUpdate(ctx context.Context, req *v1.UserUpdateReq) (res *v1.UserUpdateRes, err error)
 	UserDelete(ctx context.Context, req *v1.UserDeleteReq) (res *v1.UserDeleteRes, err error)
+	NotificationAdd(ctx context.Context, req *v1.NotificationAddReq) (res *v1.NotificationAddRes, err error)
+	NotificationUpdate(ctx context.Context, req *v1.NotificationUpdateReq) (res *v1.NotificationUpdateRes, err error)
+	NotificationDelete(ctx context.Context, req *v1.NotificationDeleteReq) (res *v1.NotificationDeleteRes, err error)
+	NotificationList(ctx context.Context, req *v1.NotificationListReq) (res *v1.NotificationListRes, err error)
 }

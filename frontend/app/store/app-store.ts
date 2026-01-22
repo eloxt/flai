@@ -16,6 +16,8 @@ interface AppState {
   toggleInspectionPanel: () => void;
   scrollToMessageId: string | null;
   setScrollToMessageId: (id: string | null) => void;
+  dismissedNotifications: string[];
+  dismissNotification: (id: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -37,6 +39,13 @@ export const useAppStore = create<AppState>()(
         })),
       scrollToMessageId: null,
       setScrollToMessageId: (id) => set({ scrollToMessageId: id }),
+      dismissedNotifications: [],
+      dismissNotification: (id) =>
+        set((state) => ({
+          dismissedNotifications: state.dismissedNotifications.includes(id)
+            ? state.dismissedNotifications
+            : [...state.dismissedNotifications, id],
+        })),
     }),
     {
       name: "flai-app-store",
@@ -44,6 +53,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         isSidebarOpen: state.isSidebarOpen,
         isRightSidebarOpen: state.isInspectionPanelOpen,
+        dismissedNotifications: state.dismissedNotifications,
       }),
     }
   )

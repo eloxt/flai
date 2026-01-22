@@ -186,7 +186,8 @@
             "title": "Admin Settings",
             "tabs": {
                 "users": "User Management",
-                "providers": "Provider Management"
+                "providers": "Provider Management",
+                "notification": "Notifications"
             },
             "users": {
                 "title": "Users",
@@ -273,6 +274,30 @@
                     "isActive": "Active"
                 },
                 "modelsCount": "models"
+            },
+            "notification": {
+                "title": "Notifications",
+                "description": "Manage site-wide notification banners displayed to all users.",
+                "add": "Add Notification",
+                "addTitle": "Add Notification",
+                "editTitle": "Edit Notification",
+                "dialogDescription": "Create a notification banner that will be displayed at the top of the main page.",
+                "titleLabel": "Title",
+                "titlePlaceholder": "Notification title",
+                "contentLabel": "Content",
+                "contentPlaceholder": "Notification message content",
+                "levelLabel": "Type",
+                "levelDefault": "Info",
+                "levelWarning": "Warning",
+                "empty": "No notifications configured. Add one to display a site-wide banner.",
+                "fetchError": "Failed to fetch notifications",
+                "createSuccess": "Notification created successfully",
+                "updateSuccess": "Notification updated successfully",
+                "deleteSuccess": "Notification deleted successfully",
+                "saveError": "Failed to save notification",
+                "deleteError": "Failed to delete notification",
+                "fillRequired": "Please fill in title and content",
+                "confirmDelete": "Are you sure you want to delete this notification?"
             }
         }
     },
