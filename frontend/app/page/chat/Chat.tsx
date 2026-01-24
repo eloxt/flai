@@ -12,6 +12,7 @@ import { useAppStore } from "@/store/app-store";
 import { useChat } from "./use-chat";
 import { ChatSkeleton } from "./ChatSkeleton";
 import { MessageItem } from "./MessageItem";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const meta: MetaFunction = ({ params }) => {
     const { conversationId } = params;
@@ -28,6 +29,7 @@ export const meta: MetaFunction = ({ params }) => {
 };
 
 export default function Chat() {
+    const isMobile = useIsMobile();
     const { conversationId } = useParams();
 
     // Input state
@@ -171,7 +173,7 @@ export default function Chat() {
                 </div>
             </div>
 
-            <div className="absolute bottom-4 left-0 right-0 z-50 px-4 md:px-8 pointer-events-none">
+            <div className={`absolute ${isMobile ? "bottom-8" : "bottom-4"} left-0 right-0 z-50 px-4 md:px-8 pointer-events-none `}>
                 <div
                     className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-opacity ${showScrollButton
                         ? "opacity-100 pointer-events-auto"
@@ -202,7 +204,7 @@ export default function Chat() {
                     />
                 </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 h-4 z-40 mx-4 md:mx-8 bg-background" />
+            <div className={`absolute bottom-0 left-0 right-0 ${isMobile ? "h-8" : "h-4"} z-40 mx-4 md:mx-8 bg-background`} />
         </>
     );
 }

@@ -56,8 +56,8 @@ export function MessageActions({
     return (
         <div
             className={`flex items-center gap-0 px-3 py-1 ${message.role === "user"
-                    ? "self-end opacity-0 group-hover:opacity-100 transition-opacity"
-                    : ""
+                ? "self-end md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                : ""
                 }`}
         >
             {/* Sibling navigation */}

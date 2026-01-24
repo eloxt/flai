@@ -29,6 +29,16 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -285,6 +295,7 @@ function MCPSettings() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingConfig, setEditingConfig] = useState<MCPConfig | null>(null);
     const [refreshingId, setRefreshingId] = useState<string | null>(null);
+    const [configToDelete, setConfigToDelete] = useState<string | null>(null);
 
     // Form state
     const [formName, setFormName] = useState("");
@@ -378,14 +389,14 @@ function MCPSettings() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm(t("pages.settings.mcp.confirmDelete"))) return;
-
         try {
             await api.del(`/api/mcp/${id}`);
             toast.success(t("pages.settings.mcp.deleteSuccess"));
             fetchConfigs();
         } catch (error: any) {
             toast.error(error.message || t("pages.settings.mcp.deleteError"));
+        } finally {
+            setConfigToDelete(null);
         }
     };
 
@@ -482,7 +493,7 @@ function MCPSettings() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => handleDelete(config.id)}
+                                            onClick={() => setConfigToDelete(config.id)}
                                             title={t("common.delete")}
                                         >
                                             <Trash2 className="size-4 text-destructive" />
@@ -579,6 +590,24 @@ function MCPSettings() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!configToDelete} onOpenChange={(open) => !open && setConfigToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t("pages.settings.mcp.deleteTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t("pages.settings.mcp.confirmDelete")}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => configToDelete && handleDelete(configToDelete)}>
+                            {t("common.actions.confirm")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
@@ -598,6 +627,7 @@ function ShareSettings() {
     const [editingShare, setEditingShare] = useState<ShareItem | null>(null);
     const [newExpiresAt, setNewExpiresAt] = useState("");
     const [isUpdating, setIsUpdating] = useState(false);
+    const [shareToDelete, setShareToDelete] = useState<string | null>(null);
 
     const fetchShares = async () => {
         setIsLoading(true);
@@ -616,14 +646,14 @@ function ShareSettings() {
     }, []);
 
     const handleDelete = async (id: string) => {
-        if (!confirm(t("pages.settings.share.confirmDelete"))) return;
-
         try {
             await api.del(`/api/share/${id}`);
             toast.success(t("pages.settings.share.deleteSuccess"));
             fetchShares();
         } catch (error: any) {
             toast.error(error.message || t("pages.settings.share.deleteError"));
+        } finally {
+            setShareToDelete(null);
         }
     };
 
@@ -759,7 +789,7 @@ function ShareSettings() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => handleDelete(share.id)}
+                                            onClick={() => setShareToDelete(share.id)}
                                             title={t("common.actions.delete")}
                                         >
                                             <Trash2 className="size-4 text-destructive" />
@@ -821,6 +851,24 @@ function ShareSettings() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!shareToDelete} onOpenChange={(open) => !open && setShareToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t("pages.settings.share.deleteTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t("pages.settings.share.confirmDelete")}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => shareToDelete && handleDelete(shareToDelete)}>
+                            {t("common.actions.confirm")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

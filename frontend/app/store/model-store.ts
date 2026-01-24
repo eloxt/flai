@@ -28,6 +28,7 @@ export interface Model {
         context?: number;
         output?: number;
     };
+    internal_search?: boolean;
 }
 
 export interface Provider {

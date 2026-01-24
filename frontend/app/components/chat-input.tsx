@@ -4,6 +4,7 @@ import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/i
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
 import { useInputStore } from "@/store/input-store";
+import { useModelStore } from "@/store/model-store";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { api } from "../lib/api";
 import { toast } from "sonner";
@@ -88,6 +89,7 @@ export function ChatInput({
     const attachments = useInputStore((state) => state.attachments);
     const addAttachment = useInputStore((state) => state.addAttachment);
     const removeAttachment = useInputStore((state) => state.removeAttachment);
+    const currentModel = useModelStore((state) => state.currentModel);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const dragCounterRef = useRef(0);
@@ -249,7 +251,9 @@ export function ChatInput({
                     </div>
                 </div>
             )}
-            <InputGroup>
+            <InputGroup
+                className="rounded-xl"
+            >
                 <TextareaAutosize
                     data-slot="input-group-control"
                     placeholder={placeholder || t("pages.chat.placeholder")}
@@ -264,7 +268,7 @@ export function ChatInput({
                     maxRows={7}
                     minRows={1}
                     autoFocus={autoFocus}
-                    className="flex field-sizing-content w-full resize-none rounded-md bg-transparent px-3 py-2.5 text-base transition-all outline-none md:text-sm"
+                    className="flex field-sizing-content w-full resize-none rounded-xl bg-transparent px-3 py-2.5 text-base transition-all outline-none md:text-sm"
                 />
                 <InputGroupAddon align="block-end" className="items-end">
                     <input
@@ -315,21 +319,25 @@ export function ChatInput({
                                 </DropdownMenu>
                             )}
 
-                            <Button
-                                variant="outline"
-                                onClick={handleUploadClick}
-                            >
-                                <Paperclip className="size-4" />
-                                {t("common.attachment")}
-                            </Button>
+                            {currentModel?.attachment && (
+                                <Button
+                                    variant="outline"
+                                    onClick={handleUploadClick}
+                                >
+                                    <Paperclip className="size-4" />
+                                    {t("common.attachment")}
+                                </Button>
+                            )}
 
-                            <ToggleGroupItem
-                                value="internal_web_search"
-                                variant="outline"
-                            >
-                                <Globe className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`} />
-                                <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("common.search")}</p>
-                            </ToggleGroupItem>
+                            {currentModel?.internal_search && (
+                                <ToggleGroupItem
+                                    value="internal_web_search"
+                                    variant="outline"
+                                >
+                                    <Globe className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`} />
+                                    <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("common.search")}</p>
+                                </ToggleGroupItem>
+                            )}
                         </ToggleGroup>
 
                         {/* Selected MCP Tools and Attachments Display */}
@@ -383,7 +391,7 @@ export function ChatInput({
                             onClick={onSend}
                             disabled={isLoading || (!value.trim() && attachments.length === 0)}
                         >
-                            <ArrowUpIcon className="size-3"/>
+                            <ArrowUpIcon className="size-3" />
                         </InputGroupButton>
                     )}
                 </InputGroupAddon>

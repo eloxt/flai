@@ -27,6 +27,7 @@ type ModelConfig struct {
 	OpenWeights      bool       `json:"open_weights"`
 	Cost             Cost       `json:"cost"`
 	Limit            Limit      `json:"limit"`
+	InternalSearch   bool       `json:"internal_search"`
 }
 
 type Cost struct {

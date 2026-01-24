@@ -8,7 +8,6 @@ import { PhotoProvider, PhotoView } from "react-photo-view";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
-import { mermaid } from "@streamdown/mermaid";
 import "katex/dist/katex.min.css";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 
@@ -82,7 +81,7 @@ export function MessageContent({
 
     return (
         <div className="markdown-body overflow-x-auto w-full">
-            <Streamdown caret="block" isAnimating={isStreaming} plugins={{cjk: cjk, code: code, math: math, mermaid: mermaid}}>
+            <Streamdown caret="block" isAnimating={isStreaming} plugins={{cjk: cjk, code: code, math: math}}>
                 {(content.data as ContentMessage).content}
             </Streamdown>
             {((content.data as ContentMessage).image_urls?.length ?? 0) > 0 && (

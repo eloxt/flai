@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { useAuthStore } from "../store/auth-store";
 import { useModelStore, Model, Provider } from "../store/model-store";
+import { useInputStore } from "../store/input-store";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { api, ApiError } from "@/lib/api";
@@ -21,6 +22,19 @@ export default function ModelSelector() {
     const [isLoading, setIsLoading] = useState(false);
     const [showModelMenu, setShowModelMenu] = useState(false);
     const tokens = useAuthStore((state) => state.tokens);
+    const clearAttachments = useInputStore((state) => state.clearAttachments);
+    const selectedTools = useInputStore((state) => state.selectedTools);
+    const setSelectedTools = useInputStore((state) => state.setSelectedTools);
+
+    const handleModelSelect = (model: Model, providerId: string) => {
+        if (!model.attachment) {
+            clearAttachments();
+        }
+        if (!model.internal_search && selectedTools.includes("internal_web_search")) {
+            setSelectedTools(selectedTools.filter(tool => tool !== "internal_web_search"));
+        }
+        setCurrentModel({ ...model, provider_id: providerId });
+    };
 
     useEffect(() => {
         fetchProviders();
@@ -86,7 +100,7 @@ export default function ModelSelector() {
                                         className="font-normal"
                                         key={model.id}
                                         checked={currentModel?.id === model.id}
-                                        onCheckedChange={() => setCurrentModel({ ...model, provider_id: provider.id })}>
+                                        onCheckedChange={() => handleModelSelect(model, provider.id)}>
                                         {model.name}
                                     </DropdownMenuCheckboxItem>
                                 </HoverCardTrigger>
