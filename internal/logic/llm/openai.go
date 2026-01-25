@@ -48,27 +48,27 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	var err error
 	var previousResponseId string
 	var inputItems []responses.ResponseInputItemUnionParam
-	if len(historyMessages) > 0 {
-		latestMessage := historyMessages[len(historyMessages)-1]
-		if latestMessage.MetaInfo != "" {
-			metaInfoStr := latestMessage.MetaInfo
-			var metaInfo map[string]any
-			err := json.Unmarshal([]byte(metaInfoStr), &metaInfo)
-			if err != nil {
-				return err
-			}
-			id, ok := metaInfo["openai_response_id"]
-			if ok {
-				previousResponseId = id.(string)
-			}
-		}
+	//if len(historyMessages) > 0 {
+	//	latestMessage := historyMessages[len(historyMessages)-1]
+	//	if latestMessage.MetaInfo != "" {
+	//		metaInfoStr := latestMessage.MetaInfo
+	//		var metaInfo map[string]any
+	//		err := json.Unmarshal([]byte(metaInfoStr), &metaInfo)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		id, ok := metaInfo["openai_response_id"]
+	//		if ok {
+	//			previousResponseId = id.(string)
+	//		}
+	//	}
+	//}
+	//if previousResponseId == "" {
+	inputItems, err = c.buildInputItems(historyMessages, newMessage, files)
+	if err != nil {
+		return err
 	}
-	if previousResponseId == "" {
-		inputItems, err = c.buildInputItems(historyMessages, newMessage, files)
-		if err != nil {
-			return err
-		}
-	}
+	//}
 
 	// Build tools
 	openaiTools := c.buildTools(tools, mcpTools)
