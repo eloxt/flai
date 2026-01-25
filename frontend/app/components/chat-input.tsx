@@ -1,4 +1,4 @@
-import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square } from "lucide-react";
+import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square, Image } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -336,6 +336,15 @@ export function ChatInput({
                                 >
                                     <Globe className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`} />
                                     <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("common.search")}</p>
+                                </ToggleGroupItem>
+                            )}
+                            {currentModel?.image_generation && (
+                                <ToggleGroupItem
+                                    value="image_generation"
+                                    variant="outline"
+                                >
+                                    <Image className={` ${selectedTools.includes("image_generation") ? "text-blue-400" : ""}`} />
+                                    <p className={` ${selectedTools.includes("image_generation") ? "text-blue-400" : ""}`}>{t("common.imageGeneration")}</p>
                                 </ToggleGroupItem>
                             )}
                         </ToggleGroup>

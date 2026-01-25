@@ -595,7 +595,7 @@ function MCPSettings() {
             <AlertDialog open={!!configToDelete} onOpenChange={(open) => !open && setConfigToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>{t("pages.settings.mcp.deleteTitle")}</AlertDialogTitle>
+                        <AlertDialogTitle>{t("pages.settings.mcp.title")}</AlertDialogTitle>
                         <AlertDialogDescription>
                             {t("pages.settings.mcp.confirmDelete")}
                         </AlertDialogDescription>
@@ -856,7 +856,7 @@ function ShareSettings() {
             <AlertDialog open={!!shareToDelete} onOpenChange={(open) => !open && setShareToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>{t("pages.settings.share.deleteTitle")}</AlertDialogTitle>
+                        <AlertDialogTitle>{t("pages.settings.share.title")}</AlertDialogTitle>
                         <AlertDialogDescription>
                             {t("pages.settings.share.confirmDelete")}
                         </AlertDialogDescription>

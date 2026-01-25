@@ -54,12 +54,19 @@ type StreamResponse struct {
 
 type ContentReasoning struct {
 	Content string `json:"content"`
+	Id      string `json:"id"`
 }
 
 type ContentMessage struct {
-	Content   string         `json:"content"`
-	Files     []*entity.File `json:"files"`
-	ImageUrls []string       `json:"image_urls"`
+	Id      string         `json:"id"`
+	Content string         `json:"content"`
+	Files   []*entity.File `json:"files"`
+	Images  []ContentImage `json:"images"`
+}
+
+type ContentImage struct {
+	Id        string `json:"id"`
+	PublicUrl string `json:"public_url"`
 }
 
 type Content struct {
@@ -73,6 +80,7 @@ type TitleGenerationResponse struct {
 }
 
 type MessageMetaInfo struct {
+	OpenaiResponseId    string                                        `json:"openai_response_id"`
 	ProviderName        string                                        `json:"provider_name"`
 	ModelName           string                                        `json:"model_name"`
 	PromptTokenCount    int                                           `json:"prompt_token_count"`

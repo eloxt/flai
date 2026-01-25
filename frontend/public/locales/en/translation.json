@@ -335,6 +335,7 @@
             "cached": "Cached",
             "toolUse": "Tool Use",
             "inputModalities": "Input Modalities",
+            "outputModalities": "Output Modalities",
             "badge": {
                 "attachment": "Attachment",
                 "reasoning": "Reasoning",

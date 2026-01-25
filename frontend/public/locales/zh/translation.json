@@ -336,6 +336,7 @@
             "toolUse": "工具使用",
             "cached": "缓存",
             "inputModalities": "输入模态",
+            "outputModalities": "输出模态",
             "badge": {
                 "attachment": "附件",
                 "reasoning": "推理",

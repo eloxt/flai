@@ -106,7 +106,8 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	// Initialize stream state
 	var currentMessageType string
 	var currentContentBuilder strings.Builder
-	var currentImages []string
+	var currentImages []ContentImage
+	var currentId string
 	var contentList []Content
 
 	message := &entity.Message{
@@ -134,7 +135,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		// Process stream
 		for resp, err := range iter {
 			if err != nil {
-				if HandleStreamError(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo) {
+				if HandleStreamError(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo) {
 					return nil
 				}
 				return err
@@ -161,7 +162,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 
 							// If type switched, save previous block
 							if currentMessageType != "" && currentMessageType != partType {
-								appendContent(&currentContentBuilder, currentMessageType, currentImages, &contentList)
+								appendContent(&currentContentBuilder, currentMessageType, currentImages, currentId, &contentList)
 								currentContentBuilder.Reset()
 							}
 
@@ -219,7 +220,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 
 							// Get public URL
 							imageUrl := s3.GetPublicUrl(ctx, imageKey)
-							currentImages = append(currentImages, imageUrl)
+							currentImages = append(currentImages, ContentImage{PublicUrl: imageUrl})
 
 							// Stream to client
 							streamResponse := StreamResponse{
@@ -279,7 +280,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		if len(functionCalls) > 0 {
 			// Save any pending content before adding tool calls (ensures correct order: reasoning -> tool_call)
 			if currentContentBuilder.Len() > 0 {
-				appendContent(&currentContentBuilder, currentMessageType, currentImages, &contentList)
+				appendContent(&currentContentBuilder, currentMessageType, currentImages, currentId, &contentList)
 				currentContentBuilder.Reset()
 				currentMessageType = ""
 			}
@@ -371,7 +372,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	}
 
 	// Save final message
-	c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+	c.saveAndClose(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 	StreamDone(response)
 
 	return nil
@@ -425,9 +426,9 @@ func (c *GeminiClient) executeMCPToolCallByName(ctx context.Context, mcpToolMap 
 	return result
 }
 
-func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, images []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
 	if contentType != "" && contentBuilder.Len() > 0 {
-		appendContent(contentBuilder, contentType, imageUrls, contentList)
+		appendContent(contentBuilder, contentType, images, currentId, contentList)
 	}
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
@@ -481,6 +482,11 @@ func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai
 			// Add file references
 			for _, file := range data.Files {
 				history = append(history, genai.NewContentFromURI(file.PublicUrl, file.MimeType, role))
+			}
+
+			// Add image references
+			for _, image := range data.Images {
+				history = append(history, genai.NewContentFromURI(image.PublicUrl, "image/png", role))
 			}
 		}
 	}

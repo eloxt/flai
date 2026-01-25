@@ -29,6 +29,7 @@ export interface Model {
         output?: number;
     };
     internal_search?: boolean;
+    image_generation?: boolean;
 }
 
 export interface Provider {

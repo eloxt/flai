@@ -84,13 +84,13 @@ export function MessageContent({
             <Streamdown caret="block" isAnimating={isStreaming} plugins={{cjk: cjk, code: code, math: math}}>
                 {(content.data as ContentMessage).content}
             </Streamdown>
-            {((content.data as ContentMessage).image_urls?.length ?? 0) > 0 && (
+            {((content.data as ContentMessage).images?.length ?? 0) > 0 && (
                 <PhotoProvider>
-                    {(content.data as ContentMessage).image_urls!.map((url, index) => (
-                        <PhotoView src={url} key={index}>
+                    {(content.data as ContentMessage).images!.map((image, index) => (
+                        <PhotoView src={image.public_url} key={index}>
                             <img
                                 key={index}
-                                src={url}
+                                src={image.public_url}
                                 alt="Generated content"
                                 className="max-w-64 rounded-lg mt-2"
                             />

@@ -18,7 +18,12 @@ export type ContentData = ContentMessage | ContentReasoning | ContentToolCall | 
 export interface ContentMessage {
     content: string;
     files?: Attachment[];
-    image_urls?: string[];
+    images?: ContentImage[];
+}
+
+export interface ContentImage {
+    public_url: string;
+    id: string;
 }
 
 export interface ContentReasoning {

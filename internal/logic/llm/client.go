@@ -151,21 +151,20 @@ func StreamDone(response *ghttp.Response) {
 }
 
 // appendContent appends content to the content list based on message type.
-func appendContent(contentBuilder *strings.Builder, messageType string, imageUrls []string, contentList *[]Content) {
-	if contentBuilder.Len() == 0 {
-		return
-	}
+func appendContent(contentBuilder *strings.Builder, messageType string, images []ContentImage, id string, contentList *[]Content) {
 	val := contentBuilder.String()
 	if messageType == consts.MessageType.Reasoning {
-		data := ContentReasoning{Content: val}
+		data := ContentReasoning{Id: id, Content: val}
 		content := Content{Type: consts.MessageType.Reasoning, Data: data}
+		g.Log().Debugf(context.TODO(), "appendContent: %v", content)
 		*contentList = append(*contentList, content)
 	} else {
-		data := ContentMessage{Content: val}
-		if len(imageUrls) > 0 {
-			data.ImageUrls = imageUrls
+		data := ContentMessage{Id: id, Content: val}
+		if len(images) > 0 {
+			data.Images = images
 		}
 		content := Content{Type: consts.MessageType.Message, Data: data}
+		g.Log().Debugf(context.TODO(), "appendContent: %v", content)
 		*contentList = append(*contentList, content)
 	}
 }
@@ -194,10 +193,10 @@ func SaveAssistantMessage(ctx context.Context, message *entity.Message, contentL
 
 // HandleStreamError checks if the error is due to context cancellation
 // and saves the message accordingly. Returns true if the caller should return nil.
-func HandleStreamError(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) bool {
+func HandleStreamError(ctx context.Context, message *entity.Message, images []ContentImage, contentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) bool {
 	if errors.Is(ctx.Err(), context.Canceled) {
 		if contentBuilder != nil && contentBuilder.Len() > 0 {
-			appendContent(contentBuilder, contentType, imageUrls, contentList)
+			appendContent(contentBuilder, contentType, images, contentId, contentList)
 		}
 		SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 		return true

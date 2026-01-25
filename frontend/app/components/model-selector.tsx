@@ -176,6 +176,16 @@ function ModelCardDetail({ model }: ModelCardDetailProps) {
                     </div>
                 </div>
             )}
+            {model.modalities?.output && model.modalities.output.length > 0 && (
+                <div className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">{t("components.modelSelector.outputModalities")}</span>
+                    <div className="flex gap-1 flex-wrap">
+                        {model.modalities.output.map(m => (
+                            <Badge key={m} variant="outline" className="capitalize">{m}</Badge>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

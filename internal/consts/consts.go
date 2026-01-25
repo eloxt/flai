@@ -72,6 +72,8 @@ var SystemConfig = struct {
 // Internal tools
 var InternalTools = struct {
 	InternalWebSearch string
+	ImageGeneration   string
 }{
 	InternalWebSearch: "internal_web_search",
+	ImageGeneration:   "image_generation",
 }

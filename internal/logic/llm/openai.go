@@ -2,13 +2,17 @@ package llm
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"flai/internal/consts"
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
 	"flai/internal/model/entity"
+	"flai/internal/utility/s3"
+	"fmt"
 	"strings"
 
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
@@ -41,9 +45,29 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	client := c.getClient(providerInfo)
 
 	// Build input items from history and new message
-	inputItems, err := c.buildInputItems(historyMessages, newMessage, files)
-	if err != nil {
-		return err
+	var err error
+	var previousResponseId string
+	var inputItems []responses.ResponseInputItemUnionParam
+	if len(historyMessages) > 0 {
+		latestMessage := historyMessages[len(historyMessages)-1]
+		if latestMessage.MetaInfo != "" {
+			metaInfoStr := latestMessage.MetaInfo
+			var metaInfo map[string]any
+			err := json.Unmarshal([]byte(metaInfoStr), &metaInfo)
+			if err != nil {
+				return err
+			}
+			id, ok := metaInfo["openai_response_id"]
+			if ok {
+				previousResponseId = id.(string)
+			}
+		}
+	}
+	if previousResponseId == "" {
+		inputItems, err = c.buildInputItems(historyMessages, newMessage, files)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Build tools
@@ -63,7 +87,8 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	// Initialize stream state
 	var currentContentBuilder strings.Builder
 	var contentList []Content
-	var currentImages []string
+	var currentImages []ContentImage
+	var currentContentId string
 	var contentType string
 
 	message := &entity.Message{
@@ -84,8 +109,9 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	for round := 0; round < maxToolRounds; round++ {
 		// Create stream params
 		params := responses.ResponseNewParams{
-			Instructions: openai.String(ComposeSystemPrompt()),
-			Model:        modelConfig.ID,
+			PreviousResponseID: openai.String(previousResponseId),
+			Instructions:       openai.String(ComposeSystemPrompt()),
+			Model:              modelConfig.ID,
 			Input: responses.ResponseNewParamsInputUnion{
 				OfInputItemList: currentInputItems,
 			},
@@ -93,8 +119,13 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 				Summary: shared.ReasoningSummaryAuto,
 			},
 			Tools: openaiTools,
-			Store: openai.Bool(false),
 		}
+
+		marshalJSON, err := params.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		g.Log().Debug(ctx, marshalJSON)
 
 		stream := client.Responses.NewStreaming(ctx, params)
 
@@ -128,6 +159,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 				shouldSend = true
 
 			case responses.ResponseOutputItemDoneEvent:
+				currentContentId = e.Item.ID
 				// Check for function calls
 				if e.Item.Type == "function_call" {
 					functionCalls = append(functionCalls, responses.ResponseFunctionToolCall{
@@ -138,7 +170,49 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					})
 				}
 
-				appendContent(&currentContentBuilder, contentType, currentImages, &contentList)
+				if e.Item.Type == "image_generation_call" {
+					base64String := e.Item.Result
+
+					// Decode base64 image data
+					imageData, err := base64.StdEncoding.DecodeString(base64String)
+					if err != nil {
+						return err
+					}
+
+					// Initialize S3 client for image upload
+					s3Client, err := s3.New(ctx)
+					if err != nil {
+						return err
+					}
+
+					// Generate unique filename for the image (OpenAI generates PNG by default)
+					imageKey := fmt.Sprintf("generated/%s.png", uuid.New().String())
+
+					// Upload to S3
+					if err := s3Client.UploadBytes(ctx, imageKey, imageData, "image/png"); err != nil {
+						return err
+					}
+
+					// Get public URL
+					imageUrl := s3.GetPublicUrl(ctx, imageKey)
+					image := ContentImage{
+						Id:        e.Item.ID,
+						PublicUrl: imageUrl,
+					}
+					currentImages = append(currentImages, image)
+
+					// Stream image URL to client
+					imageStreamResponse := StreamResponse{
+						MessageId: messageId,
+						Type:      consts.MessageType.Image,
+						Data:      imageUrl,
+					}
+					if err := StreamToClient(response, imageStreamResponse); err != nil {
+						return err
+					}
+				}
+
+				appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
 				currentContentBuilder.Reset()
 
 				// Handle annotations
@@ -172,6 +246,8 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 				}
 
 			case responses.ResponseCompletedEvent:
+				previousResponseId = e.Response.ID
+				metaInfo.OpenaiResponseId = previousResponseId
 				metaInfo.CachedTokenCount = int(e.Response.Usage.InputTokensDetails.CachedTokens)
 				metaInfo.PromptTokenCount = int(e.Response.Usage.InputTokens)
 				metaInfo.ReasoningTokenCount = int(e.Response.Usage.OutputTokensDetails.ReasoningTokens)
@@ -192,7 +268,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		}
 
 		if err := stream.Err(); err != nil {
-			if HandleStreamError(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo) {
+			if HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo) {
 				return nil
 			}
 			return err
@@ -202,7 +278,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		if len(functionCalls) > 0 {
 			// Save any pending content before adding tool calls
 			if currentContentBuilder.Len() > 0 {
-				appendContent(&currentContentBuilder, contentType, currentImages, &contentList)
+				appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
 				currentContentBuilder.Reset()
 				contentType = ""
 			}
@@ -293,14 +369,14 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	}
 
 	// Save final message
-	c.saveAndClose(ctx, message, currentImages, &currentContentBuilder, contentType, &contentList, metaInfo)
+	c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
 	StreamDone(response)
 
 	return nil
 }
 
-func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
-	appendContent(contentBuilder, contentType, imageUrls, contentList)
+func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+	appendContent(contentBuilder, contentType, imageUrls, currentId, contentList)
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
@@ -382,11 +458,18 @@ func (c *OpenAIClient) buildInputItems(historyMessages []*entity.Message, newMes
 				return nil, err
 			}
 
-			inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(data.Content, role))
+			if data.Content != "" {
+				inputItems = append(inputItems, responses.ResponseInputItemParamOfMessage(data.Content, role))
+			}
 
 			// Add file items
 			for _, file := range data.Files {
 				inputItems = append(inputItems, c.buildFileInputItem(file, role))
+			}
+
+			// Add image items
+			for _, image := range data.Images {
+				inputItems = append(inputItems, c.buildImageGenerationInputItem(image))
 			}
 		}
 	}
@@ -428,6 +511,14 @@ func (c *OpenAIClient) buildFileInputItem(file *entity.File, role responses.Easy
 	return responses.ResponseInputItemParamOfMessage(responses.ResponseInputMessageContentListParam(param), role)
 }
 
+func (c *OpenAIClient) buildImageGenerationInputItem(image ContentImage) responses.ResponseInputItemUnionParam {
+	return responses.ResponseInputItemUnionParam{
+		OfImageGenerationCall: &responses.ResponseInputItemImageGenerationCallParam{
+			ID: image.Id,
+		},
+	}
+}
+
 // ============================================================================
 // Tool Building
 // ============================================================================
@@ -441,6 +532,10 @@ func (c *OpenAIClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []res
 				OfWebSearch: &responses.WebSearchToolParam{
 					Type: responses.WebSearchToolTypeWebSearch,
 				},
+			})
+		} else if tool == consts.InternalTools.ImageGeneration {
+			openaiTools = append(openaiTools, responses.ToolUnionParam{
+				OfImageGeneration: &responses.ToolImageGenerationParam{},
 			})
 		}
 	}

@@ -28,6 +28,7 @@ type ModelConfig struct {
 	Cost             Cost       `json:"cost"`
 	Limit            Limit      `json:"limit"`
 	InternalSearch   bool       `json:"internal_search"`
+	ImageGeneration  bool       `json:"image_generation"`
 }
 
 type Cost struct {

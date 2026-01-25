@@ -12,39 +12,21 @@ export default defineConfig({
         }
     },
     server: {
-        // proxy: {
-        //     "/api": {
-        //         target: "http://127.0.0.1:8000",
-        //         changeOrigin: true,
-        //     },
-        //     "/auth": {
-        //         target: "http://127.0.0.1:8000",
-        //         changeOrigin: true,
-        //     },
-        //     "/admin": {
-        //         target: "http://127.0.0.1:8000",
-        //         changeOrigin: true,
-        //     },
-        //     "/public": {
-        //         target: "http://127.0.0.1:8000",
-        //         changeOrigin: true,
-        //     }
-        // }
         proxy: {
             "/api": {
-                target: "https://flai.eloxt.cn",
+                target: "http://127.0.0.1:8000",
                 changeOrigin: true,
             },
             "/auth": {
-                target: "https://flai.eloxt.cn",
+                target: "http://127.0.0.1:8000",
                 changeOrigin: true,
             },
             "/admin": {
-                target: "https://flai.eloxt.cn",
+                target: "http://127.0.0.1:8000",
                 changeOrigin: true,
             },
             "/public": {
-                target: "https://flai.eloxt.cn",
+                target: "http://127.0.0.1:8000",
                 changeOrigin: true,
             }
         }
