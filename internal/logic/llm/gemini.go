@@ -75,9 +75,9 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		SystemInstruction: &genai.Content{
 			Parts: []*genai.Part{genai.NewPartFromText(ComposeSystemPrompt())},
 		},
-		// ThinkingConfig: &genai.ThinkingConfig{
-		// 	IncludeThoughts: true,
-		// },
+		ThinkingConfig: &genai.ThinkingConfig{
+			IncludeThoughts: modelConfig.Reasoning,
+		},
 		Tools: genaiTools,
 	}
 
