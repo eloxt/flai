@@ -15,6 +15,7 @@ interface MessageContentProps {
     content: Content;
     contentIndex: number;
     messageId: string;
+    role: "user" | "assistant";
     isLastMessage: boolean;
     isLastContent: boolean;
     isStreaming: boolean;
@@ -24,6 +25,7 @@ interface MessageContentProps {
 
 export function MessageContent({
     content,
+    role,
     isLastMessage,
     isLastContent,
     isStreaming,
@@ -69,7 +71,7 @@ export function MessageContent({
                 >
                     <div className="overflow-hidden border-l border-border pl-4">
                         <div className="markdown-body pb-2">
-                            <Streamdown caret="circle" isAnimating={isStreaming} plugins={{cjk: cjk, math: math}}>
+                            <Streamdown caret="circle" isAnimating={isStreaming} plugins={{ cjk: cjk, math: math }}>
                                 {(content.data as ContentReasoning).content}
                             </Streamdown>
                         </div>
@@ -79,9 +81,17 @@ export function MessageContent({
         );
     }
 
+    if (role === "user") {
+        return (
+            <div className="whitespace-pre-wrap wrap-break-word">
+                {(content.data as ContentMessage).content}
+            </div>
+        );
+    }
+
     return (
         <div className="markdown-body overflow-x-auto w-full">
-            <Streamdown caret="block" isAnimating={isStreaming} plugins={{cjk: cjk, code: code, math: math}}>
+            <Streamdown caret="block" isAnimating={isStreaming} plugins={{ cjk: cjk, code: code, math: math }}>
                 {(content.data as ContentMessage).content}
             </Streamdown>
             {((content.data as ContentMessage).images?.length ?? 0) > 0 && (

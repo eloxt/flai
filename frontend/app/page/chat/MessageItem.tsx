@@ -100,6 +100,7 @@ export function MessageItem({
                                 content={content}
                                 contentIndex={index}
                                 messageId={message.id}
+                                role={message.role as "user" | "assistant"}
                                 isLastMessage={isLastMessage}
                                 isLastContent={index === message.content.length - 1}
                                 isStreaming={isStreaming}
