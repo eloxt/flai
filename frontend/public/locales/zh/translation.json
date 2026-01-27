@@ -338,6 +338,13 @@
             "newChat": "新聊天",
             "searchChat": "搜索聊天",
             "chats": "聊天",
+            "dateGroups": {
+                "today": "今天",
+                "yesterday": "昨天",
+                "previous7Days": "过去7天",
+                "previous30Days": "过去30天",
+                "older": "更早"
+            },
             "adminSettings": "管理员设置",
             "settings": "设置",
             "logout": "注销",

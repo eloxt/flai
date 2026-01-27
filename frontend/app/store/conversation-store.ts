@@ -17,23 +17,36 @@ interface GenerateTitleResponse {
     icon: string;
 }
 
+const PAGE_SIZE = 20;
+
 interface ConversationState {
     conversations: Conversation[];
     isLoading: boolean;
+    isLoadingMore: boolean;
+    currentPage: number;
+    hasMore: boolean;
     fetchConversations: () => Promise<void>;
+    fetchMoreConversations: () => Promise<void>;
     addConversation: (id: string) => void;
     generateTitle: (id: string) => Promise<void>;
     deleteConversation: (id: string) => Promise<void>;
 }
 
-export const useConversationStore = create<ConversationState>((set) => ({
+export const useConversationStore = create<ConversationState>((set, get) => ({
     conversations: [],
     isLoading: false,
+    isLoadingMore: false,
+    currentPage: 1,
+    hasMore: true,
     fetchConversations: async () => {
-        set({ isLoading: true });
+        set({ isLoading: true, currentPage: 1, hasMore: true });
         try {
-            const response = await api.get<ApiPageResponse<Conversation>>("/api/conversation");
-            set({ conversations: response.records });
+            const response = await api.get<ApiPageResponse<Conversation>>("/api/conversation", {
+                current: 1,
+                size: PAGE_SIZE,
+            });
+            const hasMore = response.current * response.size < response.total;
+            set({ conversations: response.records, currentPage: 1, hasMore });
         } catch (error) {
             if (error instanceof ApiError) {
                 toast.error(error.message);
@@ -42,6 +55,36 @@ export const useConversationStore = create<ConversationState>((set) => ({
             }
         } finally {
             set({ isLoading: false });
+        }
+    },
+    fetchMoreConversations: async () => {
+        const { isLoadingMore, hasMore, currentPage, conversations } = get();
+        if (isLoadingMore || !hasMore) return;
+
+        set({ isLoadingMore: true });
+        try {
+            const nextPage = currentPage + 1;
+            const response = await api.get<ApiPageResponse<Conversation>>("/api/conversation", {
+                current: nextPage,
+                size: PAGE_SIZE,
+            });
+            const newHasMore = response.current * response.size < response.total;
+            // Filter out duplicates (in case a new conversation was added)
+            const existingIds = new Set(conversations.map(c => c.id));
+            const newConversations = response.records.filter(c => !existingIds.has(c.id));
+            set({
+                conversations: [...conversations, ...newConversations],
+                currentPage: nextPage,
+                hasMore: newHasMore,
+            });
+        } catch (error) {
+            if (error instanceof ApiError) {
+                toast.error(error.message);
+            } else {
+                toast.error(t("error.network"));
+            }
+        } finally {
+            set({ isLoadingMore: false });
         }
     },
     addConversation: (id: string) => {

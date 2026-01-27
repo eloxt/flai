@@ -12,7 +12,7 @@ import {
     PanelLeft,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useConversationStore } from "../store/conversation-store";
 import { getInitials } from "../lib/auth-client";
 import { useAuthStore } from "../store/auth-store";
@@ -64,7 +64,10 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const logout = useAuthStore((state) => state.logout);
     const conversations = useConversationStore((state) => state.conversations);
     const isLoading = useConversationStore((state) => state.isLoading);
+    const isLoadingMore = useConversationStore((state) => state.isLoadingMore);
+    const hasMore = useConversationStore((state) => state.hasMore);
     const fetchConversations = useConversationStore((state) => state.fetchConversations);
+    const fetchMoreConversations = useConversationStore((state) => state.fetchMoreConversations);
     const deleteConversation = useConversationStore((state) => state.deleteConversation);
     const generateTitle = useConversationStore((state) => state.generateTitle);
     const navigate = useNavigate();
@@ -77,6 +80,18 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const isSidebarOpen = useAppStore((state) => state.isSidebarOpen);
     const toggleSidebarState = useAppStore((state) => state.toggleSidebar);
     const { open, setOpen, toggleSidebar } = useSidebar();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container || isLoadingMore || !hasMore) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        // Load more when within 100px of the bottom
+        if (scrollHeight - scrollTop - clientHeight < 100) {
+            fetchMoreConversations();
+        }
+    }, [isLoadingMore, hasMore, fetchMoreConversations]);
 
     useEffect(() => {
         if (tokens?.access_token) {
@@ -111,6 +126,39 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
             console.error(error);
         }
     }
+
+    const groupedConversations = useMemo(() => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+        const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const groups: { group: string; chats: typeof conversations }[] = [
+            { group: 'today', chats: [] },
+            { group: 'yesterday', chats: [] },
+            { group: 'previous7Days', chats: [] },
+            { group: 'previous30Days', chats: [] },
+            { group: 'older', chats: [] },
+        ];
+
+        conversations.forEach((chat) => {
+            const chatDate = new Date(chat.updated_at);
+            if (chatDate >= today) {
+                groups[0].chats.push(chat);
+            } else if (chatDate >= yesterday) {
+                groups[1].chats.push(chat);
+            } else if (chatDate >= sevenDaysAgo) {
+                groups[2].chats.push(chat);
+            } else if (chatDate >= thirtyDaysAgo) {
+                groups[3].chats.push(chat);
+            } else {
+                groups[4].chats.push(chat);
+            }
+        });
+
+        return groups;
+    }, [conversations]);
 
     return (
         <>
@@ -155,55 +203,72 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                     </SidebarMenu>
                 </SidebarHeader>
 
-                <SidebarContent className="transition-colors group-data-[collapsible=icon]:bg-background">
+                <SidebarContent
+                    ref={scrollContainerRef}
+                    onScroll={handleScroll}
+                    className="transition-colors group-data-[collapsible=icon]:bg-background"
+                >
                     <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100 duration-200">
-                        <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">
-                            {t("components.sidebar.chats")}
-                        </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {isLoading ? (
                                     <div className="px-4 py-2 text-sm text-muted-foreground">{t("common.loading")}</div>
                                 ) : (
-                                    conversations.map((chat) => (
-                                        <SidebarMenuItem key={chat.id}>
-                                            <SidebarMenuButton asChild className="group/item pr-12" isActive={location.pathname === `/chat/${chat.id}`}>
-                                                <NavLink to={`/chat/${chat.id}`} title={chat.title}>
-                                                    {chat.generating ? (
-                                                        <SidebarMenuSkeleton />
-                                                    ) : (
-                                                        <>
-                                                            {chat.icon && <span className="mr-2">{chat.icon}</span>}
-                                                            <span className="truncate">{chat.title}</span>
-                                                        </>
-                                                    )}
-                                                </NavLink>
-                                            </SidebarMenuButton>
-                                            {!chat.generating && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <SidebarMenuAction showOnHover>
-                                                            <EllipsisVertical />
-                                                            <span className="sr-only">More</span>
-                                                        </SidebarMenuAction>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="start">
-                                                        <DropdownMenuItem onClick={() => generateTitle(chat.id)}>
-                                                            <RefreshCw className="mr-2 size-4" />
-                                                            {t("components.sidebar.regenerateTitle")}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            variant="destructive"
-                                                            onClick={() => handleDelete(chat.id)}
-                                                        >
-                                                            <Trash className="mr-2 size-4" />
-                                                            {t("components.sidebar.delete")}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
-                                        </SidebarMenuItem>
-                                    ))
+                                    <>
+                                        {groupedConversations.map(({ group, chats }) => (
+                                            chats.length > 0 && (
+                                                <div key={group}>
+                                                    <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">
+                                                        {t(`components.sidebar.dateGroups.${group}`)}
+                                                    </SidebarGroupLabel>
+                                                    {chats.map((chat) => (
+                                                        <SidebarMenuItem key={chat.id}>
+                                                            <SidebarMenuButton asChild className="group/item pr-12" isActive={location.pathname === `/chat/${chat.id}`}>
+                                                                <NavLink to={`/chat/${chat.id}`} title={chat.title}>
+                                                                    {chat.generating ? (
+                                                                        <SidebarMenuSkeleton />
+                                                                    ) : (
+                                                                        <>
+                                                                            {chat.icon && <span className="mr-2">{chat.icon}</span>}
+                                                                            <span className="truncate">{chat.title}</span>
+                                                                        </>
+                                                                    )}
+                                                                </NavLink>
+                                                            </SidebarMenuButton>
+                                                            {!chat.generating && (
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <SidebarMenuAction showOnHover>
+                                                                            <EllipsisVertical />
+                                                                            <span className="sr-only">More</span>
+                                                                        </SidebarMenuAction>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="start">
+                                                                        <DropdownMenuItem onClick={() => generateTitle(chat.id)}>
+                                                                            <RefreshCw className="mr-2 size-4" />
+                                                                            {t("components.sidebar.regenerateTitle")}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            variant="destructive"
+                                                                            onClick={() => handleDelete(chat.id)}
+                                                                        >
+                                                                            <Trash className="mr-2 size-4" />
+                                                                            {t("components.sidebar.delete")}
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            )}
+                                                        </SidebarMenuItem>
+                                                    ))}
+                                                </div>
+                                            )
+                                        ))}
+                                        {isLoadingMore && (
+                                            <div className="px-4 py-2 text-sm text-muted-foreground text-center">
+                                                {t("common.loading")}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </SidebarMenu>
                         </SidebarGroupContent>
