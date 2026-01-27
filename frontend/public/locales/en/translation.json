@@ -345,6 +345,7 @@
                 "previous30Days": "Previous 30 Days",
                 "older": "Older"
             },
+            "loadMore": "Load More",
             "settings": "Settings",
             "logout": "Logout",
             "regenerateTitle": "Regenerate Title",

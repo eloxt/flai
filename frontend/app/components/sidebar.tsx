@@ -263,9 +263,20 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                                 </div>
                                             )
                                         ))}
-                                        {isLoadingMore && (
-                                            <div className="px-4 py-2 text-sm text-muted-foreground text-center">
-                                                {t("common.loading")}
+                                        {hasMore && (
+                                            <div className="px-4 py-2 text-center">
+                                                {isLoadingMore ? (
+                                                    <span className="text-sm text-muted-foreground">{t("common.loading")}</span>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-muted-foreground"
+                                                        onClick={fetchMoreConversations}
+                                                    >
+                                                        {t("components.sidebar.loadMore")}
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
                                     </>

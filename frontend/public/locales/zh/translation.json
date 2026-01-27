@@ -345,6 +345,7 @@
                 "previous30Days": "过去30天",
                 "older": "更早"
             },
+            "loadMore": "加载更多",
             "adminSettings": "管理员设置",
             "settings": "设置",
             "logout": "注销",
