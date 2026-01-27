@@ -10,4 +10,4 @@ export type {
     ContentReasoning,
     MessageMetaInfo,
     Attachment as File,
-} from "./types";
+} from "../../types/chat";

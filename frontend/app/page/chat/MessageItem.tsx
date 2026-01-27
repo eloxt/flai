@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { TreeNode, ContentMessage } from "./types";
+import type { TreeNode, ContentMessage } from "../../types/chat";
 import { MessageContent } from "./MessageContent";
 import { MessageAttachments } from "./MessageAttachments";
 import { MessageActions } from "./MessageActions";

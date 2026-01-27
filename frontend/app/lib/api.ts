@@ -1,30 +1,13 @@
 import { useAuthStore } from "../store/auth-store";
+import type { ApiResponse, ApiPageResponse } from "../types/api";
+import { ApiError } from "../types/api";
+
+// Re-export types for backward compatibility
+export type { ApiResponse, ApiPageResponse };
+export { ApiError };
 
 export interface ApiRequestInit extends RequestInit {
     auth?: boolean;
-}
-
-export interface ApiResponse<T = any> {
-    code: number;
-    message: string;
-    data: T | null;
-}
-
-export interface ApiPageResponse<T = any> {
-    total: number;
-    current: number,
-    size: number,
-    records: T[];
-}
-
-export class ApiError extends Error {
-    constructor(
-        public code: number,
-        public message: string
-    ) {
-        super(message);
-        this.name = 'ApiError';
-    }
 }
 
 export async function request<T>(url: string, options?: ApiRequestInit): Promise<T> {

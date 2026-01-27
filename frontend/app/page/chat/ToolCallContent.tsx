@@ -1,6 +1,6 @@
 import { XCircle, ArrowDownRight, ChevronRight, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { ContentToolCall, ContentToolResult } from "./types";
+import type { ContentToolCall, ContentToolResult } from "../../types/chat";
 import { ItemMedia, ItemContent, ItemTitle, Item } from "@/components/ui/item";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";

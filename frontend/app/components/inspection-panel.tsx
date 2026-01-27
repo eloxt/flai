@@ -2,7 +2,7 @@ import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from "@/components
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslation } from "react-i18next";
 import { User, Clock } from "lucide-react";
-import type { TreeNode, ContentMessage } from "@/page/chat/types";
+import type { TreeNode, ContentMessage } from "@/types/chat";
 import { useAppStore } from "@/store/app-store";
 import { useEffect } from "react";
 

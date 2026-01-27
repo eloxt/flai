@@ -42,7 +42,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MCPConfig, MCPTool } from "@/page/chat/types";
+import { MCPConfig, MCPTool } from "@/types/chat";
 
 export function MCPSettings() {
     const { t } = useTranslation();
@@ -68,7 +68,7 @@ export function MCPSettings() {
             const result = await api.get<MCPConfig[]>("/api/mcp");
             setMcpConfigs(result || []);
         } catch (error: any) {
-            toast.error(error.message || t("pages.settings.mcp.fetchError"));
+            toast.error(error.message || t("common.crud.fetchError"));
         } finally {
             setIsLoading(false);
         }
@@ -124,7 +124,7 @@ export function MCPSettings() {
                     headers,
                     is_active: formIsActive,
                 });
-                toast.success(t("pages.settings.mcp.updateSuccess"));
+                toast.success(t("common.crud.updateSuccess"));
             } else {
                 await api.post("/api/mcp", {
                     name: formName,
@@ -133,7 +133,7 @@ export function MCPSettings() {
                     headers,
                     is_active: formIsActive,
                 });
-                toast.success(t("pages.settings.mcp.createSuccess"));
+                toast.success(t("common.crud.createSuccess"));
             }
             setIsDialogOpen(false);
             fetchConfigs();
@@ -147,10 +147,10 @@ export function MCPSettings() {
     const handleDelete = async (id: string) => {
         try {
             await api.del(`/api/mcp/${id}`);
-            toast.success(t("pages.settings.mcp.deleteSuccess"));
+            toast.success(t("common.crud.deleteSuccess"));
             fetchConfigs();
         } catch (error: any) {
-            toast.error(error.message || t("pages.settings.mcp.deleteError"));
+            toast.error(error.message || t("common.crud.deleteError"));
         } finally {
             setConfigToDelete(null);
         }
@@ -205,7 +205,7 @@ export function MCPSettings() {
                 </div>
             ) : mcpConfigs.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                    {t("pages.settings.mcp.empty")}
+                    {t("common.empty.noItems")}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -216,7 +216,7 @@ export function MCPSettings() {
                                     <div className="flex items-center gap-2">
                                         <CardTitle className="text-base">{config.name}</CardTitle>
                                         <Badge variant={config.is_active ? "default" : "secondary"}>
-                                            {config.is_active ? t("pages.settings.mcp.active") : t("pages.settings.mcp.inactive")}
+                                            {config.is_active ? t("common.status.active") : t("common.status.inactive")}
                                         </Badge>
                                         <Badge variant="outline">{config.connection_type}</Badge>
                                     </div>
@@ -333,7 +333,7 @@ export function MCPSettings() {
                                 checked={formIsActive}
                                 onCheckedChange={setFormIsActive}
                             />
-                            <Label htmlFor="mcp-active">{t("pages.settings.mcp.active")}</Label>
+                            <Label htmlFor="mcp-active">{t("common.status.active")}</Label>
                         </div>
                     </div>
                     <DialogFooter>

@@ -1,6 +1,6 @@
 import { FileIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { Attachment } from "./types";
+import type { Attachment } from "../../types/chat";
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { formatBytes } from "@/lib/utils";

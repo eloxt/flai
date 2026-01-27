@@ -10,13 +10,7 @@ import { useAppStore } from "./store/app-store";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertTriangleIcon, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface Notification {
-    id: string;
-    title: string;
-    content: string;
-    level: string;
-}
+import { Notification } from "./types/shared";
 
 export default function Main() {
     const { t } = useTranslation();

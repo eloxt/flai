@@ -13,7 +13,7 @@ import {
     AlertDialogCancel,
     AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import type { TreeNode, ContentMessage } from "./types";
+import type { TreeNode, ContentMessage } from "../../types/chat";
 
 interface MessageActionsProps {
     message: TreeNode;

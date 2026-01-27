@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Streamdown } from "streamdown";
-import type { Content, ContentMessage, ContentReasoning, ContentToolCall, ContentToolResult } from "./types";
+import type { Content, ContentMessage, ContentReasoning, ContentToolCall, ContentToolResult } from "../../types/chat";
 import { ToolCallItem, ToolResultItem } from "./ToolCallContent";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import { cjk } from "@streamdown/cjk";

@@ -1,4 +1,4 @@
-import { Attachment, MCPTool } from '@/page/chat/types';
+import { Attachment, MCPTool } from '@/types/chat';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

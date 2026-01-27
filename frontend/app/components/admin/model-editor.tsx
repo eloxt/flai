@@ -25,7 +25,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
-import { Model, ModelLimit, ModelCost } from "./types";
+import { Model, ModelLimit, ModelCost } from "@/types/models";
 
 const MODALITY_OPTIONS = ["text", "audio", "image", "video", "pdf"] as const;
 const STATUS_OPTIONS = ["alpha", "beta", "deprecated"] as const;
@@ -66,13 +66,17 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
     };
 
     const updateModalities = (type: "input" | "output", modality: typeof MODALITY_OPTIONS[number], checked: boolean) => {
-        const current = model.modalities[type] || [];
+        const current = model.modalities?.[type] || [];
         const updated = checked
             ? [...current, modality]
             : current.filter((m) => m !== modality);
         onChange({
             ...model,
-            modalities: { ...model.modalities, [type]: updated },
+            modalities: {
+                input: model.modalities?.input ?? [],
+                output: model.modalities?.output ?? [],
+                [type]: updated,
+            },
         });
     };
 
@@ -260,16 +264,6 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
                                         type="number"
                                         value={model.limit?.context || 0}
                                         onChange={(e) => updateLimit("context", parseInt(e.target.value) || 0)}
-                                        className="h-8 text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">{t("pages.admin.providers.model.inputLimit")}</Label>
-                                    <Input
-                                        type="number"
-                                        value={model.limit?.input || 0}
-                                        onChange={(e) => updateLimit("input", parseInt(e.target.value) || 0)}
-                                        placeholder="-"
                                         className="h-8 text-sm"
                                     />
                                 </div>

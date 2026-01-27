@@ -22,7 +22,7 @@ import type {
     OpenaiGroundingData,
     Attachment,
     MCPTool,
-} from "./types";
+} from "../../types/chat";
 
 // ============================================================================
 // Constants
@@ -368,7 +368,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             const imageUrl = streamResponse.data as string;
             ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
                 const lastContent = msg.content[msg.content.length - 1];
-                (lastContent.data as ContentMessage).image_urls = [imageUrl];
+                (lastContent.data as ContentMessage).images = [{ id: "", public_url: imageUrl }];
             });
             setPathFn(ctx.newPath);
             ctx.lastMessageType = "message";

@@ -1,48 +1,9 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { Model, Provider } from "../types/models";
 
-export interface Model {
-    id: string;
-    name: string;
-    family?: string;
-    provider_id?: string;
-    attachment: boolean;
-    reasoning: boolean;
-    tool_call: boolean;
-    structured_output?: boolean;
-    temperature?: boolean;
-    knowledge?: string;
-    release_date?: string;
-    last_updated?: string;
-    modalities?: {
-        input: string[];
-        output: string[];
-    };
-    open_weights?: boolean;
-    cost?: {
-        input: number;
-        output: number;
-        cache_read?: number;
-    };
-    limit?: {
-        context?: number;
-        output?: number;
-    };
-    internal_search?: boolean;
-    image_generation?: boolean;
-}
-
-export interface Provider {
-    id: string;
-    name: string;
-    api_key: string;
-    provider_type: string;
-    base_url: string;
-    model: Model[];
-    is_active: number;
-    created_at: string;
-    logo: string;
-}
+// Re-export for backward compatibility
+export type { Model, Provider };
 
 interface ModelState {
     currentModel: Model | null;

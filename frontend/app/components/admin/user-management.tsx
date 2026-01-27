@@ -51,7 +51,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { User } from "./types";
+import { User } from "@/types/shared";
 
 export function UserManagement() {
     const { t } = useTranslation();
@@ -122,7 +122,7 @@ export function UserManagement() {
             const res = await api.get<{ list: User[] }>("/admin/user");
             setUsers(res.list || []);
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.users.fetchError"));
+            toast.error(error.message || t("common.crud.fetchError"));
         } finally {
             setIsLoading(false);
         }
@@ -147,12 +147,12 @@ export function UserManagement() {
                 role: newRole,
                 is_active: newIsActive ? 1 : 0,
             });
-            toast.success(t("pages.admin.users.createSuccess"));
+            toast.success(t("common.crud.createSuccess"));
             setShowCreateDialog(false);
             resetCreateForm();
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.users.createError"));
+            toast.error(error.message || t("common.crud.createError"));
         } finally {
             setIsCreating(false);
         }
@@ -192,12 +192,12 @@ export function UserManagement() {
             }
 
             await api.put(`/admin/user/${userToEdit.id}`, updateData);
-            toast.success(t("pages.admin.users.updateSuccess"));
+            toast.success(t("common.crud.updateSuccess"));
             setShowEditDialog(false);
             setUserToEdit(null);
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.users.updateError"));
+            toast.error(error.message || t("common.crud.updateError"));
         } finally {
             setIsEditing(false);
         }
@@ -206,10 +206,10 @@ export function UserManagement() {
     const handleDeleteUser = async (id: string) => {
         try {
             await api.del(`/admin/user/${id}`);
-            toast.success(t("pages.admin.users.deleteSuccess"));
+            toast.success(t("common.crud.deleteSuccess"));
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.users.deleteError"));
+            toast.error(error.message || t("common.crud.deleteError"));
         } finally {
             setUserToDelete(null);
         }
@@ -275,7 +275,7 @@ export function UserManagement() {
                                         colSpan={6}
                                         className="text-center text-muted-foreground py-8"
                                     >
-                                        {t("pages.admin.users.empty")}
+                                        {t("common.empty.noItems")}
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -326,7 +326,7 @@ export function UserManagement() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {formatDate(user.created_at)}
+                                            {formatDate(user.created_at ?? "")}
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-1">

@@ -19,6 +19,34 @@
             "update": "更新",
             "back": "返回"
         },
+        "crud": {
+            "createSuccess": "创建成功",
+            "updateSuccess": "更新成功",
+            "deleteSuccess": "删除成功",
+            "fetchError": "获取数据失败",
+            "createError": "创建失败",
+            "updateError": "更新失败",
+            "deleteError": "删除失败"
+        },
+        "status": {
+            "active": "启用",
+            "inactive": "禁用"
+        },
+        "empty": {
+            "noItems": "暂无数据",
+            "noResults": "未找到结果"
+        },
+        "table": {
+            "actions": "操作",
+            "status": "状态",
+            "createdAt": "创建时间",
+            "name": "名称",
+            "email": "邮箱"
+        },
+        "dialog": {
+            "confirmDelete": "确定要删除此项吗？",
+            "confirmAction": "确定要继续吗？"
+        },
         "error": {
             "network": "网络异常，请稍后重试。",
             "fetchMessages": "获取消息失败",
@@ -139,36 +167,18 @@
                 "endpointPlaceholder": "https://mcp.example.com/sse",
                 "headers": "自定义请求头",
                 "headersPlaceholder": "{\n  \"Authorization\": \"Bearer xxx\"\n}",
-                "enableOnCreate": "创建后启用",
-                "active": "已启用",
-                "inactive": "已禁用",
                 "activate": "启用",
                 "deactivate": "禁用",
                 "refreshTools": "刷新工具",
-                "empty": "暂无 MCP 服务器配置。添加一个开始使用。",
-                "fetchError": "获取 MCP 配置失败",
-                "createSuccess": "MCP 服务器创建成功",
-                "updateSuccess": "MCP 服务器更新成功",
-                "deleteSuccess": "MCP 服务器删除成功",
                 "saveError": "保存 MCP 服务器失败",
-                "deleteError": "删除 MCP 服务器失败",
                 "refreshSuccess": "已刷新 {{count}} 个工具",
                 "refreshError": "刷新工具失败",
                 "toggleError": "切换服务器状态失败",
-                "fillRequired": "请填写必填字段",
-                "invalidHeaders": "请求头 JSON 格式无效",
-                "confirmDelete": "确定要删除此 MCP 服务器吗？"
+                "invalidHeaders": "请求头 JSON 格式无效"
             },
             "share": {
                 "title": "分享链接",
                 "description": "管理您分享的对话链接。",
-                "empty": "暂无分享链接。分享一个对话后即可在此看到。",
-                "fetchError": "获取分享链接失败",
-                "deleteSuccess": "分享链接删除成功",
-                "deleteError": "删除分享链接失败",
-                "updateSuccess": "分享链接更新成功",
-                "updateError": "更新分享链接失败",
-                "confirmDelete": "确定要删除此分享链接吗？",
                 "untitled": "无标题对话",
                 "expired": "已过期",
                 "never": "永不过期",
@@ -196,19 +206,9 @@
                 "create": "创建用户",
                 "createTitle": "创建新用户",
                 "editTitle": "编辑用户",
-                "fetchError": "获取用户列表失败",
-                "createSuccess": "用户创建成功",
-                "createError": "创建用户失败",
-                "updateSuccess": "用户更新成功",
-                "updateError": "更新用户失败",
-                "deleteSuccess": "用户删除成功",
-                "deleteError": "删除用户失败",
                 "deleteTitle": "删除用户",
                 "deleteDescription": "确定要删除此用户吗？此操作无法撤销。",
                 "fillAll": "请填写所有必填字段",
-                "empty": "暂无用户",
-                "active": "已激活",
-                "inactive": "未激活",
                 "roleUser": "用户",
                 "roleAdmin": "管理员",
                 "table": {
@@ -237,19 +237,9 @@
                 "create": "创建服务商",
                 "createTitle": "创建新服务商",
                 "editTitle": "编辑服务商",
-                "fetchError": "获取服务商列表失败",
-                "createSuccess": "服务商创建成功",
-                "createError": "创建服务商失败",
-                "updateSuccess": "服务商更新成功",
-                "updateError": "更新服务商失败",
-                "deleteSuccess": "服务商删除成功",
-                "deleteError": "删除服务商失败",
                 "deleteTitle": "删除服务商",
                 "deleteDescription": "确定要删除此服务商吗？此操作无法撤销。",
                 "nameRequired": "服务商名称为必填项",
-                "empty": "暂无服务商",
-                "active": "已激活",
-                "inactive": "未激活",
                 "table": {
                     "name": "名称",
                     "models": "模型",
@@ -321,15 +311,8 @@
                 "levelLabel": "类型",
                 "levelDefault": "信息",
                 "levelWarning": "警告",
-                "empty": "暂无通知配置。添加一个以显示站内通知横幅。",
-                "fetchError": "获取通知失败",
-                "createSuccess": "通知创建成功",
-                "updateSuccess": "通知更新成功",
-                "deleteSuccess": "通知删除成功",
                 "saveError": "保存通知失败",
-                "deleteError": "删除通知失败",
-                "fillRequired": "请填写标题和内容",
-                "confirmDelete": "确定要删除此通知吗？"
+                "fillRequired": "请填写标题和内容"
             }
         }
     },

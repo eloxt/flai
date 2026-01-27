@@ -41,15 +41,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { NotificationItem } from "./types";
+import { Notification } from "@/types/shared";
 
 export function NotificationSettings() {
     const { t } = useTranslation();
-    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
-    const [editingNotification, setEditingNotification] = useState<NotificationItem | null>(null);
+    const [editingNotification, setEditingNotification] = useState<Notification | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
 
@@ -61,10 +61,10 @@ export function NotificationSettings() {
     const fetchNotifications = async () => {
         setIsLoading(true);
         try {
-            const result = await api.get<{ list: NotificationItem[] }>("/admin/notification");
+            const result = await api.get<{ list: Notification[] }>("/admin/notification");
             setNotifications(result.list || []);
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.notification.fetchError"));
+            toast.error(error.message || t("common.crud.fetchError"));
         } finally {
             setIsLoading(false);
         }
@@ -85,7 +85,7 @@ export function NotificationSettings() {
         setShowCreateDialog(true);
     };
 
-    const openEditDialog = (notification: NotificationItem) => {
+    const openEditDialog = (notification: Notification) => {
         setEditingNotification(notification);
         setFormTitle(notification.title);
         setFormContent(notification.content);
@@ -106,7 +106,7 @@ export function NotificationSettings() {
                 content: formContent,
                 level: formLevel,
             });
-            toast.success(t("pages.admin.notification.createSuccess"));
+            toast.success(t("common.crud.createSuccess"));
             setShowCreateDialog(false);
             resetForm();
             fetchNotifications();
@@ -130,7 +130,7 @@ export function NotificationSettings() {
                 content: formContent,
                 level: formLevel,
             });
-            toast.success(t("pages.admin.notification.updateSuccess"));
+            toast.success(t("common.crud.updateSuccess"));
             setShowEditDialog(false);
             setEditingNotification(null);
             resetForm();
@@ -145,10 +145,10 @@ export function NotificationSettings() {
     const handleDelete = async (id: string) => {
         try {
             await api.del(`/admin/notification/${id}`);
-            toast.success(t("pages.admin.notification.deleteSuccess"));
+            toast.success(t("common.crud.deleteSuccess"));
             fetchNotifications();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.notification.deleteError"));
+            toast.error(error.message || t("common.crud.deleteError"));
         } finally {
             setNotificationToDelete(null);
         }
@@ -190,7 +190,7 @@ export function NotificationSettings() {
                             {notifications.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                        {t("pages.admin.notification.empty")}
+                                        {t("common.empty.noItems")}
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -337,7 +337,7 @@ export function NotificationSettings() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t("pages.admin.notification.deleteTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {t("pages.admin.notification.confirmDelete")}
+                            {t("common.dialog.confirmDelete")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

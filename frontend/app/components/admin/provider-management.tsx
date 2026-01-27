@@ -41,7 +41,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Provider, Model } from "./types";
+import { Provider, Model } from "@/types/models";
 import { ModelEditor } from "./model-editor";
 
 export function ProviderManagement() {
@@ -79,7 +79,7 @@ export function ProviderManagement() {
             const res = await api.get<Provider[]>("/admin/provider");
             setProviders(res || []);
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.providers.fetchError"));
+            toast.error(error.message || t("common.crud.fetchError"));
         } finally {
             setIsLoading(false);
         }
@@ -106,12 +106,12 @@ export function ProviderManagement() {
                 logo: newLogo,
                 is_active: newIsActive,
             });
-            toast.success(t("pages.admin.providers.createSuccess"));
+            toast.success(t("common.crud.createSuccess"));
             setShowCreateDialog(false);
             resetCreateForm();
             fetchProviders();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.providers.createError"));
+            toast.error(error.message || t("common.crud.createError"));
         } finally {
             setIsCreating(false);
         }
@@ -132,9 +132,9 @@ export function ProviderManagement() {
         setEditName(provider.name);
         setEditApiKey("");
         setEditProviderType(provider.provider_type || "");
-        setEditBaseUrl(provider.base_url);
+        setEditBaseUrl(provider.base_url ?? "");
         setEditModels(provider.model || []);
-        setEditLogo(provider.logo);
+        setEditLogo(provider.logo ?? "");
         setEditIsActive(provider.is_active === 1);
         setShowEditDialog(true);
     };
@@ -157,12 +157,12 @@ export function ProviderManagement() {
             }
 
             await api.put(`/admin/provider/${providerToEdit.id}`, updateData);
-            toast.success(t("pages.admin.providers.updateSuccess"));
+            toast.success(t("common.crud.updateSuccess"));
             setShowEditDialog(false);
             setProviderToEdit(null);
             fetchProviders();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.providers.updateError"));
+            toast.error(error.message || t("common.crud.updateError"));
         } finally {
             setIsEditing(false);
         }
@@ -171,16 +171,16 @@ export function ProviderManagement() {
     const handleDeleteProvider = async (id: string) => {
         try {
             await api.del(`/admin/provider/${id}`);
-            toast.success(t("pages.admin.providers.deleteSuccess"));
+            toast.success(t("common.crud.deleteSuccess"));
             fetchProviders();
         } catch (error: any) {
-            toast.error(error.message || t("pages.admin.providers.deleteError"));
+            toast.error(error.message || t("common.crud.deleteError"));
         } finally {
             setProviderToDelete(null);
         }
     };
 
-    const maskApiKey = (key: string) => {
+    const maskApiKey = (key?: string) => {
         if (!key || key.length < 8) return "••••••••";
         return key.substring(0, 4) + "••••••••" + key.substring(key.length - 4);
     };
@@ -223,7 +223,7 @@ export function ProviderManagement() {
                             {providers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                                        {t("pages.admin.providers.empty")}
+                                        {t("common.empty.noItems")}
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -241,12 +241,12 @@ export function ProviderManagement() {
                                             {provider.is_active ? (
                                                 <Badge variant="default" className="bg-green-500 hover:bg-green-600">
                                                     <Check className="size-3 mr-1" />
-                                                    {t("pages.admin.providers.active")}
+                                                    {t("common.status.active")}
                                                 </Badge>
                                             ) : (
                                                 <Badge variant="secondary">
                                                     <X className="size-3 mr-1" />
-                                                    {t("pages.admin.providers.inactive")}
+                                                    {t("common.status.inactive")}
                                                 </Badge>
                                             )}
                                         </TableCell>

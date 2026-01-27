@@ -62,7 +62,7 @@ export function ShareSettings() {
             const result = await api.get<ShareItem[]>("/api/share");
             setShares(result || []);
         } catch (error: any) {
-            toast.error(error.message || t("pages.settings.share.fetchError"));
+            toast.error(error.message || t("common.crud.fetchError"));
         } finally {
             setIsLoading(false);
         }
@@ -75,10 +75,10 @@ export function ShareSettings() {
     const handleDelete = async (id: string) => {
         try {
             await api.del(`/api/share/${id}`);
-            toast.success(t("pages.settings.share.deleteSuccess"));
+            toast.success(t("common.crud.deleteSuccess"));
             fetchShares();
         } catch (error: any) {
-            toast.error(error.message || t("pages.settings.share.deleteError"));
+            toast.error(error.message || t("common.crud.deleteError"));
         } finally {
             setShareToDelete(null);
         }
@@ -121,11 +121,11 @@ export function ShareSettings() {
             await api.put(`/api/share/${editingShare.id}`, {
                 expires_at: getExpirationDate(newExpiresAt),
             });
-            toast.success(t("pages.settings.share.updateSuccess"));
+            toast.success(t("common.crud.updateSuccess"));
             setIsEditDialogOpen(false);
             fetchShares();
         } catch (error: any) {
-            toast.error(error.message || t("pages.settings.share.updateError"));
+            toast.error(error.message || t("common.crud.updateError"));
         } finally {
             setIsUpdating(false);
         }
@@ -170,7 +170,7 @@ export function ShareSettings() {
                 </div>
             ) : shares.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                    {t("pages.settings.share.empty")}
+                    {t("common.empty.noItems")}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -285,7 +285,7 @@ export function ShareSettings() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>{t("pages.settings.share.title")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {t("pages.settings.share.confirmDelete")}
+                            {t("common.dialog.confirmDelete")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

@@ -1,5 +1,5 @@
 import { Separator } from "@/components/ui/separator";
-import type { GoogleGroundingChunk, OpenaiGroundingData } from "./types";
+import type { GoogleGroundingChunk, OpenaiGroundingData } from "../../types/chat";
 
 interface GoogleGroundingChunksProps {
     chunks: GoogleGroundingChunk[];

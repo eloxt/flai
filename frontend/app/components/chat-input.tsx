@@ -18,7 +18,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { Attachment, MCPConfig } from "@/page/chat/types";
+import { Attachment, MCPConfig } from "@/types/chat";
 
 // Allowed file types: plain text, PDF, and images
 const ALLOWED_MIME_TYPES = [

@@ -3,7 +3,7 @@ import {
   createJSONStorage,
   persist,
 } from "zustand/middleware";
-import type { TreeNode } from "@/page/chat/types";
+import type { TreeNode } from "@/types/chat";
 
 interface AppState {
   isSidebarOpen: boolean;
