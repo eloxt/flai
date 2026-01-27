@@ -41,8 +41,8 @@ import {
     SidebarMenuSkeleton,
     useSidebar,
 } from "@/components/ui/sidebar"
-import SettingsPanel from "./settings-panel";
-import AdminPanel from "./admin-panel";
+import SettingsPanel from "./settings";
+import AdminPanel from "./admin";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { api } from "@/lib/api";

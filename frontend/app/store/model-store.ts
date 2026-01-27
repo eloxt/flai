@@ -35,8 +35,12 @@ export interface Model {
 export interface Provider {
     id: string;
     name: string;
+    api_key: string;
     provider_type: string;
+    base_url: string;
     model: Model[];
+    is_active: number;
+    created_at: string;
     logo: string;
 }
 
