@@ -2,6 +2,7 @@ package v1
 
 import (
 	"flai/internal/model/entity"
+	"flai/utility"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -171,3 +172,11 @@ type NotificationItem struct {
 	Content string `json:"content" dc:"Notification content"`
 	Level   string `json:"level" dc:"Notification level"`
 }
+
+type ConversationListReq struct {
+	g.Meta `path:"/conversation" method:"get" tag:"Conversation" Summary:"Get list of conversations(Admin)"`
+	UserId string `json:"user_id" v:"required"`
+	utility.PageReq
+}
+
+type ConversationListRes utility.PageRes[entity.Conversation]
