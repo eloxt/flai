@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Copy, Trash2, RefreshCcw, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Trash2, RefreshCcw, Info, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -24,6 +24,7 @@ interface MessageActionsProps {
     onSwitchNode: (message: TreeNode, isNext: boolean) => void;
     onRetry: (message: TreeNode) => void;
     onDelete: () => void;
+    onEdit?: (message: TreeNode) => void;
 }
 
 export function MessageActions({
@@ -35,6 +36,7 @@ export function MessageActions({
     onSwitchNode,
     onRetry,
     onDelete,
+    onEdit,
 }: MessageActionsProps) {
     const { t } = useTranslation();
 
@@ -87,6 +89,13 @@ export function MessageActions({
             <Button variant="ghost" size="icon-sm" onClick={handleCopy}>
                 <Copy className="size-4 text-muted-foreground" />
             </Button>
+
+            {/* Edit button (only for user messages) */}
+            {message.role === "user" && onEdit && (
+                <Button variant="ghost" size="icon-sm" onClick={() => onEdit(message)}>
+                    <Pencil className="size-4 text-muted-foreground" />
+                </Button>
+            )}
 
             {/* Meta info popover */}
             {message.meta_info && !isStreaming && message.role === "assistant" && (

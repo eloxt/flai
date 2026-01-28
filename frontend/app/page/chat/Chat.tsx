@@ -13,6 +13,7 @@ import { useChat } from "./use-chat";
 import { ChatSkeleton } from "./ChatSkeleton";
 import { MessageItem } from "./MessageItem";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { TreeNode } from "../../types/chat";
 
 export const meta: MetaFunction = ({ params }) => {
     const { conversationId } = params;
@@ -48,6 +49,8 @@ export default function Chat() {
     const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set());
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [inputHeight, setInputHeight] = useState(0);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState("");
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
 
@@ -138,6 +141,34 @@ export default function Chat() {
         scrollToBottom();
     };
 
+    const handleEdit = (message: TreeNode) => {
+        const lastContent = message.content[message.content.length - 1];
+        const text = (lastContent.data as { content: string }).content || "";
+        setEditingMessageId(message.id);
+        setEditValue(text);
+    };
+
+    const handleEditCancel = () => {
+        setEditingMessageId(null);
+        setEditValue("");
+    };
+
+    const handleEditSubmit = () => {
+        if (!editValue.trim() || !editingMessageId) return;
+
+        const messageIndex = path.findIndex((m) => m.id === editingMessageId);
+        if (messageIndex === -1) return;
+
+        const newPath = path.slice(0, messageIndex);
+
+        setEditingMessageId(null);
+        sendMessage({
+            text: editValue,
+            pathParam: newPath,
+        });
+        setEditValue("");
+    };
+
     return (
         <>
             <div
@@ -167,6 +198,12 @@ export default function Chat() {
                                 onSwitchNode={switchNode}
                                 onRetry={retryMessage}
                                 onDelete={deleteMessage}
+                                isEditing={editingMessageId === message.id}
+                                editValue={editingMessageId === message.id ? editValue : ""}
+                                onEdit={handleEdit}
+                                onEditChange={setEditValue}
+                                onEditSubmit={handleEditSubmit}
+                                onEditCancel={handleEditCancel}
                             />
                         ))
                     )}
