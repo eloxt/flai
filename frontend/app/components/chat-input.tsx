@@ -283,7 +283,7 @@ export function ChatInput({
                             {totalAvailableTools > 0 && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline">
+                                        <Button variant="ghost">
                                             <Wrench className="size-4" />
                                             <span>{t("components.chatInput.mcpTools")}</span>
                                             <ChevronDown className="size-3 ml-1" />
@@ -321,7 +321,7 @@ export function ChatInput({
 
                             {currentModel?.attachment && (
                                 <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     onClick={handleUploadClick}
                                 >
                                     <Paperclip className="size-4" />
@@ -332,19 +332,17 @@ export function ChatInput({
                             {currentModel?.internal_search && (
                                 <ToggleGroupItem
                                     value="internal_web_search"
-                                    variant="outline"
                                 >
-                                    <Globe className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`} />
-                                    <p className={` ${selectedTools.includes("internal_web_search") ? "text-blue-400" : ""}`}>{t("common.search")}</p>
+                                    <Globe />
+                                    <p>{t("common.search")}</p>
                                 </ToggleGroupItem>
                             )}
                             {currentModel?.image_generation && (
                                 <ToggleGroupItem
                                     value="image_generation"
-                                    variant="outline"
                                 >
-                                    <Image className={` ${selectedTools.includes("image_generation") ? "text-blue-400" : ""}`} />
-                                    <p className={` ${selectedTools.includes("image_generation") ? "text-blue-400" : ""}`}>{t("common.imageGeneration")}</p>
+                                    <Image />
+                                    <p>{t("common.imageGeneration")}</p>
                                 </ToggleGroupItem>
                             )}
                         </ToggleGroup>
