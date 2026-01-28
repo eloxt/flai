@@ -168,8 +168,8 @@ export function MessageItem({
                                     isLastMessage={isLastMessage}
                                     isLastContent={index === message.content.length - 1}
                                     isStreaming={isStreaming}
-                                    isExpanded={expandedReasoning.has(message.id)}
-                                    onToggleReasoning={() => onToggleReasoning(message.id)}
+                                    isExpanded={expandedReasoning.has(`${message.id}-${index}`)}
+                                    onToggleReasoning={() => onToggleReasoning(`${message.id}-${index}`)}
                                 />
                             </div>
                         )}
