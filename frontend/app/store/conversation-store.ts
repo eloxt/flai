@@ -28,7 +28,7 @@ interface ConversationState {
     fetchConversations: () => Promise<void>;
     fetchMoreConversations: () => Promise<void>;
     addConversation: (id: string) => void;
-    generateTitle: (id: string) => Promise<void>;
+    generateTitle: (id: string, content?: string) => Promise<void>;
     deleteConversation: (id: string) => Promise<void>;
 }
 
@@ -99,14 +99,16 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         };
         set((state) => ({ conversations: [newConversation, ...state.conversations] }));
     },
-    generateTitle: async (id: string) => {
+    generateTitle: async (id: string, content?: string) => {
         try {
             set((state) => ({
                 conversations: state.conversations.map((c) =>
                     c.id === id ? { ...c, generating: true } : c
                 ),
             }));
-            const result = await api.get<GenerateTitleResponse>(`/api/conversation/${id}/generate-title`);
+            const result = await api.post<GenerateTitleResponse>(`/api/conversation/${id}/generate-title`, {
+                content,
+            });
             set((state) => ({
                 conversations: state.conversations.map((c) =>
                     c.id === id ? { ...c, title: result.title, icon: result.icon, generating: false } : c

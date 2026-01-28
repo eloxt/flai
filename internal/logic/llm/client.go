@@ -54,7 +54,7 @@ func StreamChat(ctx context.Context, assistantMessageId string, response *ghttp.
 	return client.StreamChat(ctx, assistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, tools, mcpTools, files)
 }
 
-func GenerateTitle(ctx context.Context, messages []*entity.Message) (*TitleGenerationResponse, error) {
+func GenerateTitle(ctx context.Context, messages []*entity.Message, content string) (*TitleGenerationResponse, error) {
 	config, ok := logic.SystemConfigMap[consts.SystemConfig.TitleGeneration]
 	if !ok {
 		return nil, gerror.New("Title generation config not found")
@@ -74,7 +74,7 @@ func GenerateTitle(ctx context.Context, messages []*entity.Message) (*TitleGener
 		return nil, gerror.New("Model not found")
 	}
 
-	xmlContent := buildChatHistoryXML(messages)
+	xmlContent := buildChatHistoryXML(messages, content)
 
 	client, err := NewClient(providerInfo.ProviderType)
 	if err != nil {
@@ -89,11 +89,16 @@ func GenerateTitle(ctx context.Context, messages []*entity.Message) (*TitleGener
 // ============================================================================
 
 // buildChatHistoryXML formats messages as XML for title generation.
-func buildChatHistoryXML(messages []*entity.Message) string {
+func buildChatHistoryXML(messages []*entity.Message, content string) string {
 	var sb strings.Builder
 	sb.WriteString("<chat_history>\n")
-	for _, msg := range messages {
-		sb.WriteString(fmt.Sprintf("<message role=\"%s\">%s</message>\n", msg.Role, msg.Content))
+	if content != "" {
+		sb.WriteString(fmt.Sprintf("<message role=\"user\">%s</message>\n", content))
+	}
+	if len(messages) > 0 {
+		for _, msg := range messages {
+			sb.WriteString(fmt.Sprintf("<message role=\"%s\">%s</message>\n", msg.Role, msg.Content))
+		}
 	}
 	sb.WriteString("</chat_history>")
 	return sb.String()

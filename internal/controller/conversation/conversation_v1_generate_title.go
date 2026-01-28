@@ -34,13 +34,15 @@ func (c *ControllerV1) GenerateTitle(ctx context.Context, req *v1.GenerateTitleR
 	}
 
 	var messages []*entity.Message
-	err = dao.Message.Ctx(ctx).
-		Where(do.Message{ConversationId: conversation.Id}).
-		OrderAsc("created_at").
-		Limit(1).
-		Scan(&messages)
-	if err != nil {
-		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch messages")
+	if req.Content == "" {
+		err = dao.Message.Ctx(ctx).
+			Where(do.Message{ConversationId: conversation.Id}).
+			OrderAsc("created_at").
+			Limit(1).
+			Scan(&messages)
+		if err != nil {
+			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch messages")
+		}
 	}
 
 	type titleResult struct {
@@ -52,7 +54,7 @@ func (c *ControllerV1) GenerateTitle(ctx context.Context, req *v1.GenerateTitleR
 	done := make(chan titleResult, 1)
 
 	go func() {
-		title, err := llm.GenerateTitle(generationCtx, messages)
+		title, err := llm.GenerateTitle(generationCtx, messages, req.Content)
 		if err != nil {
 			done <- titleResult{err: err}
 			return

@@ -657,8 +657,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 setSendMainInput(false);
                 setMainInput("");
                 addConversation(conversationId);
+                generateTitle(conversationId, mainInput);
                 await sendMessage({ text: mainInput });
-                generateTitle(conversationId);
             } else {
                 await fetchMessages();
             }

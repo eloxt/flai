@@ -52,8 +52,9 @@ type MessageResponse struct {
 }
 
 type GenerateTitleReq struct {
-	g.Meta `path:"/conversation/{id}/generate-title" method:"get" tag:"Conversation" Summary:"Generate title for a conversation"`
-	Id     string `v:"required"`
+	g.Meta  `path:"/conversation/{id}/generate-title" method:"post" tag:"Conversation" Summary:"Generate title for a conversation"`
+	Id      string `v:"required"`
+	Content string
 }
 
 type GenerateTitleRes struct {
