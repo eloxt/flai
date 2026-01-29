@@ -125,6 +125,8 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	maxToolRounds := 10 // Prevent infinite loops
 
 	for round := 0; round < maxToolRounds; round++ {
+		g.Log().Debug(ctx, "Gemini content stream call: %v\nconfig: %v\ncontents: %v", modelConfig.ID, config, contents)
+
 		// Start streaming with full content history
 		iter := client.Models.GenerateContentStream(ctx, modelConfig.ID, contents, config)
 
@@ -499,14 +501,17 @@ func (c *GeminiClient) buildHistory(historyMessages []*entity.Message) ([]*genai
 // ============================================================================
 
 func (c *GeminiClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []*genai.Tool {
-	genaiTools := []*genai.Tool{
-		//{URLContext: &genai.URLContext{}},
-	}
+	genaiTools := []*genai.Tool{}
 
 	for _, tool := range tools {
 		if tool == consts.InternalTools.InternalWebSearch {
 			genaiTools = append(genaiTools, &genai.Tool{
 				GoogleSearch: &genai.GoogleSearch{},
+			})
+		}
+		if tool == consts.InternalTools.URLContext {
+			genaiTools = append(genaiTools, &genai.Tool{
+				URLContext: &genai.URLContext{},
 			})
 		}
 	}

@@ -17,7 +17,7 @@ interface MessageItemProps {
     expandedReasoning: Set<string>;
     nodeMap: Map<string, TreeNode>;
     previousMessageId?: string;
-    onToggleReasoning: (messageId: string) => void;
+    onToggleReasoning: (messageId: string, index: number) => void;
     onSwitchNode: (message: TreeNode, isNext: boolean) => void;
     onRetry: (message: TreeNode) => void;
     onDelete: () => void;
@@ -169,7 +169,7 @@ export function MessageItem({
                                     isLastContent={index === message.content.length - 1}
                                     isStreaming={isStreaming}
                                     isExpanded={expandedReasoning.has(`${message.id}-${index}`)}
-                                    onToggleReasoning={() => onToggleReasoning(`${message.id}-${index}`)}
+                                    onToggleReasoning={() => onToggleReasoning(message.id, index)}
                                 />
                             </div>
                         )}

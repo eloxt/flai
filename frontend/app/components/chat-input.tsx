@@ -1,4 +1,4 @@
-import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square, Image } from "lucide-react";
+import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square, Image, Link } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -19,6 +19,7 @@ import {
     DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { Attachment, MCPConfig } from "@/types/chat";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 // Allowed file types: plain text, PDF, and images
 const ALLOWED_MIME_TYPES = [
@@ -66,6 +67,7 @@ interface ChatInputProps {
     className?: string;
     onHeightChange?: (height: number) => void;
     autoFocus?: boolean;
+    contextUsagePercentage?: number;
 }
 
 export function ChatInput({
@@ -78,7 +80,8 @@ export function ChatInput({
     placeholder,
     className,
     onHeightChange,
-    autoFocus = false
+    autoFocus = false,
+    contextUsagePercentage
 }: ChatInputProps) {
     const { t } = useTranslation();
     const selectedTools = useInputStore((state) => state.selectedTools);
@@ -86,6 +89,7 @@ export function ChatInput({
     const selectedMcpTools = useInputStore((state) => state.selectedMcpTools);
     const addMcpTool = useInputStore((state) => state.addMcpTool);
     const removeMcpTool = useInputStore((state) => state.removeMcpTool);
+    const clearMcpTools = useInputStore((state) => state.clearMcpTools);
     const attachments = useInputStore((state) => state.attachments);
     const addAttachment = useInputStore((state) => state.addAttachment);
     const removeAttachment = useInputStore((state) => state.removeAttachment);
@@ -110,6 +114,12 @@ export function ChatInput({
         };
         fetchMcpConfigs();
     }, []);
+
+    useEffect(() => {
+        if (selectedTools.length > 0) {
+            clearMcpTools();
+        }
+    }, [selectedTools])
 
     const handleCompositionStart = () => {
         isComposingRef.current = true;
@@ -228,6 +238,7 @@ export function ChatInput({
                 name: tool.name,
                 description: tool.description,
             });
+            setSelectedTools([]);
         }
     };
 
@@ -329,15 +340,41 @@ export function ChatInput({
                                 </Button>
                             )}
 
-                            {currentModel?.internal_search && (
+                            {currentModel?.internal_tools?.includes("web_search") && (
                                 <ToggleGroupItem
                                     value="internal_web_search"
                                 >
-                                    <Globe />
-                                    <p>{t("common.search")}</p>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="flex items-center gap-1">
+                                                <Globe />
+                                                <span>{t("common.search")}</span>
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{t("components.chatInput.web_search_tooltip")}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 </ToggleGroupItem>
                             )}
-                            {currentModel?.image_generation && (
+                            {currentModel?.internal_tools?.includes("url_context") && (
+                                <ToggleGroupItem
+                                    value="url_context"
+                                >
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="flex items-center gap-1">
+                                                <Link />
+                                                <span>{t("common.urlContext")}</span>
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{t("components.chatInput.url_context_tooltip")}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </ToggleGroupItem>
+                            )}
+                            {currentModel?.internal_tools?.includes("image_generation") && (
                                 <ToggleGroupItem
                                     value="image_generation"
                                 >
@@ -391,18 +428,77 @@ export function ChatInput({
                             <Square className="size-3" />
                         </InputGroupButton>
                     ) : (
-                        <InputGroupButton
-                            variant="default"
-                            className="rounded-full ml-auto"
-                            size="icon-xs"
-                            onClick={onSend}
-                            disabled={isLoading || (!value.trim() && attachments.length === 0)}
-                        >
-                            <ArrowUpIcon className="size-3" />
-                        </InputGroupButton>
+                        <div className="flex items-center gap-2 ml-auto">
+                            {contextUsagePercentage !== undefined && (
+                                <ContextUsageRing percentage={contextUsagePercentage} />
+                            )}
+                            <InputGroupButton
+                                variant="default"
+                                className="rounded-full"
+                                size="icon-xs"
+                                onClick={onSend}
+                                disabled={isLoading || (!value.trim() && attachments.length === 0)}
+                            >
+                                <ArrowUpIcon className="size-3" />
+                            </InputGroupButton>
+                        </div>
                     )}
                 </InputGroupAddon>
             </InputGroup>
+        </div >
+    );
+}
+
+// Context usage ring component
+function ContextUsageRing({ percentage }: { percentage: number }) {
+    const size = 24;
+    const strokeWidth = 3;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    // Color based on usage
+    const getColor = (pct: number) => {
+        if (pct >= 90) return "#ef4444"; // red
+        if (pct >= 70) return "#f59e0b"; // amber
+        return "#3b82f6"; // blue
+    };
+
+    return (
+        <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground tabular-nums">
+                {Math.round(percentage)}%
+            </span>
+            <svg
+                width={size}
+                height={size}
+                viewBox={`0 0 ${size} ${size}`}
+                className="-rotate-90"
+            >
+                {/* Background circle */}
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    className="opacity-20"
+                />
+                {/* Progress circle */}
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke={getColor(percentage)}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                />
+            </svg>
+           
         </div>
     );
 }

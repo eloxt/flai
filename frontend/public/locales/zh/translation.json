@@ -4,6 +4,7 @@
         "generating": "生成中...",
         "search": "搜索",
         "attachment": "附件",
+        "urlContext": "URL 上下文",
         "uploading": "上传中...",
         "fileUploaded": "文件已上传",
         "uploadFailed": "上传文件失败",
@@ -390,7 +391,9 @@
             "copied": "链接已复制到剪贴板"
         },
         "chatInput": {
-            "mcpTools": "MCP 工具"
+            "mcpTools": "MCP 工具",
+            "web_search_tooltip": "需要时搜索网络信息。",
+            "url_context_tooltip": "需要时访问 URL 提取信息。"
         },
         "toolCall": {
             "callingTool": "正在调用工具：",

@@ -8,6 +8,7 @@ import { ChatInput } from "@/components/chat-input";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { useAppStore } from "@/store/app-store";
+import { useModelStore } from "@/store/model-store";
 
 import { useChat } from "./use-chat";
 import { ChatSkeleton } from "./ChatSkeleton";
@@ -44,6 +45,7 @@ export default function Chat() {
         }
     };
     const attachments = useInputStore((state) => state.attachments);
+    const currentModel = useModelStore((state) => state.currentModel);
 
     // UI state
     const [expandedReasoning, setExpandedReasoning] = useState<Set<string>>(new Set());
@@ -66,13 +68,13 @@ export default function Chat() {
         cancelGeneration,
         switchNode,
     } = useChat(conversationId, {
-        onExpandReasoning: (messageId) => {
-            setExpandedReasoning((prev) => new Set(prev).add(messageId));
+        onExpandReasoning: (messageId, index) => {
+            setExpandedReasoning((prev) => new Set(prev).add(messageId + "-" + index));
         },
-        onCollapseReasoning: (messageId) => {
+        onCollapseReasoning: (messageId, index) => {
             setExpandedReasoning((prev) => {
                 const newSet = new Set(prev);
-                newSet.delete(messageId);
+                newSet.delete(messageId + "-" + index);
                 return newSet;
             });
         },
@@ -123,13 +125,14 @@ export default function Chat() {
         setShowHeaderBorder(scrollTop > 20);
     };
 
-    const toggleReasoning = (messageId: string) => {
+    const toggleReasoning = (messageId: string, index: number) => {
+        const label = messageId + "-" + index;
         setExpandedReasoning((prev) => {
             const newSet = new Set(prev);
-            if (newSet.has(messageId)) {
-                newSet.delete(messageId);
+            if (newSet.has(label)) {
+                newSet.delete(label);
             } else {
-                newSet.add(messageId);
+                newSet.add(label);
             }
             return newSet;
         });
@@ -168,6 +171,19 @@ export default function Chat() {
         });
         setEditValue("");
     };
+
+    // Calculate context usage percentage from latest assistant message
+    const contextUsagePercentage = (() => {
+        if (!currentModel?.limit?.context) return undefined;
+
+        // Find the latest assistant message with meta_info
+        const latestMessage = path[path.length - 1]
+        if (!latestMessage) return undefined;
+        const metaInfo = latestMessage.meta_info;
+        if (!metaInfo) return undefined;
+        const totalTokens = metaInfo.response_token_count;
+        return Math.min((totalTokens / currentModel.limit.context) * 100, 100);
+    })();
 
     return (
         <>
@@ -238,6 +254,7 @@ export default function Chat() {
                         isStreaming={isStreaming}
                         onHeightChange={setInputHeight}
                         autoFocus={true}
+                        contextUsagePercentage={contextUsagePercentage}
                     />
                 </div>
             </div>

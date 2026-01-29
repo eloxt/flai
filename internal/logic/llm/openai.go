@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
@@ -119,6 +120,9 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			},
 			Tools: openaiTools,
 		}
+
+		paramsJson, _ := params.MarshalJSON()
+		g.Log().Debug(ctx, "OpenAI content stream call: %v", string(paramsJson))
 
 		stream := client.Responses.NewStreaming(ctx, params)
 

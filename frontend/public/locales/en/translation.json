@@ -4,6 +4,7 @@
         "generating": "Generating...",
         "search": "Search",
         "attachment": "Attachment",
+        "urlContext": "URL Context",
         "uploading": "Uploading...",
         "fileUploaded": "File uploaded",
         "uploadFailed": "Failed to upload file",
@@ -390,7 +391,9 @@
             "copied": "Link copied to clipboard"
         },
         "chatInput": {
-            "mcpTools": "MCP Tools"
+            "mcpTools": "MCP Tools",
+            "web_search_tooltip": "Search web for information when needed.",
+            "url_context_tooltip": "Extract information from URLs when needed."
         },
         "toolCall": {
             "callingTool": "Calling tool:",

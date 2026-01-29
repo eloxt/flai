@@ -39,8 +39,7 @@ export interface Model {
   cost?: ModelCost;
   limit?: ModelLimit;
   status?: "alpha" | "beta" | "deprecated";
-  internal_search?: boolean;
-  image_generation?: boolean;
+  internal_tools?: string[];
 }
 
 // Provider interface (extended version with all fields)

@@ -30,8 +30,14 @@ export default function ModelSelector() {
         if (!model.attachment) {
             clearAttachments();
         }
-        if (!model.internal_search && selectedTools.includes("internal_web_search")) {
-            setSelectedTools(selectedTools.filter(tool => tool !== "internal_web_search"));
+        if (!model.internal_tools?.includes("web_search") && selectedTools.includes("web_search")) {
+            setSelectedTools(selectedTools.filter(tool => tool !== "web_search"));
+        }
+        if (!model.internal_tools?.includes("url_context") && selectedTools.includes("url_context")) {
+            setSelectedTools(selectedTools.filter(tool => tool !== "url_context"));
+        }
+        if (!model.internal_tools?.includes("image_generation") && selectedTools.includes("image_generation")) {
+            setSelectedTools(selectedTools.filter(tool => tool !== "image_generation"));
         }
         setCurrentModel({ ...model, provider_id: providerId });
     };
@@ -93,7 +99,7 @@ export default function ModelSelector() {
                             )}
                             {provider.name}
                         </DropdownMenuLabel>
-                        {provider.model.map((model) => (
+                        {provider.model?.map((model) => (
                             <HoverCard key={model.id} openDelay={150} closeDelay={150}>
                                 <HoverCardTrigger>
                                     <DropdownMenuCheckboxItem

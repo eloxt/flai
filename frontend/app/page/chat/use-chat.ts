@@ -38,13 +38,16 @@ const DEFAULT_META_INFO: MessageMetaInfo = {
     tool_use_token_count: 0,
 };
 
+// Virtual root node ID - used as parent for all top-level messages
+export const ROOT_NODE_ID = "__ROOT__";
+
 // ============================================================================
 // Types
 // ============================================================================
 
 interface UseChatOptions {
-    onExpandReasoning?: (messageId: string) => void;
-    onCollapseReasoning?: (messageId: string) => void;
+    onExpandReasoning?: (messageId: string, index: number) => void;
+    onCollapseReasoning?: (messageId: string, index: number) => void;
 }
 
 interface SendMessageParams {
@@ -207,6 +210,17 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         const pathList: TreeNode[] = [];
         let lastMessage: TreeNode | null = null;
 
+        // Create virtual root node
+        const rootNode: TreeNode = {
+            id: ROOT_NODE_ID,
+            parent_id: "",
+            role: "system",
+            content: [],
+            created_at: new Date(0),
+            children: [],
+        };
+        map.set(ROOT_NODE_ID, rootNode);
+
         // First pass: create nodes and find the latest message
         for (const message of messages) {
             const node: TreeNode = { ...message, children: [] };
@@ -219,23 +233,32 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
         // Second pass: build tree relationships
         for (const message of messages) {
+            const child = map.get(message.id);
+            if (!child) {
+                continue;
+            }
             if (message.parent_id) {
+                // Has parent - attach to parent node
                 const parent = map.get(message.parent_id);
                 if (parent) {
-                    const child = map.get(message.id);
-                    if (child) {
-                        parent.children.push(child);
-                        parent.children.sort(
-                            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-                        );
-                    }
+                    parent.children.push(child);
+                    parent.children.sort(
+                        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                    );
                 }
+            } else {
+                // No parent - attach to virtual root node
+                child.parent_id = ROOT_NODE_ID;
+                rootNode.children.push(child);
+                rootNode.children.sort(
+                    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                );
             }
         }
 
-        // Build path from last message to root
+        // Build path from last message to root (excluding virtual root)
         let current = lastMessage;
-        while (current) {
+        while (current && current.id !== ROOT_NODE_ID) {
             pathList.unshift(current);
             current = current.parent_id ? map.get(current.parent_id) ?? null : null;
         }
@@ -302,14 +325,18 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
     const handleStreamChunk = useCallback((
         ctx: StreamContext,
         streamResponse: StreamResponse,
-        setPathFn: (path: TreeNode[]) => void    ): void => {
+        setPathFn: (path: TreeNode[]) => void): void => {
         const { type: streamContentType } = streamResponse;
         const assistantContent = parseStreamContent(streamResponse);
 
+        // Get the current content index for reasoning expand/collapse
+        const assistantMsg = ctx.newPath.find(m => m.id === ctx.assistantMessageId);
+        const contentIndex = assistantMsg ? Math.max(0, assistantMsg.content.length - 1) : 0;
+
         if (streamContentType === "reasoning") {
-            options?.onExpandReasoning?.(ctx.assistantMessageId);
+            options?.onExpandReasoning?.(ctx.assistantMessageId, contentIndex);
         } else {
-            options?.onCollapseReasoning?.(ctx.assistantMessageId);
+            options?.onCollapseReasoning?.(ctx.assistantMessageId, contentIndex);
         }
 
         // Handle meta info
@@ -396,7 +423,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             (lastContent.data as ContentMessage).content += assistantContent;
         });
         setPathFn(ctx.newPath);
-        
+
         ctx.lastMessageType = streamContentType;
     }, [options]);
 
