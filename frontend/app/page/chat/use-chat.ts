@@ -444,6 +444,20 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             const lines = chunk.split("\n");
 
             for (const line of lines) {
+                // Check for non-SSE JSON error response (backend exception)
+                if (line.startsWith("{") && !line.startsWith("data: ")) {
+                    try {
+                        const errorResponse = JSON.parse(line);
+                        if (errorResponse.code !== undefined && errorResponse.code !== 0) {
+                            const errorMessage = errorResponse.message || t("common.error.network");
+                            toast.error(errorMessage);
+                            return;
+                        }
+                    } catch {
+                        // Not valid JSON, continue processing
+                    }
+                }
+
                 if (!line.startsWith("data: ")) continue;
 
                 const dataStr = line.slice(6);

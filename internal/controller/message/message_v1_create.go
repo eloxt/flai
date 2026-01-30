@@ -86,7 +86,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	select {
 	case err := <-done:
 		if err != nil {
-			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to stream message")
+			return nil, err
 		}
 	case <-ctx.Done():
 		response.BufferWriter = nil
