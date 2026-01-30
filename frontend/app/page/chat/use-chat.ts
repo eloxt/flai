@@ -569,6 +569,25 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             };
 
             await processStream(reader, ctx);
+
+            // Send browser notification when stream completes and page is not focused
+            if (document.hidden && "Notification" in window) {
+                if (Notification.permission === "granted") {
+                    new Notification(t("pages.chat.notification.complete"), {
+                        body: t("pages.chat.notification.messageReady"),
+                        icon: "/favicon.ico",
+                    });
+                } else if (Notification.permission !== "denied") {
+                    Notification.requestPermission().then((permission) => {
+                        if (permission === "granted") {
+                            new Notification(t("pages.chat.notification.complete"), {
+                                body: t("pages.chat.notification.messageReady"),
+                                icon: "/favicon.ico",
+                            });
+                        }
+                    });
+                }
+            }
         } catch (error) {
             if (error instanceof DOMException && error.name === "AbortError") {
                 return;

@@ -106,7 +106,11 @@
                 "process": "思考中",
                 "done": "思考过程"
             },
-            "newChat": "新聊天"
+            "newChat": "新聊天",
+            "notification": {
+                "complete": "回复完成",
+                "messageReady": "AI 回复已就绪"
+            }
         },
         "search": {
             "title": "搜索功能建设中",

@@ -106,7 +106,11 @@
                 "process": "Reasoning",
                 "done": "Reasoned"
             },
-            "newChat": "New Chat"
+            "newChat": "New Chat",
+            "notification": {
+                "complete": "Response Complete",
+                "messageReady": "Your AI response is ready"
+            }
         },
         "search": {
             "title": "Search Under Construction",
