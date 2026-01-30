@@ -289,100 +289,104 @@ export function ChatInput({
                         onChange={handleFileChange}
                     />
                     <div className="flex flex-col gap-2 flex-1 min-w-0">
-                        <ToggleGroup type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
+                        <ScrollArea>
+                            <ToggleGroup type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
                             {/* MCP Tool Selector */}
-                            {totalAvailableTools > 0 && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost">
-                                            <Wrench className="size-4" />
-                                            <span>{t("components.chatInput.mcpTools")}</span>
-                                            <ChevronDown className="size-3 ml-1" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent className="w-72" align="start">
-                                        {mcpConfigs.map((config, index) => (
-                                            <div key={config.id}>
-                                                {index > 0 && <DropdownMenuSeparator />}
-                                                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                                    {config.name}
-                                                </DropdownMenuLabel>
-                                                {config.tools?.map((tool) => (
-                                                    <DropdownMenuCheckboxItem
-                                                        key={`${config.id}-${tool.name}`}
-                                                        checked={isToolSelected(config.id, tool.name)}
-                                                        onCheckedChange={() => handleToolToggle(config, tool)}
-                                                        onSelect={(e) => e.preventDefault()}
-                                                    >
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-sm font-medium truncate">{tool.name}</div>
-                                                            {tool.description && (
-                                                                <div className="text-xs text-muted-foreground truncate">
-                                                                    {tool.description}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </DropdownMenuCheckboxItem>
-                                                ))}
-                                            </div>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
+                                {totalAvailableTools > 0 && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost">
+                                                <Wrench className="size-4" />
+                                                <span>{t("components.chatInput.mcpTools")}</span>
+                                                <ChevronDown className="size-3 ml-1" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="w-72" align="start">
+                                            {mcpConfigs.map((config, index) => (
+                                                <div key={config.id}>
+                                                    {index > 0 && <DropdownMenuSeparator />}
+                                                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                                        {config.name}
+                                                    </DropdownMenuLabel>
+                                                    {config.tools?.map((tool) => (
+                                                        <DropdownMenuCheckboxItem
+                                                            key={`${config.id}-${tool.name}`}
+                                                            checked={isToolSelected(config.id, tool.name)}
+                                                            onCheckedChange={() => handleToolToggle(config, tool)}
+                                                            onSelect={(e) => e.preventDefault()}
+                                                        >
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="text-sm font-medium truncate">{tool.name}</div>
+                                                                {tool.description && (
+                                                                    <div className="text-xs text-muted-foreground truncate">
+                                                                        {tool.description}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </DropdownMenuCheckboxItem>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
 
-                            {currentModel?.attachment && (
-                                <Button
-                                    variant="ghost"
-                                    onClick={handleUploadClick}
-                                >
-                                    <Paperclip className="size-4" />
-                                    {t("common.attachment")}
-                                </Button>
-                            )}
+                                {currentModel?.attachment && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleUploadClick}
+                                    >
+                                        <Paperclip className="size-4" />
+                                        {t("common.attachment")}
+                                    </Button>
+                                )}
 
-                            {currentModel?.internal_tools?.includes("web_search") && (
-                                <ToggleGroupItem
-                                    value="internal_web_search"
-                                >
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="flex items-center gap-1">
-                                                <Globe />
-                                                <span>{t("common.search")}</span>
-                                            </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{t("components.chatInput.web_search_tooltip")}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </ToggleGroupItem>
-                            )}
-                            {currentModel?.internal_tools?.includes("url_context") && (
-                                <ToggleGroupItem
-                                    value="url_context"
-                                >
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="flex items-center gap-1">
-                                                <Link />
-                                                <span>{t("common.urlContext")}</span>
-                                            </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{t("components.chatInput.url_context_tooltip")}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </ToggleGroupItem>
-                            )}
-                            {currentModel?.internal_tools?.includes("image_generation") && (
-                                <ToggleGroupItem
-                                    value="image_generation"
-                                >
-                                    <Image />
-                                    <p>{t("common.imageGeneration")}</p>
-                                </ToggleGroupItem>
-                            )}
-                        </ToggleGroup>
+                                {currentModel?.internal_tools?.includes("web_search") && (
+                                    <ToggleGroupItem
+                                        value="internal_web_search"
+                                    >
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="flex items-center gap-1">
+                                                    <Globe />
+                                                    <span>{t("common.search")}</span>
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{t("components.chatInput.web_search_tooltip")}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </ToggleGroupItem>
+                                )}
+                                {currentModel?.internal_tools?.includes("url_context") && (
+                                    <ToggleGroupItem
+                                        value="url_context"
+                                    >
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="flex items-center gap-1">
+                                                    <Link />
+                                                    <span>{t("common.urlContext")}</span>
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{t("components.chatInput.url_context_tooltip")}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </ToggleGroupItem>
+                                )}
+                                {currentModel?.internal_tools?.includes("image_generation") && (
+                                    <ToggleGroupItem
+                                        value="image_generation"
+                                    >
+                                        <Image />
+                                        <p>{t("common.imageGeneration")}</p>
+                                    </ToggleGroupItem>
+                                )}
+    
+                            </ToggleGroup>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
 
                         {/* Selected MCP Tools and Attachments Display */}
                         {(selectedMcpTools.length > 0 || attachments.length > 0) && (
@@ -498,7 +502,7 @@ function ContextUsageRing({ percentage }: { percentage: number }) {
                     strokeDashoffset={strokeDashoffset}
                 />
             </svg>
-           
+
         </div>
     );
 }
