@@ -125,7 +125,7 @@ function buildMessageRequest(
         provider_id: providerId,
         model_name: modelName,
         messagePath: newPath
-            .filter((msg) => msg.id !== userMsgId)
+            .filter((msg) => msg.id !== userMsgId && msg.id !== assistantMsgId)
             .map((msg) => msg.id),
         prompt: text,
         tools: selectedTools,
@@ -541,7 +541,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 conversationId,
                 providerId,
                 modelName,
-                newPath.slice(0, newPath.length - 1),
+                newPath,
                 text,
                 selectedTools,
                 selectedMcpTools,
