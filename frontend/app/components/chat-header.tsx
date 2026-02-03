@@ -23,7 +23,7 @@ export default function ChatHeader() {
     return (
         <>
             <header className={`sticky top-0 z-50 bg-background flex items-center px-4 py-2 gap-2 transition-[border-color] duration-200 ${showHeaderBorder ? "border-b border-border" : "border-b border-transparent"}`}>
-                <div className="flex-1 flex justify-start">
+                <div className="flex-1 md:flex-none flex justify-start">
                     <Button
                         variant="ghost"
                         size="icon"
