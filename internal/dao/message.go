@@ -23,15 +23,31 @@ var (
 )
 
 func FetchMessageHistory(ctx context.Context, messagePath []string) ([]*entity.Message, error) {
-	var historyMessages []*entity.Message
-	if len(messagePath) > 0 {
-		err := Message.Ctx(ctx).Where(do.Message{
-			Id: messagePath,
-		}).Scan(&historyMessages)
-		if err != nil {
-			return nil, err
-		}
-		return historyMessages, nil
+	if len(messagePath) == 0 {
+		return nil, nil
 	}
-	return nil, nil
+
+	var historyMessages []*entity.Message
+	err := Message.Ctx(ctx).Where(do.Message{
+		Id: messagePath,
+	}).Scan(&historyMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build a map for quick lookup
+	messageMap := make(map[string]*entity.Message, len(historyMessages))
+	for _, msg := range historyMessages {
+		messageMap[msg.Id] = msg
+	}
+
+	// Reorder messages to match the input messagePath order
+	orderedMessages := make([]*entity.Message, 0, len(messagePath))
+	for _, id := range messagePath {
+		if msg, exists := messageMap[id]; exists {
+			orderedMessages = append(orderedMessages, msg)
+		}
+	}
+
+	return orderedMessages, nil
 }
