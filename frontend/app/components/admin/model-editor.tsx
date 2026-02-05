@@ -95,8 +95,20 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
         });
     };
 
+    const toggleInternalTool = (tool: string, enabled: boolean) => {
+        const tools = Array.isArray(model.internal_tools) ? model.internal_tools : [];
+        const nextTools = enabled
+            ? Array.from(new Set([...tools, tool]))
+            : tools.filter((item) => item !== tool);
+        onChange({ ...model, internal_tools: nextTools });
+    };
+
+    const hasInternalTool = (tool: string) => {
+        return Array.isArray(model.internal_tools) && model.internal_tools.includes(tool);
+    };
+
     return (
-        <Card className="py-2">
+        <Card className="mx-2 py-2">
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CardHeader className="px-4">
                     <div className="flex items-center justify-between">
@@ -193,14 +205,29 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
                                     { key: "structured_output", label: t("pages.admin.providers.model.structuredOutput") },
                                     { key: "temperature", label: t("pages.admin.providers.model.temperature") },
                                     { key: "open_weights", label: t("pages.admin.providers.model.openWeights") },
-                                    { key: "internal_search", label: t("pages.admin.providers.model.internalSearch") },
-                                    { key: "image_generation", label: t("pages.admin.providers.model.imageGeneration") },
                                 ].map(({ key, label }) => (
                                     <div key={key} className="flex items-center gap-2">
                                         <Switch
                                             id={`${model.id}-${key}`}
                                             checked={Boolean(model[key as keyof Model])}
                                             onCheckedChange={(v) => updateField(key as keyof Model, v as any)}
+                                            className="scale-75"
+                                        />
+                                        <Label htmlFor={`${model.id}-${key}`} className="text-xs cursor-pointer">
+                                            {label}
+                                        </Label>
+                                    </div>
+                                ))}
+                                {[
+                                    { key: "web_search", label: t("pages.admin.providers.model.internalSearch") },
+                                    { key: "image_generation", label: t("pages.admin.providers.model.imageGeneration") },
+                                    { key: "url_context", label: t("pages.admin.providers.model.urlContext") },
+                                ].map(({ key, label }) => (
+                                    <div key={key} className="flex items-center gap-2">
+                                        <Switch
+                                            id={`${model.id}-${key}`}
+                                            checked={hasInternalTool(key)}
+                                            onCheckedChange={(v) => toggleInternalTool(key, v)}
                                             className="scale-75"
                                         />
                                         <Label htmlFor={`${model.id}-${key}`} className="text-xs cursor-pointer">
@@ -353,10 +380,7 @@ export function ModelEditor({ models, onChange }: ModelEditorProps) {
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                    {t("pages.admin.providers.form.models")} ({models.length})
-                </Label>
+            <div className="flex items-center justify-end">
                 <Button variant="outline" size="sm" onClick={addModel}>
                     <Plus className="h-4 w-4 mr-1" />
                     {t("pages.admin.providers.model.addModel")}

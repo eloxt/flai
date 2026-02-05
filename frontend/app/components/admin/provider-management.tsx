@@ -22,6 +22,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -72,6 +73,9 @@ export function ProviderManagement() {
     const [editLogo, setEditLogo] = useState("");
     const [editIsActive, setEditIsActive] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+    const [showImportDialog, setShowImportDialog] = useState(false);
+    const [importJsonText, setImportJsonText] = useState("");
+    const [importTarget, setImportTarget] = useState<"create" | "edit">("create");
 
     const fetchProviders = async () => {
         setIsLoading(true);
@@ -183,6 +187,120 @@ export function ProviderManagement() {
     const maskApiKey = (key?: string) => {
         if (!key || key.length < 8) return "••••••••";
         return key.substring(0, 4) + "••••••••" + key.substring(key.length - 4);
+    };
+
+    const openImportDialog = (target: "create" | "edit") => {
+        setImportTarget(target);
+        setImportJsonText("");
+        setShowImportDialog(true);
+    };
+
+    const normalizeModel = (raw: Record<string, any>): Model => {
+        const model = { ...raw } as Model & Record<string, any>;
+        const toolCall = raw.tool_call ?? raw.toolCall;
+        const structuredOutput = raw.structured_output ?? raw.structuredOutput;
+        const openWeights = raw.open_weights ?? raw.openWeights;
+        const internalSearch = raw.internal_search ?? raw.internalSearch;
+        const imageGeneration = raw.image_generation ?? raw.imageGeneration;
+        const urlContext = raw.url_context ?? raw.urlContext;
+        const releaseDate = raw.release_date ?? raw.releaseDate;
+        const lastUpdated = raw.last_updated ?? raw.lastUpdated;
+
+        model.tool_call = typeof model.tool_call === "boolean" ? model.tool_call : Boolean(toolCall);
+        model.structured_output = typeof model.structured_output === "boolean" ? model.structured_output : Boolean(structuredOutput);
+        model.open_weights = typeof model.open_weights === "boolean" ? model.open_weights : Boolean(openWeights);
+        const internalTools = Array.isArray(model.internal_tools) ? model.internal_tools : [];
+        const normalizedTools = new Set(internalTools);
+        if (typeof internalSearch === "boolean") {
+            internalSearch ? normalizedTools.add("internal_web_search") : normalizedTools.delete("internal_web_search");
+        }
+        if (typeof imageGeneration === "boolean") {
+            imageGeneration ? normalizedTools.add("image_generation") : normalizedTools.delete("image_generation");
+        }
+        if (typeof urlContext === "boolean") {
+            urlContext ? normalizedTools.add("url_context") : normalizedTools.delete("url_context");
+        }
+        model.internal_tools = Array.from(normalizedTools);
+        model.attachment = typeof model.attachment === "boolean" ? model.attachment : Boolean(raw.attachment);
+        model.reasoning = typeof model.reasoning === "boolean" ? model.reasoning : Boolean(raw.reasoning);
+        model.release_date = typeof model.release_date === "string" ? model.release_date : releaseDate;
+        model.last_updated = typeof model.last_updated === "string" ? model.last_updated : lastUpdated;
+
+        if (!model.id && typeof model.name === "string") {
+            model.id = model.name;
+        }
+        if (!model.name && typeof model.id === "string") {
+            model.name = model.id;
+        }
+
+        return model;
+    };
+
+    const extractModels = (value: unknown): Model[] => {
+        const asRecord = (input: unknown): input is Record<string, any> =>
+            typeof input === "object" && input !== null && !Array.isArray(input);
+
+        const modelFromPrimitive = (input: string | number) => ({
+            id: String(input),
+            name: String(input),
+            attachment: false,
+            reasoning: false,
+            tool_call: false,
+        } as Model);
+
+        const mapModelItems = (items: unknown[]): Model[] => {
+            return items
+                .map((item) => {
+                    if (asRecord(item)) return normalizeModel(item);
+                    if (typeof item === "string" || typeof item === "number") return modelFromPrimitive(item);
+                    return null;
+                })
+                .filter((item): item is Model => Boolean(item));
+        };
+
+        if (Array.isArray(value)) {
+            return mapModelItems(value);
+        }
+
+        if (asRecord(value)) {
+            if (Array.isArray(value.models)) {
+                return mapModelItems(value.models);
+            }
+            if (Array.isArray(value.model)) {
+                return mapModelItems(value.model);
+            }
+            return mapModelItems([value]);
+        }
+
+        return [];
+    };
+
+    const handleImportModels = () => {
+        if (!importJsonText.trim()) {
+            toast.error(t("pages.admin.providers.form.importJsonInvalid"));
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(importJsonText);
+            const models = extractModels(parsed).filter((model) => Boolean(model.id));
+
+            if (models.length === 0) {
+                toast.error(t("pages.admin.providers.form.importJsonNoModels"));
+                return;
+            }
+
+            if (importTarget === "create") {
+                setNewModels([...newModels, ...models]);
+            } else {
+                setEditModels([...editModels, ...models]);
+            }
+
+            toast.success(t("pages.admin.providers.form.importJsonSuccess", { count: models.length }));
+            setShowImportDialog(false);
+        } catch (error) {
+            toast.error(t("pages.admin.providers.form.importJsonInvalid"));
+        }
     };
 
     return (
@@ -323,7 +441,20 @@ export function ProviderManagement() {
                                 placeholder={t("pages.admin.providers.form.baseUrlPlaceholder")}
                             />
                         </div>
-                        <ModelEditor models={newModels} onChange={setNewModels} />
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label>{t("pages.admin.providers.form.models")}</Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openImportDialog("create")}
+                                >
+                                    {t("pages.admin.providers.form.importJson")}
+                                </Button>
+                            </div>
+                            <ModelEditor models={newModels} onChange={setNewModels} />
+                        </div>
                         <div className="grid gap-2">
                             <Label htmlFor="logo">{t("pages.admin.providers.form.logo")}</Label>
                             <Input
@@ -400,7 +531,20 @@ export function ProviderManagement() {
                                 placeholder={t("pages.admin.providers.form.baseUrlPlaceholder")}
                             />
                         </div>
-                        <ModelEditor models={editModels} onChange={setEditModels} />
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label>{t("pages.admin.providers.form.models")}</Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openImportDialog("edit")}
+                                >
+                                    {t("pages.admin.providers.form.importJson")}
+                                </Button>
+                            </div>
+                            <ModelEditor models={editModels} onChange={setEditModels} />
+                        </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-logo">{t("pages.admin.providers.form.logo")}</Label>
                             <Input
@@ -425,6 +569,34 @@ export function ProviderManagement() {
                         </Button>
                         <Button onClick={handleEditProvider} disabled={isEditing}>
                             {isEditing ? t("common.loading") : t("common.actions.save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("pages.admin.providers.form.importJsonTitle")}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="import-json">{t("pages.admin.providers.form.importJsonDescription")}</Label>
+                            <Textarea
+                                id="import-json"
+                                value={importJsonText}
+                                onChange={(e) => setImportJsonText(e.target.value)}
+                                placeholder={t("pages.admin.providers.form.importJsonPlaceholder")}
+                                rows={8}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+                            {t("common.actions.cancel")}
+                        </Button>
+                        <Button onClick={handleImportModels}>
+                            {t("pages.admin.providers.form.importJsonApply")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

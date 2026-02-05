@@ -504,12 +504,12 @@ func (c *GeminiClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []*ge
 	genaiTools := []*genai.Tool{}
 
 	for _, tool := range tools {
-		if tool == consts.InternalTools.InternalWebSearch {
+		switch tool {
+		case consts.InternalTools.WebSearch:
 			genaiTools = append(genaiTools, &genai.Tool{
 				GoogleSearch: &genai.GoogleSearch{},
 			})
-		}
-		if tool == consts.InternalTools.URLContext {
+		case consts.InternalTools.URLContext:
 			genaiTools = append(genaiTools, &genai.Tool{
 				URLContext: &genai.URLContext{},
 			})

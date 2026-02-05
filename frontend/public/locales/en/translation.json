@@ -274,6 +274,14 @@
                     "baseUrlPlaceholder": "https://api.example.com",
                     "models": "Models",
                     "modelsPlaceholder": "[{\"id\": \"gpt-4\", \"name\": \"GPT-4\", ...}]",
+                    "importJson": "Import JSON",
+                    "importJsonTitle": "Import Models JSON",
+                    "importJsonDescription": "Paste a model object, an array of models, or a provider object with models.",
+                    "importJsonPlaceholder": "[{\"id\": \"gpt-4o\", \"name\": \"GPT-4o\"}]",
+                    "importJsonApply": "Apply",
+                    "importJsonInvalid": "Invalid JSON content",
+                    "importJsonNoModels": "No valid models found",
+                    "importJsonSuccess": "Imported {{count}} models",
                     "logo": "Logo SVG",
                     "logoPlaceholder": "https://example.com/logo.svg",
                     "isActive": "Active"
@@ -308,7 +316,8 @@
                     "costCacheRead": "Cache Read",
                     "costCacheWrite": "Cache Write",
                     "internalSearch": "Internal Search",
-                    "imageGeneration": "Image Generation"
+                    "imageGeneration": "Image Generation",
+                    "urlContext": "URL Context"
                 }
             },
             "notification": {

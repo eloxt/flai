@@ -272,8 +272,16 @@
                     "providerTypePlaceholder": "选择类型",
                     "baseUrl": "接口地址",
                     "baseUrlPlaceholder": "https://api.example.com",
-                    "models": "模型 (JSON)",
+                    "models": "模型",
                     "modelsPlaceholder": "[{\"id\": \"gpt-4\", \"name\": \"GPT-4\", ...}]",
+                    "importJson": "导入 JSON",
+                    "importJsonTitle": "导入模型 JSON",
+                    "importJsonDescription": "粘贴模型对象、模型数组，或包含 models 的服务商对象。",
+                    "importJsonPlaceholder": "[{\"id\": \"gpt-4o\", \"name\": \"GPT-4o\"}]",
+                    "importJsonApply": "应用",
+                    "importJsonInvalid": "JSON 内容无效",
+                    "importJsonNoModels": "未找到有效模型",
+                    "importJsonSuccess": "已导入 {{count}} 个模型",
                     "logo": "Logo SVG",
                     "logoPlaceholder": "https://example.com/logo.svg",
                     "isActive": "激活"
@@ -308,7 +316,8 @@
                     "costCacheRead": "缓存读取",
                     "costCacheWrite": "缓存写入",
                     "internalSearch": "联网搜索",
-                    "imageGeneration": "图片生成"
+                    "imageGeneration": "图片生成",
+                    "urlContext": "URL 上下文"
                 }
             },
             "notification": {

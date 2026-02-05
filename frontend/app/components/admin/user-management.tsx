@@ -313,14 +313,14 @@ export function UserManagement() {
                                                 >
                                                     <Check className="size-3 mr-1" />
                                                     {t(
-                                                        "pages.admin.users.active",
+                                                        "common.status.active",
                                                     )}
                                                 </Badge>
                                             ) : (
                                                 <Badge variant="secondary">
                                                     <X className="size-3 mr-1" />
                                                     {t(
-                                                        "pages.admin.users.inactive",
+                                                        "common.status.inactive",
                                                     )}
                                                 </Badge>
                                             )}

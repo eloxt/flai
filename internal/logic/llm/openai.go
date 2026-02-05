@@ -524,13 +524,14 @@ func (c *OpenAIClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []res
 	var openaiTools []responses.ToolUnionParam
 
 	for _, tool := range tools {
-		if tool == consts.InternalTools.InternalWebSearch {
+		switch tool {
+		case consts.InternalTools.WebSearch:
 			openaiTools = append(openaiTools, responses.ToolUnionParam{
 				OfWebSearch: &responses.WebSearchToolParam{
 					Type: responses.WebSearchToolTypeWebSearch,
 				},
 			})
-		} else if tool == consts.InternalTools.ImageGeneration {
+		case consts.InternalTools.ImageGeneration:
 			openaiTools = append(openaiTools, responses.ToolUnionParam{
 				OfImageGeneration: &responses.ToolImageGenerationParam{},
 			})
