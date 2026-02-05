@@ -109,7 +109,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	for round := 0; round < maxToolRounds; round++ {
 		// Create stream params
 		params := responses.ResponseNewParams{
-			PreviousResponseID: openai.String(previousResponseId),
+			// PreviousResponseID: openai.String(previousResponseId),
 			Instructions:       openai.String(ComposeSystemPrompt()),
 			Model:              modelConfig.ID,
 			Input: responses.ResponseNewParamsInputUnion{
