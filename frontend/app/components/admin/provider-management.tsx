@@ -212,7 +212,7 @@ export function ProviderManagement() {
         const internalTools = Array.isArray(model.internal_tools) ? model.internal_tools : [];
         const normalizedTools = new Set(internalTools);
         if (typeof internalSearch === "boolean") {
-            internalSearch ? normalizedTools.add("internal_web_search") : normalizedTools.delete("internal_web_search");
+            internalSearch ? normalizedTools.add("web_search") : normalizedTools.delete("web_search");
         }
         if (typeof imageGeneration === "boolean") {
             imageGeneration ? normalizedTools.add("image_generation") : normalizedTools.delete("image_generation");

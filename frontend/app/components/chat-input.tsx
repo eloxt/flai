@@ -343,7 +343,7 @@ export function ChatInput({
 
                                 {currentModel?.internal_tools?.includes("web_search") && (
                                     <ToggleGroupItem
-                                        value="internal_web_search"
+                                        value="web_search"
                                     >
                                         <Tooltip>
                                             <TooltipTrigger asChild>

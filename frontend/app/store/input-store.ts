@@ -26,7 +26,7 @@ export const useInputStore = create<InputState>()(
         (set) => ({
             mainInput: "",
             sendMainInput: false,
-            selectedTools: ["internal_web_search"],
+            selectedTools: ["web_search"],
             selectedMcpTools: [],
             setMainInput: (value) => set({ mainInput: value }),
             setSendMainInput: (value) => set({ sendMainInput: value }),
