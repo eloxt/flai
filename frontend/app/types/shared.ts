@@ -1,3 +1,7 @@
+interface UserPreference {
+  sidebar_show_emoji?: boolean;
+}
+
 // Consolidated User interface (merge AuthUser + User)
 interface User {
   id: string;
@@ -7,6 +11,7 @@ interface User {
   is_active: number;
   avatar?: string;
   created_at?: string;
+  preference?: UserPreference | string;
 }
 
 // Token pair for authentication
@@ -35,4 +40,4 @@ interface Notification {
   level: string;
 }
 
-export type { User, TokenPair, AuthResponse, Notification };
+export type { User, UserPreference, TokenPair, AuthResponse, Notification };

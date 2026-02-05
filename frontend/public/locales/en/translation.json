@@ -130,6 +130,7 @@
             "tabs": {
                 "account": "Account & Security",
                 "mcp": "MCP Servers",
+                "preference": "Preferences",
                 "share": "Shared Links"
             },
             "account": {
@@ -157,6 +158,14 @@
                 "success": "Password updated successfully",
                 "error": "Failed to update password",
                 "fillAll": "Please fill in both password fields"
+            },
+            "preference": {
+                "title": "Preferences",
+                "description": "Personalize how the app looks and behaves.",
+                "sidebarEmoji": "Show emojis in sidebar",
+                "sidebarEmojiDescription": "Display conversation emojis in the sidebar list.",
+                "updateSuccess": "Preferences updated",
+                "updateError": "Failed to update preferences"
             },
             "mcp": {
                 "title": "MCP Servers",

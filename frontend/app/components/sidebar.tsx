@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { api } from "@/lib/api";
 import { useAppStore } from "@/store/app-store";
+import { normalizePreference } from "@/lib/user-preferences";
 
 interface SearchResponse {
     conversation_id: string;
@@ -81,6 +82,8 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const toggleSidebarState = useAppStore((state) => state.toggleSidebar);
     const { open, setOpen, toggleSidebar } = useSidebar();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const preference = useMemo(() => normalizePreference(user?.preference), [user?.preference]);
+    const showSidebarEmoji = preference.sidebar_show_emoji ?? true;
 
     const handleScroll = useCallback(() => {
         const container = scrollContainerRef.current;
@@ -225,11 +228,11 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                                         <SidebarMenuItem key={chat.id}>
                                                             <SidebarMenuButton asChild className="group/item pr-12" isActive={location.pathname === `/chat/${chat.id}`}>
                                                                 <NavLink to={`/chat/${chat.id}`} title={chat.title}>
-                                                                    {chat.generating ? (
-                                                                        <SidebarMenuSkeleton />
-                                                                    ) : (
+                                                                            {chat.generating ? (
+                                                                                <SidebarMenuSkeleton />
+                                                                            ) : (
                                                                         <>
-                                                                            {chat.icon && <span className="mr-2">{chat.icon}</span>}
+                                                                            {showSidebarEmoji && chat.icon && <span className="mr-2">{chat.icon}</span>}
                                                                             <span className="truncate">{chat.title}</span>
                                                                         </>
                                                                     )}
@@ -409,7 +412,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                     <CommandItem key={`${result.conversation_id}-${index}`} asChild>
                                         <NavLink to={`/chat/${result.conversation_id}`} className="flex flex-col items-start gap-1 w-full" onClick={() => setShowSearchDialog(false)}>
                                             <div className="flex items-center gap-2 w-full">
-                                                {result.icon && <span>{result.icon}</span>}
+                                                {showSidebarEmoji && result.icon && <span>{result.icon}</span>}
                                                 <span className="font-medium truncate">{result.title}</span>
                                                 <span className="text-xs text-muted-foreground ml-auto shrink-0">
                                                     {new Date(result.created_at).toLocaleDateString()}

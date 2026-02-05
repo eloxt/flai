@@ -12,5 +12,6 @@ import (
 
 type IUserV1 interface {
 	Update(ctx context.Context, req *v1.UpdateReq) (res *v1.UpdateRes, err error)
+	UpdatePreference(ctx context.Context, req *v1.UpdatePreferenceReq) (res *v1.UpdatePreferenceRes, err error)
 	UpdatePassword(ctx context.Context, req *v1.UpdatePasswordReq) (res *v1.UpdatePasswordRes, err error)
 }

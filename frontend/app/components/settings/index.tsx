@@ -1,9 +1,10 @@
-import { User, Wrench, Share2 } from "lucide-react";
+import { User, Wrench, Share2, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PanelLayout, PanelTab } from "@/components/panel-layout";
 import { AccountSettings } from "./account-settings";
 import { MCPSettings } from "./mcp-settings";
 import { ShareSettings } from "./share-settings";
+import { PreferenceSettings } from "./preference-settings";
 
 export default function SettingsPanel() {
     const { t } = useTranslation();
@@ -20,6 +21,12 @@ export default function SettingsPanel() {
             label: t("pages.settings.tabs.mcp"),
             icon: Wrench,
             component: <MCPSettings />
+        },
+        {
+            id: "preference",
+            label: t("pages.settings.tabs.preference"),
+            icon: SlidersHorizontal,
+            component: <PreferenceSettings />
         },
         {
             id: "share",

@@ -130,6 +130,7 @@
             "tabs": {
                 "account": "账户与安全",
                 "mcp": "MCP 服务器",
+                "preference": "偏好",
                 "share": "分享链接"
             },
             "account": {
@@ -157,6 +158,14 @@
                 "success": "密码更新成功",
                 "error": "更新密码失败",
                 "fillAll": "请填写所有密码字段"
+            },
+            "preference": {
+                "title": "偏好",
+                "description": "个性化应用的显示与行为。",
+                "sidebarEmoji": "侧边栏显示 Emoji",
+                "sidebarEmojiDescription": "在侧边栏列表中显示对话 Emoji。",
+                "updateSuccess": "偏好已更新",
+                "updateError": "更新偏好失败"
             },
             "mcp": {
                 "title": "MCP 服务器",
