@@ -59,15 +59,10 @@ export function PreferenceSettings() {
             </div>
             <Separator />
 
-            <div className="flex items-center justify-between gap-6 rounded-lg border p-4">
-                <div className="space-y-1">
-                    <Label className="text-sm font-medium">
-                        {t("pages.settings.preference.sidebarEmoji")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                        {t("pages.settings.preference.sidebarEmojiDescription")}
-                    </p>
-                </div>
+            <div className="flex items-center justify-between gap-6 px-2">
+                <Label className="text-sm font-medium">
+                    {t("pages.settings.preference.sidebarEmoji")}
+                </Label>
                 <Switch
                     checked={showSidebarEmoji}
                     onCheckedChange={handleToggle}
