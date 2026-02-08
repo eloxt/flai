@@ -17,4 +17,5 @@ type Conversation struct {
 	UpdatedAt *gtime.Time `json:"updated_at" orm:"updated_at" description:""` //
 	DeletedAt *gtime.Time `json:"deleted_at" orm:"deleted_at" description:""` //
 	Icon      string      `json:"icon"       orm:"icon"       description:""` //
+	Favourite int         `json:"favourite"  orm:"favourite"  description:""` //
 }

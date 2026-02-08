@@ -344,6 +344,7 @@
             "newChat": "New Chat",
             "searchChat": "Search Chat",
             "chats": "Chats",
+            "favourites": "Favorites",
             "adminSettings": "Admin Settings",
             "dateGroups": {
                 "today": "Today",
@@ -355,6 +356,8 @@
             "loadMore": "Load More",
             "settings": "Settings",
             "logout": "Logout",
+            "addFavourite": "Add to Favorites",
+            "removeFavourite": "Remove from Favorites",
             "regenerateTitle": "Regenerate Title",
             "delete": "Delete",
             "dialog": {

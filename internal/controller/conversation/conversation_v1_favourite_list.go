@@ -2,30 +2,28 @@ package conversation
 
 import (
 	"context"
+	"flai/api/conversation/v1"
 	"flai/internal/dao"
 	"flai/internal/middleware"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-
-	"flai/api/conversation/v1"
 )
 
-func (c *ControllerV1) GetList(ctx context.Context, req *v1.GetListReq) (res *v1.GetListRes, err error) {
+func (c *ControllerV1) FavouriteList(ctx context.Context, req *v1.FavouriteListReq) (res *v1.FavouriteListRes, err error) {
 	user, ok := middleware.GetUserFromContext(ctx)
 	if !ok {
 		return nil, gerror.New("User not found")
 	}
 
 	var conversations []*entity.Conversation
-	var total int
-	err = dao.Conversation.Ctx(ctx).Page(req.Current, req.Size).Where(do.Conversation{
-		UserId: user.Id,
-		Favourite: 0,
+	err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
+		UserId:    user.Id,
+		Favourite: 1,
 	}).
-		OrderDesc("created_at").
-		ScanAndCount(&conversations, &total, false)
+		OrderDesc("updated_at").
+		Scan(&conversations)
 	if err != nil {
 		return nil, err
 	}
@@ -33,10 +31,6 @@ func (c *ControllerV1) GetList(ctx context.Context, req *v1.GetListReq) (res *v1
 		conversations = make([]*entity.Conversation, 0)
 	}
 
-	return &v1.GetListRes{
-		Size:    req.Size,
-		Current: req.Current,
-		Total:   total,
-		Records: conversations,
-	}, nil
+	resList := v1.FavouriteListRes(conversations)
+	return &resList, nil
 }

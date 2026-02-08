@@ -344,6 +344,7 @@
             "newChat": "新聊天",
             "searchChat": "搜索聊天",
             "chats": "聊天",
+            "favourites": "收藏",
             "dateGroups": {
                 "today": "今天",
                 "yesterday": "昨天",
@@ -355,6 +356,8 @@
             "adminSettings": "管理员设置",
             "settings": "设置",
             "logout": "注销",
+            "addFavourite": "添加收藏",
+            "removeFavourite": "取消收藏",
             "regenerateTitle": "重新生成标题",
             "delete": "删除",
             "dialog": {

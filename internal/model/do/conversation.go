@@ -19,4 +19,5 @@ type Conversation struct {
 	UpdatedAt *gtime.Time //
 	DeletedAt *gtime.Time //
 	Icon      any         //
+	Favourite any         //
 }

@@ -62,6 +62,31 @@ type GenerateTitleRes struct {
 	Icon  string `json:"icon"`
 }
 
+// Favourite
+type FavouriteReq struct {
+	g.Meta `path:"/conversation/{id}/favourite" method:"post" tag:"Conversation" Summary:"Favourite a conversation"`
+	Id     string `v:"required"`
+}
+
+type FavouriteRes struct {
+}
+
+// Unfavourite
+type UnfavouriteReq struct {
+	g.Meta `path:"/conversation/{id}/favourite" method:"delete" tag:"Conversation" Summary:"Unfavourite a conversation"`
+	Id     string `v:"required"`
+}
+
+type UnfavouriteRes struct {
+}
+
+// Favourite List
+type FavouriteListReq struct {
+	g.Meta `path:"/conversation/favourite" method:"get" tag:"Conversation" Summary:"Get favourite conversations (Logined user)"`
+}
+
+type FavouriteListRes []*entity.Conversation
+
 // TODO: rename
 
 type SearchReq struct {

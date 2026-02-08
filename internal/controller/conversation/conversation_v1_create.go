@@ -19,9 +19,10 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, gerror.New("User not found")
 	}
 	conversation := entity.Conversation{
-		Id:     uuid.New().String(),
-		UserId: user.Id,
-		Title:  "Untitled",
+		Id:        uuid.New().String(),
+		UserId:    user.Id,
+		Title:     "Untitled",
+		Favourite: 0,
 	}
 	_, err = dao.Conversation.Ctx(ctx).Data(conversation).Insert()
 	if err != nil {

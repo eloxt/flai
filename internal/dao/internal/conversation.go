@@ -28,6 +28,7 @@ type ConversationColumns struct {
 	UpdatedAt string //
 	DeletedAt string //
 	Icon      string //
+	Favourite string //
 }
 
 // conversationColumns holds the columns for the table conversation.
@@ -39,6 +40,7 @@ var conversationColumns = ConversationColumns{
 	UpdatedAt: "updated_at",
 	DeletedAt: "deleted_at",
 	Icon:      "icon",
+	Favourite: "favourite",
 }
 
 // NewConversationDao creates and returns a new DAO object for table data access.

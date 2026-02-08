@@ -10,10 +10,13 @@ import {
     Settings,
     TentTree,
     PanelLeft,
+    Star,
+    StarOff,
+    ChevronDown,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useConversationStore } from "../store/conversation-store";
+import { Conversation, useConversationStore } from "../store/conversation-store";
 import { getInitials } from "../lib/auth-client";
 import { useAuthStore } from "../store/auth-store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -48,6 +51,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { api } from "@/lib/api";
 import { useAppStore } from "@/store/app-store";
 import { normalizePreference } from "@/lib/user-preferences";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SearchResponse {
     conversation_id: string;
@@ -64,13 +68,17 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const tokens = useAuthStore((state) => state.tokens);
     const logout = useAuthStore((state) => state.logout);
     const conversations = useConversationStore((state) => state.conversations);
+    const favouriteConversations = useConversationStore((state) => state.favouriteConversations);
     const isLoading = useConversationStore((state) => state.isLoading);
+    const isLoadingFavourites = useConversationStore((state) => state.isLoadingFavourites);
     const isLoadingMore = useConversationStore((state) => state.isLoadingMore);
     const hasMore = useConversationStore((state) => state.hasMore);
     const fetchConversations = useConversationStore((state) => state.fetchConversations);
+    const fetchFavourites = useConversationStore((state) => state.fetchFavourites);
     const fetchMoreConversations = useConversationStore((state) => state.fetchMoreConversations);
     const deleteConversation = useConversationStore((state) => state.deleteConversation);
     const generateTitle = useConversationStore((state) => state.generateTitle);
+    const toggleFavourite = useConversationStore((state) => state.toggleFavourite);
     const navigate = useNavigate();
     const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -84,6 +92,11 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const preference = useMemo(() => normalizePreference(user?.preference), [user?.preference]);
     const showSidebarEmoji = preference.sidebar_show_emoji ?? true;
+    const favouriteIds = useMemo(() => new Set(favouriteConversations.map((chat) => chat.id)), [favouriteConversations]);
+    const nonFavouriteConversations = useMemo(
+        () => conversations.filter((chat) => !favouriteIds.has(chat.id)),
+        [conversations, favouriteIds]
+    );
 
     const handleScroll = useCallback(() => {
         const container = scrollContainerRef.current;
@@ -99,8 +112,9 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
     useEffect(() => {
         if (tokens?.access_token) {
             fetchConversations();
+            fetchFavourites();
         }
-    }, [tokens?.access_token]);
+    }, [tokens?.access_token, fetchConversations, fetchFavourites]);
 
     useEffect(() => {
         if (isSidebarOpen !== open) {
@@ -137,7 +151,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
         const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
         const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        const groups: { group: string; chats: typeof conversations }[] = [
+        const groups: { group: string; chats: typeof nonFavouriteConversations }[] = [
             { group: 'today', chats: [] },
             { group: 'yesterday', chats: [] },
             { group: 'previous7Days', chats: [] },
@@ -145,7 +159,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
             { group: 'older', chats: [] },
         ];
 
-        conversations.forEach((chat) => {
+        nonFavouriteConversations.forEach((chat) => {
             const chatDate = new Date(chat.updated_at);
             if (chatDate >= today) {
                 groups[0].chats.push(chat);
@@ -161,7 +175,57 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
         });
 
         return groups;
-    }, [conversations]);
+    }, [nonFavouriteConversations]);
+
+    const renderConversationItem = (chat: Conversation, isFavourite: boolean) => (
+        <SidebarMenuItem key={chat.id}>
+            <SidebarMenuButton asChild className="group/item pr-12" isActive={location.pathname === `/chat/${chat.id}`}>
+                <NavLink to={`/chat/${chat.id}`} title={chat.title}>
+                    {chat.generating ? (
+                        <SidebarMenuSkeleton />
+                    ) : (
+                        <>
+                            {showSidebarEmoji && chat.icon && <span className="mr-2">{chat.icon}</span>}
+                            <span className="truncate">{chat.title}</span>
+                        </>
+                    )}
+                </NavLink>
+            </SidebarMenuButton>
+            {!chat.generating && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <SidebarMenuAction showOnHover>
+                            <EllipsisVertical />
+                            <span className="sr-only">More</span>
+                        </SidebarMenuAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => toggleFavourite(chat.id, isFavourite)}>
+                            {isFavourite ? (
+                                <StarOff className="mr-2 size-4" />
+                            ) : (
+                                <Star className="mr-2 size-4" />
+                            )}
+                            {isFavourite
+                                ? t("components.sidebar.removeFavourite")
+                                : t("components.sidebar.addFavourite")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generateTitle(chat.id)}>
+                            <RefreshCw className="mr-2 size-4" />
+                            {t("components.sidebar.regenerateTitle")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => handleDelete(chat.id)}
+                        >
+                            <Trash className="mr-2 size-4" />
+                            {t("components.sidebar.delete")}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
+        </SidebarMenuItem>
+    );
 
     return (
         <>
@@ -211,6 +275,32 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                     onScroll={handleScroll}
                     className="transition-colors group-data-[collapsible=icon]:bg-background"
                 >
+                    {(isLoadingFavourites || favouriteConversations.length > 0) && (
+                        <Collapsible defaultOpen className="group/collapsible">
+                            <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100 duration-200">
+                                <SidebarGroupLabel asChild className="group-data-[collapsible=icon]:mt-0">
+                                    <CollapsibleTrigger>
+                                        {t("components.sidebar.favourites")}
+                                        <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                                    </CollapsibleTrigger>
+                                </SidebarGroupLabel>
+                                <CollapsibleContent>
+                                    <SidebarGroupContent>
+                                        <SidebarMenu>
+                                            {isLoadingFavourites ? (
+                                                <div className="px-4 py-2 text-sm text-muted-foreground">
+                                                    {t("common.loading")}
+                                                </div>
+                                            ) : (
+                                                favouriteConversations.map((chat) => renderConversationItem(chat, true))
+                                            )}
+                                        </SidebarMenu>
+                                    </SidebarGroupContent>
+                                </CollapsibleContent>
+                            </SidebarGroup>
+                        </Collapsible>
+                    )}
+
                     <SidebarGroup className="group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none opacity-100 duration-200">
                         <SidebarGroupContent>
                             <SidebarMenu>
@@ -224,45 +314,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                                     <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">
                                                         {t(`components.sidebar.dateGroups.${group}`)}
                                                     </SidebarGroupLabel>
-                                                    {chats.map((chat) => (
-                                                        <SidebarMenuItem key={chat.id}>
-                                                            <SidebarMenuButton asChild className="group/item pr-12" isActive={location.pathname === `/chat/${chat.id}`}>
-                                                                <NavLink to={`/chat/${chat.id}`} title={chat.title}>
-                                                                            {chat.generating ? (
-                                                                                <SidebarMenuSkeleton />
-                                                                            ) : (
-                                                                        <>
-                                                                            {showSidebarEmoji && chat.icon && <span className="mr-2">{chat.icon}</span>}
-                                                                            <span className="truncate">{chat.title}</span>
-                                                                        </>
-                                                                    )}
-                                                                </NavLink>
-                                                            </SidebarMenuButton>
-                                                            {!chat.generating && (
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <SidebarMenuAction showOnHover>
-                                                                            <EllipsisVertical />
-                                                                            <span className="sr-only">More</span>
-                                                                        </SidebarMenuAction>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="start">
-                                                                        <DropdownMenuItem onClick={() => generateTitle(chat.id)}>
-                                                                            <RefreshCw className="mr-2 size-4" />
-                                                                            {t("components.sidebar.regenerateTitle")}
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem
-                                                                            variant="destructive"
-                                                                            onClick={() => handleDelete(chat.id)}
-                                                                        >
-                                                                            <Trash className="mr-2 size-4" />
-                                                                            {t("components.sidebar.delete")}
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            )}
-                                                        </SidebarMenuItem>
-                                                    ))}
+                                                    {chats.map((chat) => renderConversationItem(chat, favouriteIds.has(chat.id)))}
                                                 </div>
                                             )
                                         ))}
