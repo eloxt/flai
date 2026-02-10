@@ -28,7 +28,7 @@ A modern, AI-powered chat application designed for seamless interaction with mul
 ### Backend
 - **Language**: Go 1.24
 - **Framework**: GoFrame (GF) v2
-- **Database**: PostgreSQL (pgx driver)
+- **Database**: PostgreSQL (**pg_vector, zhparser required**)
 - **Authentication**: JWT (golang-jwt)
 - **AI Integration**:
     - `openai-go`

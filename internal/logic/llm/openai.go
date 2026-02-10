@@ -121,9 +121,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			Tools: openaiTools,
 		}
 
-		paramsJson, _ := params.MarshalJSON()
-		g.Log().Debug(ctx, "OpenAI content stream call: %v", string(paramsJson))
-
 		stream := client.Responses.NewStreaming(ctx, params)
 
 		var functionCalls []responses.ResponseFunctionToolCall

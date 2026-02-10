@@ -125,7 +125,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	maxToolRounds := 10 // Prevent infinite loops
 
 	for round := 0; round < maxToolRounds; round++ {
-		g.Log().Debug(ctx, "Gemini content stream call: %v\nconfig: %v\ncontents: %v", modelConfig.ID, config, contents)
 
 		// Start streaming with full content history
 		iter := client.Models.GenerateContentStream(ctx, modelConfig.ID, contents, config)

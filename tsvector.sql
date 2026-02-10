@@ -1,3 +1,4 @@
+create extension zhparser;
 -- 配置分词
 create text search CONFIGURATION zhcfg (PARSER =zhparser);
 ALTER TEXT SEARCH CONFIGURATION zhcfg ADD MAPPING FOR n,v,a,i,e,l,j WITH simple;

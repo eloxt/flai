@@ -161,7 +161,6 @@ func appendContent(contentBuilder *strings.Builder, messageType string, images [
 	if messageType == consts.MessageType.Reasoning {
 		data := ContentReasoning{Id: id, Content: val}
 		content := Content{Type: consts.MessageType.Reasoning, Data: data}
-		//g.Log().Debugf(context.TODO(), "appendContent: %v", content)
 		*contentList = append(*contentList, content)
 	} else {
 		data := ContentMessage{Id: id, Content: val}
@@ -169,7 +168,6 @@ func appendContent(contentBuilder *strings.Builder, messageType string, images [
 			data.Images = images
 		}
 		content := Content{Type: consts.MessageType.Message, Data: data}
-		//g.Log().Debugf(context.TODO(), "appendContent: %v", content)
 		*contentList = append(*contentList, content)
 	}
 }
