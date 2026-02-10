@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
