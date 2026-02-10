@@ -15,8 +15,9 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import "katex/dist/katex.min.css";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import "katex/dist/katex.min.css";
+import "streamdown/styles.css";
 
 interface MessageContentProps {
     content: Content;
@@ -73,18 +74,17 @@ export function MessageContent({
                     )}
                 </Button>
                 <div
-                    className={`grid transition-all duration-300 ease-in-out ${
-                        isExpanded
+                    className={`grid transition-all duration-300 ease-in-out ${isExpanded
                             ? "grid-rows-[1fr] opacity-100"
                             : "grid-rows-[0fr] opacity-0"
-                    }`}
+                        }`}
                 >
                     <div className="overflow-hidden border-l border-border pl-4">
                         <div className="markdown-body pb-2">
                             <Streamdown
+                                animated
                                 isAnimating={isStreaming}
                                 plugins={{ cjk: cjk, math: math }}
-                                className="streamdown-animate"
                             >
                                 {(content.data as ContentReasoning).content}
                             </Streamdown>
@@ -106,9 +106,11 @@ export function MessageContent({
     return (
         <div className="markdown-body overflow-x-auto w-full">
             <Streamdown
+                animated={{
+                    sep: "char"
+                }}
                 isAnimating={isStreaming}
                 plugins={{ cjk: cjk, code: code, math: math, mermaid: mermaid }}
-                className="streamdown-animate"
             >
                 {(content.data as ContentMessage).content}
             </Streamdown>
