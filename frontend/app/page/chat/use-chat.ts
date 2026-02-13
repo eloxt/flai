@@ -62,6 +62,7 @@ interface StreamContext {
     newMap: Map<string, TreeNode>;
     userMsgId: string;
     assistantMessageId: string;
+    assistantMsg: TreeNode | null; // Cached reference to avoid O(n) find on every chunk
     lastMessageType: string;
 }
 
@@ -149,21 +150,6 @@ function parseStreamContent(streamResponse: StreamResponse): string {
 }
 
 
-/**
- * Update message in path with a modifier function
- */
-function updateMessageInPath(
-    path: TreeNode[],
-    messageId: string,
-    modifier: (msg: TreeNode) => void
-): TreeNode[] {
-    return path.map((msg) => {
-        if (msg.id === messageId) {
-            modifier(msg);
-        }
-        return msg;
-    });
-}
 
 // ============================================================================
 // Main Hook
@@ -177,11 +163,29 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
     const [path, setPath] = useState<TreeNode[]>([]);
     const [nodeMap, setNodeMap] = useState<Map<string, TreeNode>>(new Map());
 
+    // Streaming message state - isolated from path to avoid re-rendering all messages
+    const [streamingMessage, setStreamingMessage] = useState<TreeNode | null>(null);
+    const streamingMessageRef = useRef<TreeNode | null>(null);
+
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
     const [isStreaming, setIsStreaming] = useState(false);
     const assistantMessageIdRef = useRef<string | null>(null);
     const streamAbortRef = useRef<AbortController | null>(null);
+
+    // RAF batching: flush streamingMessage updates at ~60fps
+    const rafRef = useRef<number | null>(null);
+
+    const scheduleFlush = useCallback(() => {
+        if (rafRef.current !== null) return; // already scheduled
+        rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            if (streamingMessageRef.current) {
+                // Shallow copy to create new reference, triggering re-render of only the streaming message
+                setStreamingMessage({ ...streamingMessageRef.current });
+            }
+        });
+    }, []);
 
     // Store selectors
     const setChatInput = useInputStore((state) => state.setChatInput);
@@ -321,60 +325,58 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
     /**
      * Handle stream response chunks
+     * Optimized: modifies streamingMessageRef in-place, RAF batches setStreamingMessage
+     * Only the streaming message component re-renders; all other messages are untouched.
      */
     const handleStreamChunk = useCallback((
         ctx: StreamContext,
-        streamResponse: StreamResponse,
-        setPathFn: (path: TreeNode[]) => void): void => {
+        streamResponse: StreamResponse): void => {
         const { type: streamContentType } = streamResponse;
         const assistantContent = parseStreamContent(streamResponse);
+        const assistantMsg = ctx.assistantMsg;
 
-        // Get the current content index for reasoning expand/collapse
-        const assistantMsg = ctx.newPath.find(m => m.id === ctx.assistantMessageId);
+        // Only fire expand/collapse callbacks on type TRANSITIONS, not every chunk.
+        // Firing on every chunk causes setExpandedReasoning → new Set → Chat.tsx re-render.
         const contentIndex = assistantMsg ? Math.max(0, assistantMsg.content.length - 1) : 0;
 
-        if (streamContentType === "reasoning") {
-            options?.onExpandReasoning?.(ctx.assistantMessageId, contentIndex);
-        } else {
-            options?.onCollapseReasoning?.(ctx.assistantMessageId, contentIndex);
+        if (ctx.lastMessageType !== streamContentType) {
+            if (streamContentType === "reasoning") {
+                options?.onExpandReasoning?.(ctx.assistantMessageId, contentIndex);
+            } else if (ctx.lastMessageType === "reasoning") {
+                options?.onCollapseReasoning?.(ctx.assistantMessageId, contentIndex);
+            }
         }
+
+        if (!assistantMsg) return;
 
         // Handle meta info
         if (streamContentType === "meta_info") {
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                msg.meta_info = streamResponse.data as MessageMetaInfo;
-            });
-            setPathFn(ctx.newPath);
+            assistantMsg.meta_info = streamResponse.data as MessageMetaInfo;
+            scheduleFlush();
             return;
         }
 
         // Handle Google grounding data
         if (streamContentType === "google_grounding_data") {
             const groundingData = streamResponse.data as GoogleGroundingData;
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                msg.meta_info = { ...(msg.meta_info || DEFAULT_META_INFO), google_grounding_data: groundingData };
-            });
-            setPathFn(ctx.newPath);
+            assistantMsg.meta_info = { ...(assistantMsg.meta_info || DEFAULT_META_INFO), google_grounding_data: groundingData };
+            scheduleFlush();
             return;
         }
 
         // Handle OpenAI grounding data
         if (streamContentType === "openai_grounding_data") {
             const groundingData = streamResponse.data as OpenaiGroundingData[];
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                msg.meta_info = { ...(msg.meta_info || DEFAULT_META_INFO), openai_grounding_data: groundingData };
-            });
-            setPathFn(ctx.newPath);
+            assistantMsg.meta_info = { ...(assistantMsg.meta_info || DEFAULT_META_INFO), openai_grounding_data: groundingData };
+            scheduleFlush();
             return;
         }
 
         // Handle tool_call - add as new content block
         if (streamContentType === "tool_call") {
             const toolCallData = streamResponse.data as ContentToolCall;
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                msg.content.push({ type: "tool_call", data: toolCallData });
-            });
-            setPathFn(ctx.newPath);
+            assistantMsg.content.push({ type: "tool_call", data: toolCallData });
+            scheduleFlush();
             ctx.lastMessageType = streamContentType;
             return;
         }
@@ -382,10 +384,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         // Handle tool_result - update the matching tool_call with result
         if (streamContentType === "tool_result") {
             const toolResultData = streamResponse.data as ContentToolResult;
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                msg.content.push({ type: "tool_result", data: toolResultData });
-            });
-            setPathFn(ctx.newPath);
+            assistantMsg.content.push({ type: "tool_result", data: toolResultData });
+            scheduleFlush();
             ctx.lastMessageType = streamContentType;
             return;
         }
@@ -393,39 +393,29 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         // Handle image
         if (streamContentType === "image") {
             const imageUrl = streamResponse.data as string;
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                const lastContent = msg.content[msg.content.length - 1];
-                (lastContent.data as ContentMessage).images = [{ id: "", public_url: imageUrl }];
-            });
-            setPathFn(ctx.newPath);
+            const lastContent = assistantMsg.content[assistantMsg.content.length - 1];
+            (lastContent.data as ContentMessage).images = [{ id: "", public_url: imageUrl }];
+            scheduleFlush();
             ctx.lastMessageType = "message";
             return;
         }
 
         // Content type changed - add new content block
         if (ctx.lastMessageType !== streamContentType) {
-            ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-                msg.content.push({ type: streamContentType, data: { content: assistantContent } });
-            });
-            ctx.newPath.map((path) => {
-                if (path.id === ctx.assistantMessageId) {
-                    path.content = path.content.filter((content) => content.type !== "pending");
-                }
-            })
-            setPathFn(ctx.newPath);
+            assistantMsg.content.push({ type: streamContentType, data: { content: assistantContent } });
+            assistantMsg.content = assistantMsg.content.filter((content) => content.type !== "pending");
+            scheduleFlush();
             ctx.lastMessageType = streamContentType;
             return;
         }
 
         // Same type - append content
-        ctx.newPath = updateMessageInPath(ctx.newPath, ctx.assistantMessageId, (msg) => {
-            const lastContent = msg.content[msg.content.length - 1];
-            (lastContent.data as ContentMessage).content += assistantContent;
-        });
-        setPathFn(ctx.newPath);
+        const lastContent = assistantMsg.content[assistantMsg.content.length - 1];
+        (lastContent.data as ContentMessage).content += assistantContent;
+        scheduleFlush();
 
         ctx.lastMessageType = streamContentType;
-    }, [options]);
+    }, [options, scheduleFlush]);
 
     /**
      * Process SSE stream
@@ -435,13 +425,15 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         ctx: StreamContext
     ): Promise<void> => {
         const decoder = new TextDecoder();
+        let buffer = ""; // Buffer for handling lines split across TCP chunks
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? ""; // Keep the last incomplete line in buffer
 
             for (const line of lines) {
                 // Check for non-SSE JSON error response (backend exception)
@@ -465,7 +457,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
                 try {
                     const streamResponse: StreamResponse = JSON.parse(dataStr);
-                    handleStreamChunk(ctx, streamResponse, setPath);
+                    handleStreamChunk(ctx, streamResponse);
                 } catch (e) {
                     console.error("Error parsing SSE:", e);
                 }
@@ -497,7 +489,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         let newPath = pathParam || [...path];
         const newMap = new Map(nodeMap);
 
-        // Add placeholder assistant message
+        // Create placeholder assistant message (will be rendered separately as streamingMessage)
         const assistantPlaceholder = createPlaceholderAssistantMessage(assistantMessageId, userMsgId);
         newMap.set(assistantMessageId, assistantPlaceholder);
 
@@ -512,8 +504,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 [assistantPlaceholder]
             );
             newPath.push(userMessage);
-            setPath(newPath);
-            // append to parent's chilren
+            // append to parent's children
             if (userMessage.parent_id) {
                 newMap.get(userMessage.parent_id)?.children.push(userMessage);
             }
@@ -525,7 +516,10 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             newMap.get(userMsgId)?.children.push(assistantPlaceholder);
         }
 
-        newPath.push(assistantPlaceholder);
+        // Assistant message is rendered separately as streamingMessage (not in path)
+        // This avoids re-rendering all other MessageItems during streaming
+        streamingMessageRef.current = assistantPlaceholder;
+        setStreamingMessage(assistantPlaceholder);
         setNodeMap(newMap);
         setPath(newPath);
 
@@ -565,6 +559,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 newMap,
                 userMsgId,
                 assistantMessageId,
+                assistantMsg: streamingMessageRef.current,
                 lastMessageType: "",
             };
 
@@ -595,6 +590,20 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             console.error(error);
             toast.error(t("common.error.sendMessage"));
         } finally {
+            // Cancel any pending RAF
+            if (rafRef.current !== null) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+
+            // Merge streaming message back into path
+            if (streamingMessageRef.current) {
+                const finalMsg = streamingMessageRef.current;
+                setPath(prev => [...prev, finalMsg]);
+                streamingMessageRef.current = null;
+                setStreamingMessage(null);
+            }
+
             if (assistantMessageIdRef.current === assistantMessageId) {
                 assistantMessageIdRef.current = null;
                 streamAbortRef.current = null;
@@ -621,6 +630,20 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             const message = error instanceof ApiError ? error.message : t("common.error.network");
             toast.error(message);
         } finally {
+            // Cancel any pending RAF
+            if (rafRef.current !== null) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+
+            // Merge streaming message back into path on cancel
+            if (streamingMessageRef.current) {
+                const finalMsg = streamingMessageRef.current;
+                setPath(prev => [...prev, finalMsg]);
+                streamingMessageRef.current = null;
+                setStreamingMessage(null);
+            }
+
             if (assistantMessageIdRef.current === assistantMessageId) {
                 assistantMessageIdRef.current = null;
                 streamAbortRef.current = null;
@@ -736,6 +759,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         nodeMap,
         isLoading,
         isStreaming,
+        streamingMessage,
 
         // Actions
         fetchMessages,

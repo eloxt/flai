@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import { ArrowDown } from "lucide-react";
 import type { MetaFunction } from "react-router";
@@ -62,31 +62,36 @@ export default function Chat() {
         nodeMap,
         isLoading,
         isStreaming,
+        streamingMessage,
         sendMessage,
         retryMessage,
         deleteMessage,
         cancelGeneration,
         switchNode,
-    } = useChat(conversationId, {
-        onExpandReasoning: (messageId, index) => {
+    } = useChat(conversationId, useMemo(() => ({
+        onExpandReasoning: (messageId: string, index: number) => {
             setExpandedReasoning((prev) => new Set(prev).add(messageId + "-" + index));
         },
-        onCollapseReasoning: (messageId, index) => {
+        onCollapseReasoning: (messageId: string, index: number) => {
             setExpandedReasoning((prev) => {
+                const label = messageId + "-" + index;
+                if (!prev.has(label)) return prev; // bail out - no state change, no re-render
                 const newSet = new Set(prev);
-                newSet.delete(messageId + "-" + index);
+                newSet.delete(label);
                 return newSet;
             });
         },
-    });
+    }), []));
 
     // Sync message path to app store for sharing
     const setCurrentMessagePath = useAppStore((state) => state.setCurrentMessagePath);
     useEffect(() => {
-        setCurrentMessagePath(path);
-    }, [path, setCurrentMessagePath]);
+        // Include streamingMessage in the path for sharing
+        const fullPath = streamingMessage ? [...path, streamingMessage] : path;
+        setCurrentMessagePath(fullPath);
+    }, [path, streamingMessage, setCurrentMessagePath]);
 
-    // Scroll to bottom when path changes
+    // Scroll to bottom when streaming message updates
     useEffect(() => {
         if (!isStreaming) {
             return;
@@ -94,7 +99,7 @@ export default function Chat() {
         if (!showScrollButton) {
             scrollToBottom();
         }
-    }, [path]);
+    }, [streamingMessage]);
 
     // Scroll to specific message when triggered from timeline
     const scrollToMessageId = useAppStore((state) => state.scrollToMessageId);
@@ -110,22 +115,22 @@ export default function Chat() {
         }
     }, [scrollToMessageId, setScrollToMessageId]);
 
-    const scrollToBottom = () => {
+    const scrollToBottom = useCallback(() => {
         requestAnimationFrame(() => {
             if (scrollAreaRef.current) {
                 scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: "smooth" });
             }
         });
-    };
+    }, []);
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
         const isBottom = scrollHeight - scrollTop - clientHeight < 100;
         setShowScrollButton(!isBottom);
         setShowHeaderBorder(scrollTop > 20);
-    };
+    }, [setShowHeaderBorder]);
 
-    const toggleReasoning = (messageId: string, index: number) => {
+    const toggleReasoning = useCallback((messageId: string, index: number) => {
         const label = messageId + "-" + index;
         setExpandedReasoning((prev) => {
             const newSet = new Set(prev);
@@ -136,27 +141,27 @@ export default function Chat() {
             }
             return newSet;
         });
-    };
+    }, []);
 
-    const handleSend = () => {
+    const handleSend = useCallback(() => {
         if (!input.trim()) return;
         sendMessage({ text: input });
         scrollToBottom();
-    };
+    }, [input, sendMessage, scrollToBottom]);
 
-    const handleEdit = (message: TreeNode) => {
+    const handleEdit = useCallback((message: TreeNode) => {
         const lastContent = message.content[message.content.length - 1];
         const text = (lastContent.data as { content: string }).content || "";
         setEditingMessageId(message.id);
         setEditValue(text);
-    };
+    }, []);
 
-    const handleEditCancel = () => {
+    const handleEditCancel = useCallback(() => {
         setEditingMessageId(null);
         setEditValue("");
-    };
+    }, []);
 
-    const handleEditSubmit = () => {
+    const handleEditSubmit = useCallback(() => {
         if (!editValue.trim() || !editingMessageId) return;
 
         const messageIndex = path.findIndex((m) => m.id === editingMessageId);
@@ -170,14 +175,14 @@ export default function Chat() {
             pathParam: newPath,
         });
         setEditValue("");
-    };
+    }, [editValue, editingMessageId, path, sendMessage]);
 
     // Calculate context usage percentage from latest assistant message
     const contextUsagePercentage = (() => {
         if (!currentModel?.limit?.context) return undefined;
 
-        // Find the latest assistant message with meta_info
-        const latestMessage = path[path.length - 1]
+        // Check streaming message first, then fall back to last path message
+        const latestMessage = streamingMessage || path[path.length - 1];
         if (!latestMessage) return undefined;
         const metaInfo = latestMessage.meta_info;
         if (!metaInfo) return undefined;
@@ -200,28 +205,47 @@ export default function Chat() {
                     {isLoading ? (
                         <ChatSkeleton />
                     ) : (
-                        path.map((message, messageIndex) => (
-                            <MessageItem
-                                key={message.id}
-                                message={message}
-                                messageIndex={messageIndex}
-                                pathLength={path.length}
-                                isStreaming={isStreaming && message.id === path[path.length - 1].id && message.role === "assistant"}
-                                expandedReasoning={expandedReasoning}
-                                nodeMap={nodeMap}
-                                previousMessageId={messageIndex > 0 ? path[messageIndex - 1].id : undefined}
-                                onToggleReasoning={toggleReasoning}
-                                onSwitchNode={switchNode}
-                                onRetry={retryMessage}
-                                onDelete={deleteMessage}
-                                isEditing={editingMessageId === message.id}
-                                editValue={editingMessageId === message.id ? editValue : ""}
-                                onEdit={handleEdit}
-                                onEditChange={setEditValue}
-                                onEditSubmit={handleEditSubmit}
-                                onEditCancel={handleEditCancel}
-                            />
-                        ))
+                        <>
+                            {path.map((message, messageIndex) => (
+                                <MessageItem
+                                    key={message.id}
+                                    message={message}
+                                    messageIndex={messageIndex}
+                                    pathLength={path.length + (streamingMessage ? 1 : 0)}
+                                    isStreaming={false}
+                                    expandedReasoning={expandedReasoning}
+                                    nodeMap={nodeMap}
+                                    previousMessageId={messageIndex > 0 ? path[messageIndex - 1].id : undefined}
+                                    onToggleReasoning={toggleReasoning}
+                                    onSwitchNode={switchNode}
+                                    onRetry={retryMessage}
+                                    onDelete={deleteMessage}
+                                    isEditing={editingMessageId === message.id}
+                                    editValue={editingMessageId === message.id ? editValue : ""}
+                                    onEdit={handleEdit}
+                                    onEditChange={setEditValue}
+                                    onEditSubmit={handleEditSubmit}
+                                    onEditCancel={handleEditCancel}
+                                />
+                            ))}
+                            {/* Streaming message rendered separately - only this re-renders during streaming */}
+                            {streamingMessage && (
+                                <MessageItem
+                                    key={streamingMessage.id}
+                                    message={streamingMessage}
+                                    messageIndex={path.length}
+                                    pathLength={path.length + 1}
+                                    isStreaming={isStreaming}
+                                    expandedReasoning={expandedReasoning}
+                                    nodeMap={nodeMap}
+                                    previousMessageId={path.length > 0 ? path[path.length - 1].id : undefined}
+                                    onToggleReasoning={toggleReasoning}
+                                    onSwitchNode={switchNode}
+                                    onRetry={retryMessage}
+                                    onDelete={deleteMessage}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import type { TreeNode, ContentMessage } from "../../types/chat";
 import { MessageContent } from "./MessageContent";
 import { MessageAttachments } from "./MessageAttachments";
@@ -29,7 +29,7 @@ interface MessageItemProps {
     onEditCancel?: () => void;
 }
 
-export function MessageItem({
+export const MessageItem = React.memo(function MessageItem({
     message,
     messageIndex,
     pathLength,
@@ -210,4 +210,4 @@ export function MessageItem({
             )}
         </div>
     );
-}
+});
