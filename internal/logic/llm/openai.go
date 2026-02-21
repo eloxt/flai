@@ -116,6 +116,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			},
 			Reasoning: shared.ReasoningParam{
 				Summary: shared.ReasoningSummaryAuto,
+				Effort: shared.ReasoningEffortMedium,
 			},
 			Tools: openaiTools,
 		}
