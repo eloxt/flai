@@ -80,7 +80,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	done := make(chan error, 1)
 	go func() {
 		defer llm.UnregisterGeneration(req.AssistantMessageId)
-		done <- llm.StreamChat(generationCtx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpToolInfos, files)
+		done <- llm.StreamChat(generationCtx, req, response, providerInfo, modelConfig, historyMessages, newMessage, mcpToolInfos, files)
 	}()
 
 	select {

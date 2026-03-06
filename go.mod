@@ -13,9 +13,9 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.2.0
-	github.com/openai/openai-go/v3 v3.15.0
+	github.com/openai/openai-go/v3 v3.26.0
 	golang.org/x/crypto v0.45.0
-	google.golang.org/genai v1.38.0
+	google.golang.org/genai v1.49.0
 )
 
 require (

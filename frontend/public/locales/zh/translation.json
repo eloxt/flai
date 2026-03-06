@@ -417,6 +417,16 @@
         },
         "chatInput": {
             "mcpTools": "MCP 工具",
+            "thinkingIntensity": "思考强度",
+            "default": "默认",
+            "thinking": {
+                "none": "无",
+                "minimal": "最小",
+                "low": "低",
+                "medium": "中",
+                "high": "高",
+                "xhigh": "极高"
+            },
             "web_search_tooltip": "需要时搜索网络信息。",
             "url_context_tooltip": "需要时访问 URL 提取信息。"
         },

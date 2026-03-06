@@ -40,7 +40,7 @@ func (c *OpenAIClient) getClient(providerInfo *logic.SimpleProviderInfo) openai.
 // Stream Chat
 // ============================================================================
 
-func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
+func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
 	client := c.getClient(providerInfo)
 
 	// Build input items from history and new message
@@ -101,6 +101,22 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		ModelName:    modelConfig.Name,
 	}
 
+	var reasoningLevel shared.ReasoningEffort
+	switch thinkingIntensity {
+	case "none":
+		reasoningLevel = shared.ReasoningEffortNone
+	case "minial":
+		reasoningLevel = shared.ReasoningEffortMinimal
+	case "low":
+		reasoningLevel = shared.ReasoningEffortLow
+	case "medium":
+		reasoningLevel = shared.ReasoningEffortMedium
+	case "high":
+		reasoningLevel = shared.ReasoningEffortHigh
+	case "xhigh":
+		reasoningLevel = shared.ReasoningEffortXhigh
+	}
+
 	// Tool call loop - continues until model finishes without requesting tools
 	maxToolRounds := 10
 	currentInputItems := inputItems
@@ -116,7 +132,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			},
 			Reasoning: shared.ReasoningParam{
 				Summary: shared.ReasoningSummaryAuto,
-				// Effort: shared.ReasoningEffortMedium,
+				Effort: reasoningLevel,
 			},
 			Tools: openaiTools,
 		}
@@ -159,7 +175,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					functionCalls = append(functionCalls, responses.ResponseFunctionToolCall{
 						ID:        e.Item.ID,
 						Name:      e.Item.Name,
-						Arguments: e.Item.Arguments,
+						Arguments: e.Item.Arguments.OfString,
 						CallID:    e.Item.CallID,
 					})
 				}

@@ -1,4 +1,4 @@
-import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square, Image, Link } from "lucide-react";
+import { ArrowUpIcon, Globe, Paperclip, X, FileIcon, Wrench, ChevronDown, Square, Image, Link, Brain } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { InputGroup, InputGroupAddon, InputGroupButton } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -90,6 +90,8 @@ export function ChatInput({
     const addMcpTool = useInputStore((state) => state.addMcpTool);
     const removeMcpTool = useInputStore((state) => state.removeMcpTool);
     const clearMcpTools = useInputStore((state) => state.clearMcpTools);
+    const thinkingIntensity = useInputStore((state) => state.thinkingIntensity);
+    const setThinkingIntensity = useInputStore((state) => state.setThinkingIntensity);
     const attachments = useInputStore((state) => state.attachments);
     const addAttachment = useInputStore((state) => state.addAttachment);
     const removeAttachment = useInputStore((state) => state.removeAttachment);
@@ -244,6 +246,35 @@ export function ChatInput({
 
     const totalAvailableTools = mcpConfigs.reduce((acc, config) => acc + (config.tools?.length || 0), 0);
 
+    // Get thinking intensity options based on model
+    const getThinkingIntensityOptions = () => {
+        const modelId = currentModel?.id || '';
+        if (modelId.startsWith('gpt-5')) {
+            return [
+                { value: 'none', label: t('components.chatInput.thinking.none') },
+                { value: 'low', label: t('components.chatInput.thinking.low') },
+                { value: 'medium', label: t('components.chatInput.thinking.medium') },
+                { value: 'high', label: t('components.chatInput.thinking.high') }
+            ];
+        } else if (modelId === 'gemini-3.1-pro-preview') {
+            return [
+                { value: 'low', label: t('components.chatInput.thinking.low') },
+                { value: 'medium', label: t('components.chatInput.thinking.medium') },
+                { value: 'high', label: t('components.chatInput.thinking.high') }
+            ];
+        } else if (modelId === 'gemini-3-flash-preview') {
+            return [
+                { value: 'minimal', label: t('components.chatInput.thinking.minimal') },
+                { value: 'low', label: t('components.chatInput.thinking.low') },
+                { value: 'medium', label: t('components.chatInput.thinking.medium') },
+                { value: 'high', label: t('components.chatInput.thinking.high') }
+            ];
+        }
+        return null;
+    };
+
+    const thinkingOptions = getThinkingIntensityOptions();
+
     return (
         <div
             className={`flex flex-col w-full gap-2 ${className || ""} relative`}
@@ -290,7 +321,7 @@ export function ChatInput({
                     />
                     <div className="flex flex-col gap-2 flex-1 min-w-0">
                         <ScrollArea>
-                            <ToggleGroup type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
+                            <ToggleGroup className="p-1" type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
                             {/* MCP Tool Selector */}
                                 {totalAvailableTools > 0 && (
                                     <DropdownMenu>
@@ -326,6 +357,37 @@ export function ChatInput({
                                                         </DropdownMenuCheckboxItem>
                                                     ))}
                                                 </div>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+
+                                {thinkingOptions && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost">
+                                                <Brain className="size-4" />
+                                                {thinkingIntensity
+                                                    ? thinkingOptions.find(o => o.value === thinkingIntensity)?.label
+                                                    : t("components.chatInput.thinkingIntensity")}
+                                                <ChevronDown className="size-3 ml-1" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start">
+                                            <DropdownMenuCheckboxItem
+                                                checked={!thinkingIntensity}
+                                                onCheckedChange={() => setThinkingIntensity(null)}
+                                            >
+                                                {t("components.chatInput.default")}
+                                            </DropdownMenuCheckboxItem>
+                                            {thinkingOptions.map((option) => (
+                                                <DropdownMenuCheckboxItem
+                                                    key={option.value}
+                                                    checked={thinkingIntensity === option.value}
+                                                    onCheckedChange={() => setThinkingIntensity(option.value)}
+                                                >
+                                                    {option.label}
+                                                </DropdownMenuCheckboxItem>
                                             ))}
                                         </DropdownMenuContent>
                                     </DropdownMenu>

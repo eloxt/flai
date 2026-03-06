@@ -44,7 +44,7 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // Stream Chat
 // ============================================================================
 
-func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
+func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
 	client, err := c.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
@@ -71,12 +71,24 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	mcpClientCache := make(map[string]*mcp.MCPClient)
 
 	// Create content config
+	var thinkingLevel genai.ThinkingLevel
+	switch thinkingIntensity {
+	case "minial":
+		thinkingLevel = genai.ThinkingLevelMinimal
+	case "low":
+		thinkingLevel = genai.ThinkingLevelLow
+	case "medium":
+		thinkingLevel = genai.ThinkingLevelMedium
+	case "high":
+		thinkingLevel = genai.ThinkingLevelHigh
+	}
 	config := &genai.GenerateContentConfig{
 		SystemInstruction: &genai.Content{
 			Parts: []*genai.Part{genai.NewPartFromText(ComposeSystemPrompt())},
 		},
 		ThinkingConfig: &genai.ThinkingConfig{
 			IncludeThoughts: modelConfig.Reasoning,
+			ThinkingLevel:   thinkingLevel,
 		},
 		Tools: genaiTools,
 	}

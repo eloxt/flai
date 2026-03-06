@@ -417,6 +417,16 @@
         },
         "chatInput": {
             "mcpTools": "MCP Tools",
+            "thinkingIntensity": "Thinking",
+            "default": "Default",
+            "thinking": {
+                "none": "None",
+                "minimal": "Minimal",
+                "low": "Low",
+                "medium": "Medium",
+                "high": "High",
+                "xhigh": "Extra High"
+            },
             "web_search_tooltip": "Search web for information when needed.",
             "url_context_tooltip": "Extract information from URLs when needed."
         },

@@ -117,7 +117,8 @@ function buildMessageRequest(
     text: string,
     selectedTools: string[],
     mcpTools: MCPTool[],
-    fileIds: string[]
+    fileIds: string[],
+    thinkingIntensity: string | null | undefined
 ): MessageRequest {
     return {
         id: userMsgId,
@@ -132,6 +133,7 @@ function buildMessageRequest(
         tools: selectedTools,
         mcpTools: mcpTools,
         files: fileIds,
+        thinking_intensity: thinkingIntensity,
     };
 }
 
@@ -473,6 +475,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
         const providerId = useModelStore.getState().currentModel?.provider_id;
         const modelName = useModelStore.getState().currentModel?.id;
+        const thinkingIntensity = useInputStore.getState().thinkingIntensity;
 
         if (!providerId || !modelName) {
             toast.error(t("common.error.modelProviderNotFound"));
@@ -539,7 +542,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 text,
                 selectedTools,
                 selectedMcpTools,
-                fileIds
+                fileIds,
+                thinkingIntensity
             );
             clearAttachments();
 

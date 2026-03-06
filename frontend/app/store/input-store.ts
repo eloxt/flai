@@ -7,12 +7,14 @@ interface InputState {
     sendMainInput: boolean;
     selectedTools: string[];
     selectedMcpTools: MCPTool[];
+    thinkingIntensity: string | null;
     setMainInput: (value: string) => void;
     setSendMainInput: (value: boolean) => void;
     setSelectedTools: (value: string[]) => void;
     addMcpTool: (tool: MCPTool) => void;
     removeMcpTool: (mcpId: string, toolName: string) => void;
     clearMcpTools: () => void;
+    setThinkingIntensity: (value: string | null) => void;
     chatInputs: Record<string, string>;
     setChatInput: (conversationId: string, value: string) => void;
     attachments: Attachment[];
@@ -28,6 +30,7 @@ export const useInputStore = create<InputState>()(
             sendMainInput: false,
             selectedTools: ["web_search"],
             selectedMcpTools: [],
+            thinkingIntensity: null,
             setMainInput: (value) => set({ mainInput: value }),
             setSendMainInput: (value) => set({ sendMainInput: value }),
             setSelectedTools: (value) => set({ selectedTools: value }),
@@ -45,6 +48,7 @@ export const useInputStore = create<InputState>()(
                 )
             })),
             clearMcpTools: () => set({ selectedMcpTools: [] }),
+            setThinkingIntensity: (value) => set({ thinkingIntensity: value }),
             chatInputs: {},
             setChatInput: (conversationId, value) =>
                 set((state) => ({

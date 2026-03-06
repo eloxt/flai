@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	v1 "flai/api/message/v1"
 	"flai/internal/consts"
 	"flai/internal/dao"
 	"flai/internal/logic"
@@ -22,7 +23,7 @@ import (
 // ============================================================================
 
 type Client interface {
-	StreamChat(ctx context.Context, assistantMessageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error
+	StreamChat(ctx context.Context, assistantMessageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error
 	GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error)
 }
 
@@ -46,12 +47,12 @@ func NewClient(providerType string) (Client, error) {
 // Public API Functions
 // ============================================================================
 
-func StreamChat(ctx context.Context, assistantMessageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File) error {
+func StreamChat(ctx context.Context, req *v1.CreateReq, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, mcpTools []*MCPToolInfo, files []*entity.File) error {
 	client, err := NewClient(providerInfo.ProviderType)
 	if err != nil {
 		return err
 	}
-	return client.StreamChat(ctx, assistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, tools, mcpTools, files)
+	return client.StreamChat(ctx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpTools, files, req.ThinkingIntensity)
 }
 
 func GenerateTitle(ctx context.Context, messages []*entity.Message, content string) (*TitleGenerationResponse, error) {

@@ -60,6 +60,7 @@ export interface MessageRequest {
     tools: string[];
     mcpTools: MCPTool[];
     files: string[];
+    thinking_intensity: string | null | undefined;
 }
 
 export interface StreamResponse {
