@@ -178,6 +178,8 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 						Arguments: e.Item.Arguments.OfString,
 						CallID:    e.Item.CallID,
 					})
+					appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
+					currentContentBuilder.Reset()
 				}
 
 				if e.Item.Type == "image_generation_call" {
@@ -220,10 +222,9 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					if err := StreamToClient(response, imageStreamResponse); err != nil {
 						return err
 					}
+					appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
+					currentContentBuilder.Reset()
 				}
-
-				appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
-				currentContentBuilder.Reset()
 
 				// Handle annotations
 				var annotations []responses.ResponseOutputTextAnnotationUnion
