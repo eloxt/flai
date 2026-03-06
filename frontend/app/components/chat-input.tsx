@@ -249,12 +249,13 @@ export function ChatInput({
     // Get thinking intensity options based on model
     const getThinkingIntensityOptions = () => {
         const modelId = currentModel?.id || '';
-        if (modelId.startsWith('gpt-5')) {
+        if (modelId.startsWith('gpt-5.4')) {
             return [
                 { value: 'none', label: t('components.chatInput.thinking.none') },
                 { value: 'low', label: t('components.chatInput.thinking.low') },
                 { value: 'medium', label: t('components.chatInput.thinking.medium') },
-                { value: 'high', label: t('components.chatInput.thinking.high') }
+                { value: 'high', label: t('components.chatInput.thinking.high') },
+                { value: 'xhigh', label: t('components.chatInput.thinking.xhigh') }
             ];
         } else if (modelId === 'gemini-3.1-pro-preview') {
             return [
