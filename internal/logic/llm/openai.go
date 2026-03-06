@@ -168,6 +168,10 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 				streamResponse.Type = contentType
 				shouldSend = true
 
+			case responses.ResponseContentPartAddedEvent:
+				appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
+				currentContentBuilder.Reset()
+
 			case responses.ResponseOutputItemDoneEvent:
 				currentContentId = e.Item.ID
 				// Check for function calls
@@ -178,6 +182,8 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 						Arguments: e.Item.Arguments.OfString,
 						CallID:    e.Item.CallID,
 					})
+					appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
+					currentContentBuilder.Reset()
 				}
 
 				if e.Item.Type == "image_generation_call" {
@@ -220,11 +226,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					if err := StreamToClient(response, imageStreamResponse); err != nil {
 						return err
 					}
-				}
-
-				if e.Item.Type != "web_search_call" {
-					appendContent(&currentContentBuilder, contentType, currentImages, currentContentId, &contentList)
-					currentContentBuilder.Reset()
 				}
 
 				// Handle annotations
