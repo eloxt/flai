@@ -428,6 +428,7 @@ export function ProviderManagement() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="openai">OpenAI</SelectItem>
+                                    <SelectItem value="openai_completion">OpenAI (Completion)</SelectItem>
                                     <SelectItem value="gemini">Google Gemini</SelectItem>
                                 </SelectContent>
                             </Select>

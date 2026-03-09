@@ -36,6 +36,8 @@ func NewClient(providerType string) (Client, error) {
 	switch providerType {
 	case consts.ProviderType.OpenAI:
 		return &OpenAIClient{}, nil
+	case consts.ProviderType.OpenAICompletion:
+		return &OpenAIChatClient{}, nil
 	case consts.ProviderType.Gemini:
 		return &GeminiClient{}, nil
 	default:

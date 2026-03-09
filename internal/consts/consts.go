@@ -52,9 +52,11 @@ var MessageRole = struct {
 // Provider types
 var ProviderType = struct {
 	OpenAI string
+	OpenAICompletion string
 	Gemini string
 }{
 	OpenAI: "openai",
+	OpenAICompletion: "openai_completion",
 	Gemini: "gemini",
 }
 

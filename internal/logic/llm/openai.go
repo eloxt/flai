@@ -121,7 +121,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	maxToolRounds := 10
 	currentInputItems := inputItems
 
-	for round := 0; round < maxToolRounds; round++ {
+	for range maxToolRounds {
 		// Create stream params
 		params := responses.ResponseNewParams{
 			// PreviousResponseID: openai.String(previousResponseId),
