@@ -37,6 +37,7 @@ func (c *ControllerV1) Register(ctx context.Context, req *v1.RegisterReq) (res *
 		Email:    req.Email,
 		Password: hashedPassword,
 		Role:     consts.UserRole.User,
+		Preference: "{}",
 	}
 
 	_, err = dao.User.Ctx(ctx).Insert(newUser)
