@@ -39,20 +39,37 @@ export default function ModelSelector() {
     const clearAttachments = useInputStore((state) => state.clearAttachments);
     const selectedTools = useInputStore((state) => state.selectedTools);
     const setSelectedTools = useInputStore((state) => state.setSelectedTools);
+    const selectedMcpTools = useInputStore((state) => state.selectedMcpTools);
+    const clearMcpTools = useInputStore((state) => state.clearMcpTools);
 
     const handleModelSelect = (model: Model, providerId: string) => {
         if (!model.attachment) {
             clearAttachments();
         }
-        if (!model.internal_tools?.includes("web_search") && selectedTools.includes("web_search")) {
-            setSelectedTools(selectedTools.filter(tool => tool !== "web_search"));
+
+        const canKeepMcpTools = model.tool_call;
+        const hasSelectedMcpTools = canKeepMcpTools && selectedMcpTools.length > 0;
+
+        if (!canKeepMcpTools && selectedMcpTools.length > 0) {
+            clearMcpTools();
         }
-        if (!model.internal_tools?.includes("url_context") && selectedTools.includes("url_context")) {
-            setSelectedTools(selectedTools.filter(tool => tool !== "url_context"));
+
+        const nextSelectedTools = ["web_search", "url_context", "image_generation"].filter((tool) => {
+            if (hasSelectedMcpTools) {
+                return false;
+            }
+
+            return model.internal_tools?.includes(tool);
+        });
+
+        const hasSelectedToolsChanged =
+            nextSelectedTools.length !== selectedTools.length ||
+            nextSelectedTools.some((tool) => !selectedTools.includes(tool));
+
+        if (hasSelectedToolsChanged) {
+            setSelectedTools(nextSelectedTools);
         }
-        if (!model.internal_tools?.includes("image_generation") && selectedTools.includes("image_generation")) {
-            setSelectedTools(selectedTools.filter(tool => tool !== "image_generation"));
-        }
+
         setCurrentModel({ ...model, provider_id: providerId });
     };
 
