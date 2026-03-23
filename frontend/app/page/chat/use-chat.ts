@@ -151,6 +151,147 @@ function parseStreamContent(streamResponse: StreamResponse): string {
     return "";
 }
 
+const GOOGLE_FOOTNOTE_START_MARKER = "<!-- flai-google-footnotes:start -->";
+const GOOGLE_FOOTNOTE_END_MARKER = "<!-- flai-google-footnotes:end -->";
+
+function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta_info">): void {
+    const groundingData = message.meta_info?.google_grounding_data;
+    if (!groundingData?.groundingSupports?.length || !groundingData.groundingChunks?.length) {
+        return;
+    }
+
+    const textBlocks: Array<{
+        data: ContentMessage;
+        text: string;
+        startIndex: number;
+        endIndex: number;
+    }> = [];
+
+    let totalTextLength = 0;
+    for (const content of message.content) {
+        if (content.type !== "message") {
+            continue;
+        }
+
+        const data = content.data as ContentMessage;
+        if (data.content.includes(GOOGLE_FOOTNOTE_START_MARKER)) {
+            return;
+        }
+
+        textBlocks.push({
+            data,
+            text: data.content,
+            startIndex: totalTextLength,
+            endIndex: totalTextLength + data.content.length,
+        });
+        totalTextLength += data.content.length;
+    }
+
+    if (textBlocks.length === 0 || totalTextLength === 0) {
+        return;
+    }
+
+    const insertions = new Map<number, number[]>();
+    for (const support of groundingData.groundingSupports) {
+        const endIndex = support.segment?.endIndex;
+        if (
+            endIndex === undefined ||
+            endIndex < 0 ||
+            endIndex > totalTextLength ||
+            !support.groundingChunkIndices?.length
+        ) {
+            continue;
+        }
+
+        const chunkIndices = Array.from(
+            new Set(
+                support.groundingChunkIndices.filter((chunkIndex) => {
+                    const uri = groundingData.groundingChunks[chunkIndex]?.web?.uri;
+                    return typeof uri === "string" && uri.length > 0;
+                })
+            )
+        ).sort((a, b) => a - b);
+
+        if (chunkIndices.length === 0) {
+            continue;
+        }
+
+        const existingChunkIndices = insertions.get(endIndex) ?? [];
+        for (const chunkIndex of chunkIndices) {
+            if (!existingChunkIndices.includes(chunkIndex)) {
+                existingChunkIndices.push(chunkIndex);
+            }
+        }
+        existingChunkIndices.sort((a, b) => a - b);
+        insertions.set(endIndex, existingChunkIndices);
+    }
+
+    if (insertions.size === 0) {
+        return;
+    }
+
+    const referencedChunkIndices = new Set<number>();
+    for (const block of textBlocks) {
+        const relevantInsertions = Array.from(insertions.entries())
+            .filter(
+                ([absoluteIndex]) =>
+                    absoluteIndex <= block.endIndex &&
+                    (absoluteIndex > block.startIndex ||
+                        (block.startIndex === 0 && absoluteIndex === 0))
+            )
+            .sort((a, b) => b[0] - a[0]);
+
+        if (relevantInsertions.length === 0) {
+            continue;
+        }
+
+        let formattedText = block.text;
+        for (const [absoluteIndex, chunkIndices] of relevantInsertions) {
+            const localIndex = absoluteIndex - block.startIndex;
+            const footnoteRefs = chunkIndices
+                .map((chunkIndex) => {
+                    referencedChunkIndices.add(chunkIndex);
+                    return `[^${chunkIndex + 1}]`;
+                })
+                .join("");
+
+            formattedText =
+                formattedText.slice(0, localIndex) +
+                footnoteRefs +
+                formattedText.slice(localIndex);
+        }
+
+        block.data.content = formattedText;
+    }
+
+    if (referencedChunkIndices.size === 0) {
+        return;
+    }
+
+    const footnoteLines = Array.from(referencedChunkIndices)
+        .sort((a, b) => a - b)
+        .map((chunkIndex) => {
+            const web = groundingData.groundingChunks[chunkIndex]?.web;
+            const uri = web?.uri;
+            const title = web?.title?.trim();
+            if (!uri) {
+                return null;
+            }
+            if (title) {
+                return `[^${chunkIndex + 1}]: [${title}](${uri})`;
+            }
+            return `[^${chunkIndex + 1}]: ${uri}`;
+        })
+        .filter((line): line is string => line !== null);
+
+    if (footnoteLines.length === 0) {
+        return;
+    }
+
+    const lastTextBlock = textBlocks[textBlocks.length - 1];
+    lastTextBlock.data.content = `${lastTextBlock.data.content}\n\n${GOOGLE_FOOTNOTE_START_MARKER}\n${footnoteLines.join("\n")}\n${GOOGLE_FOOTNOTE_END_MARKER}`;
+}
+
 
 
 // ============================================================================
@@ -230,6 +371,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         // First pass: create nodes and find the latest message
         for (const message of messages) {
             const node: TreeNode = { ...message, children: [] };
+            applyGoogleGroundingFootnotes(node);
             map.set(message.id, node);
 
             if (!lastMessage || message.created_at >= lastMessage.created_at) {
@@ -362,6 +504,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         if (streamContentType === "google_grounding_data") {
             const groundingData = streamResponse.data as GoogleGroundingData;
             assistantMsg.meta_info = { ...(assistantMsg.meta_info || DEFAULT_META_INFO), google_grounding_data: groundingData };
+            applyGoogleGroundingFootnotes(assistantMsg);
             scheduleFlush();
             return;
         }
