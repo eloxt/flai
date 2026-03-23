@@ -373,6 +373,8 @@
         },
         "modelSelector": {
             "select": "Select Model",
+            "modelDeletedSwitch": "The selected model was removed. Switched to {{model}} automatically.",
+            "modelDeletedNoReplacement": "The selected model was removed. Please select another model.",
             "trainingUntil": "Training until",
             "contextWindow": "Context Window",
             "maxOutput": "Max Output",

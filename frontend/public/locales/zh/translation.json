@@ -373,6 +373,8 @@
         },
         "modelSelector": {
             "select": "选择模型",
+            "modelDeletedSwitch": "当前所选模型已不再提供，已自动切换到 {{model}}。",
+            "modelDeletedNoReplacement": "当前所选模型已不再提供，请重新选择模型。",
             "trainingUntil": "训练截至",
             "contextWindow": "上下文窗口",
             "maxOutput": "最大输出",

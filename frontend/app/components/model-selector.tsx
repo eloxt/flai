@@ -15,6 +15,20 @@ interface ModelCardDetailProps {
     model: Model;
 }
 
+interface ProviderModelOption {
+    model: Model;
+    providerId: string;
+}
+
+function flattenProviderModels(providers: Provider[]): ProviderModelOption[] {
+    return providers.flatMap((provider) =>
+        (provider.model ?? []).map((model) => ({
+            model,
+            providerId: provider.id,
+        }))
+    );
+}
+
 export default function ModelSelector() {
     const { t } = useTranslation();
     const { currentModel, setCurrentModel } = useModelStore();
@@ -50,6 +64,39 @@ export default function ModelSelector() {
         setIsLoading(true);
         try {
             const data = await api.get<Provider[]>("/api/provider");
+            if (currentModel) {
+                const nextModels = flattenProviderModels(data);
+                const currentExists = nextModels.some(
+                    ({ model, providerId }) =>
+                        model.id === currentModel.id &&
+                        (!currentModel.provider_id || providerId === currentModel.provider_id)
+                );
+
+                if (!currentExists) {
+                    const previousModels = flattenProviderModels(providers);
+                    const previousIndex = previousModels.findIndex(
+                        ({ model, providerId }) =>
+                            model.id === currentModel.id &&
+                            (!currentModel.provider_id || providerId === currentModel.provider_id)
+                    );
+                    const fallbackModel =
+                        nextModels[previousIndex >= 0 ? Math.min(previousIndex, nextModels.length - 1) : 0] ??
+                        nextModels[nextModels.length - 1] ??
+                        null;
+
+                    if (fallbackModel) {
+                        toast.warning(
+                            t("components.modelSelector.modelDeletedSwitch", {
+                                model: fallbackModel.model.name,
+                            })
+                        );
+                        handleModelSelect(fallbackModel.model, fallbackModel.providerId);
+                    } else {
+                        toast.warning(t("components.modelSelector.modelDeletedNoReplacement"));
+                        setCurrentModel(null);
+                    }
+                }
+            }
             setProviders(data);
         } catch (error) {
             if (error instanceof ApiError) {
