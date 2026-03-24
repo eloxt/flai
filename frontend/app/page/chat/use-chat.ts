@@ -153,6 +153,39 @@ function parseStreamContent(streamResponse: StreamResponse): string {
 
 const GOOGLE_FOOTNOTE_START_MARKER = "<!-- flai-google-footnotes:start -->";
 const GOOGLE_FOOTNOTE_END_MARKER = "<!-- flai-google-footnotes:end -->";
+const UTF8_ENCODER = new TextEncoder();
+
+function byteOffsetToCharIndex(text: string, byteOffset: number): number {
+    if (byteOffset <= 0) {
+        return 0;
+    }
+
+    const totalBytes = UTF8_ENCODER.encode(text).length;
+    if (byteOffset >= totalBytes) {
+        return text.length;
+    }
+
+    let consumedBytes = 0;
+    for (let i = 0; i < text.length; i += 1) {
+        const codePoint = text.codePointAt(i);
+        if (codePoint === undefined) {
+            break;
+        }
+
+        const char = String.fromCodePoint(codePoint);
+        const nextBytes = consumedBytes + UTF8_ENCODER.encode(char).length;
+        if (nextBytes >= byteOffset) {
+            return nextBytes === byteOffset ? i + char.length : i;
+        }
+
+        consumedBytes = nextBytes;
+        if (char.length === 2) {
+            i += 1;
+        }
+    }
+
+    return text.length;
+}
 
 function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta_info">): void {
     const groundingData = message.meta_info?.google_grounding_data;
@@ -163,11 +196,8 @@ function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta
     const textBlocks: Array<{
         data: ContentMessage;
         text: string;
-        startIndex: number;
-        endIndex: number;
     }> = [];
 
-    let totalTextLength = 0;
     for (const content of message.content) {
         if (content.type !== "message") {
             continue;
@@ -181,25 +211,17 @@ function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta
         textBlocks.push({
             data,
             text: data.content,
-            startIndex: totalTextLength,
-            endIndex: totalTextLength + data.content.length,
         });
-        totalTextLength += data.content.length;
     }
 
-    if (textBlocks.length === 0 || totalTextLength === 0) {
+    if (textBlocks.length === 0) {
         return;
     }
 
-    const insertions = new Map<number, number[]>();
+    const insertions = new Map<number, Map<number, number[]>>();
     for (const support of groundingData.groundingSupports) {
-        const endIndex = support.segment?.endIndex;
-        if (
-            endIndex === undefined ||
-            endIndex < 0 ||
-            endIndex > totalTextLength ||
-            !support.groundingChunkIndices?.length
-        ) {
+        const endByteIndex = support.segment?.endIndex;
+        if (endByteIndex === undefined || endByteIndex < 0 || !support.groundingChunkIndices?.length) {
             continue;
         }
 
@@ -216,14 +238,56 @@ function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta
             continue;
         }
 
-        const existingChunkIndices = insertions.get(endIndex) ?? [];
+        const startByteIndex = support.segment?.startIndex ?? 0;
+        const segmentText = support.segment?.text;
+
+        let targetBlockIndex = -1;
+        let targetCharIndex = -1;
+
+        for (let blockIndex = 0; blockIndex < textBlocks.length; blockIndex += 1) {
+            const block = textBlocks[blockIndex];
+            const startCharIndex = byteOffsetToCharIndex(block.text, startByteIndex);
+            const endCharIndex = byteOffsetToCharIndex(block.text, endByteIndex);
+            const candidateText = block.text.slice(startCharIndex, endCharIndex);
+
+            if (!segmentText || candidateText === segmentText) {
+                targetBlockIndex = blockIndex;
+                targetCharIndex = endCharIndex;
+                break;
+            }
+        }
+
+        if (targetBlockIndex === -1 && segmentText) {
+            for (let blockIndex = textBlocks.length - 1; blockIndex >= 0; blockIndex -= 1) {
+                const block = textBlocks[blockIndex];
+                const segmentIndex = block.text.lastIndexOf(segmentText);
+                if (segmentIndex !== -1) {
+                    targetBlockIndex = blockIndex;
+                    targetCharIndex = segmentIndex + segmentText.length;
+                    break;
+                }
+            }
+        }
+
+        if (targetBlockIndex === -1) {
+            if (textBlocks.length !== 1) {
+                continue;
+            }
+
+            targetBlockIndex = 0;
+            targetCharIndex = byteOffsetToCharIndex(textBlocks[0].text, endByteIndex);
+        }
+
+        const blockInsertions = insertions.get(targetBlockIndex) ?? new Map<number, number[]>();
+        const existingChunkIndices = blockInsertions.get(targetCharIndex) ?? [];
         for (const chunkIndex of chunkIndices) {
             if (!existingChunkIndices.includes(chunkIndex)) {
                 existingChunkIndices.push(chunkIndex);
             }
         }
         existingChunkIndices.sort((a, b) => a - b);
-        insertions.set(endIndex, existingChunkIndices);
+        blockInsertions.set(targetCharIndex, existingChunkIndices);
+        insertions.set(targetBlockIndex, blockInsertions);
     }
 
     if (insertions.size === 0) {
@@ -231,23 +295,17 @@ function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta
     }
 
     const referencedChunkIndices = new Set<number>();
-    for (const block of textBlocks) {
-        const relevantInsertions = Array.from(insertions.entries())
-            .filter(
-                ([absoluteIndex]) =>
-                    absoluteIndex <= block.endIndex &&
-                    (absoluteIndex > block.startIndex ||
-                        (block.startIndex === 0 && absoluteIndex === 0))
-            )
-            .sort((a, b) => b[0] - a[0]);
+    for (const [blockIndex, block] of textBlocks.entries()) {
+        const relevantInsertions = Array.from(insertions.get(blockIndex)?.entries() ?? []).sort(
+            (a, b) => b[0] - a[0]
+        );
 
         if (relevantInsertions.length === 0) {
             continue;
         }
 
         let formattedText = block.text;
-        for (const [absoluteIndex, chunkIndices] of relevantInsertions) {
-            const localIndex = absoluteIndex - block.startIndex;
+        for (const [charIndex, chunkIndices] of relevantInsertions) {
             const footnoteRefs = chunkIndices
                 .map((chunkIndex) => {
                     referencedChunkIndices.add(chunkIndex);
@@ -256,9 +314,9 @@ function applyGoogleGroundingFootnotes(message: Pick<TreeNode, "content" | "meta
                 .join("");
 
             formattedText =
-                formattedText.slice(0, localIndex) +
+                formattedText.slice(0, charIndex) +
                 footnoteRefs +
-                formattedText.slice(localIndex);
+                formattedText.slice(charIndex);
         }
 
         block.data.content = formattedText;
