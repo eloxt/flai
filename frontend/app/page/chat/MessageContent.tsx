@@ -105,7 +105,7 @@ export function MessageContent({
     return (
         <div className="markdown-body overflow-x-auto w-full">
             <Streamdown
-                animated=
+                animated
                 isAnimating={isStreaming}
                 plugins={{ cjk: cjk, code: code, math: math, mermaid: mermaid }}
             >
