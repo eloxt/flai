@@ -49,6 +49,7 @@ func (c *ControllerV1) UploadFile(ctx context.Context, req *v1.UploadFileReq) (r
 	}
 
 	fileId := uuid.New().String()
+	contentType := req.File.Header.Get("Content-Type")
 
 	if existingFile != nil {
 		fileKey = existingFile.Path
@@ -67,7 +68,7 @@ func (c *ControllerV1) UploadFile(ctx context.Context, req *v1.UploadFileReq) (r
 		ext := filepath.Ext(req.File.Filename)
 		fileKey = fmt.Sprintf("%s/%s%s", user.Id, fileId, ext)
 
-		if err := s3Client.UploadFile(ctx, fileKey, file); err != nil {
+		if err := s3Client.UploadFile(ctx, fileKey, file, contentType); err != nil {
 			return nil, err
 		}
 	}
@@ -82,7 +83,7 @@ func (c *ControllerV1) UploadFile(ctx context.Context, req *v1.UploadFileReq) (r
 		UserId:    user.Id,
 		Hash:      fileHash,
 		FileName:  req.File.Filename,
-		MimeType:  req.File.Header.Get("Content-Type"),
+		MimeType:  contentType,
 		Size:      int(req.File.Size),
 		Path:      fileKey,
 		PublicUrl: publicUrl + fileKey,

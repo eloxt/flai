@@ -88,13 +88,11 @@ func detectContentType(key string, data []byte) string {
 	return "application/octet-stream"
 }
 
-func (c *Client) UploadFile(ctx context.Context, key string, content io.Reader) error {
+func (c *Client) UploadFile(ctx context.Context, key string, content io.Reader, contentType string) error {
 	data, err := io.ReadAll(content)
 	if err != nil {
 		return gerror.Wrap(err, "failed to read file content")
 	}
-
-	contentType := detectContentType(key, data)
 
 	_, err = c.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(c.bucket),
