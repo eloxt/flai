@@ -116,6 +116,39 @@
             "title": "搜索功能建设中",
             "description": "我们正在努力为您提供最佳的搜索体验。请稍后再来检查。"
         },
+        "translate": {
+            "title": "翻译",
+            "sourceLanguage": "源语言",
+            "targetLanguage": "目标语言",
+            "sourcePlaceholder": "输入要翻译的原文...",
+            "targetPlaceholder": "译文会显示在这里",
+            "streamingPlaceholder": "正在生成译文...",
+            "translate": "翻译",
+            "translating": "翻译中...",
+            "stop": "停止",
+            "swap": "交换语言和文本",
+            "defaults": {
+                "source": "中文",
+                "target": "英语"
+            },
+            "languages": [
+                "中文",
+                "英语",
+                "日语",
+                "韩语",
+                "法语",
+                "德语",
+                "西班牙语",
+                "葡萄牙语",
+                "俄语",
+                "阿拉伯语"
+            ],
+            "errors": {
+                "emptyText": "请输入要翻译的内容",
+                "failed": "翻译失败",
+                "noStream": "翻译响应为空"
+            }
+        },
         "share": {
             "error": "加载分享对话失败",
             "notFound": "未找到分享的对话",
@@ -343,6 +376,7 @@
         "sidebar": {
             "newChat": "新聊天",
             "searchChat": "搜索聊天",
+            "translate": "翻译",
             "chats": "聊天",
             "favourites": "收藏",
             "dateGroups": {

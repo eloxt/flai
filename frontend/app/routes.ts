@@ -13,6 +13,7 @@ export default [
     layout("./layout/sidebar-layout.tsx", [
       index("./main.tsx"),
       route("/chat/:conversationId", "./page/chat.tsx"),
+      route("/translate", "./page/translate.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig;

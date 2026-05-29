@@ -194,6 +194,46 @@ func (c *OpenAIChatClient) saveAndClose(ctx context.Context, message *entity.Mes
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
+func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+	client := c.getClient(providerInfo)
+
+	stream := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
+		Model: modelConfig.ID,
+		Messages: []openai.ChatCompletionMessageParamUnion{
+			openai.UserMessage(prompt),
+		},
+	})
+
+	for stream.Next() {
+		chunk := stream.Current()
+		if len(chunk.Choices) == 0 {
+			continue
+		}
+
+		delta := chunk.Choices[0].Delta.Content
+		if delta == "" {
+			continue
+		}
+
+		if err := StreamToClient(response, StreamResponse{
+			Type: consts.MessageType.Message,
+			Data: ContentMessage{Content: delta},
+		}); err != nil {
+			return err
+		}
+	}
+
+	if err := stream.Err(); err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+		return err
+	}
+
+	StreamDone(response)
+	return nil
+}
+
 func (c *OpenAIChatClient) executeMCPToolCallByName(ctx context.Context, mcpToolMap map[string]*MCPToolInfo, mcpClientCache map[string]*mcp.MCPClient, toolName string, args map[string]any) *MCPToolResult {
 	result := &MCPToolResult{Name: toolName}
 

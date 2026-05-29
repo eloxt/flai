@@ -448,6 +448,49 @@ func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
+func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+	client, err := c.getClient(ctx, providerInfo)
+	if err != nil {
+		return err
+	}
+
+	contents := []*genai.Content{
+		genai.NewContentFromText(prompt, genai.RoleUser),
+	}
+	config := &genai.GenerateContentConfig{}
+
+	for resp, err := range client.Models.GenerateContentStream(ctx, modelConfig.ID, contents, config) {
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return err
+		}
+
+		for _, candidate := range resp.Candidates {
+			if candidate.Content == nil {
+				continue
+			}
+
+			for _, part := range candidate.Content.Parts {
+				if part.Text == "" || part.Thought {
+					continue
+				}
+
+				if err := StreamToClient(response, StreamResponse{
+					Type: consts.MessageType.Message,
+					Data: ContentMessage{Content: part.Text},
+				}); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	StreamDone(response)
+	return nil
+}
+
 // ============================================================================
 // History Building
 // ============================================================================

@@ -125,14 +125,14 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		// Create stream params
 		params := responses.ResponseNewParams{
 			// PreviousResponseID: openai.String(previousResponseId),
-			Instructions:       openai.String(ComposeSystemPrompt()),
-			Model:              modelConfig.ID,
+			Instructions: openai.String(ComposeSystemPrompt()),
+			Model:        modelConfig.ID,
 			Input: responses.ResponseNewParamsInputUnion{
 				OfInputItemList: currentInputItems,
 			},
 			Reasoning: shared.ReasoningParam{
 				Summary: shared.ReasoningSummaryAuto,
-				Effort: reasoningLevel,
+				Effort:  reasoningLevel,
 			},
 			Tools: openaiTools,
 		}
@@ -391,6 +391,40 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
 	appendContent(contentBuilder, contentType, imageUrls, currentId, contentList)
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
+}
+
+func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+	client := c.getClient(providerInfo)
+
+	params := responses.ResponseNewParams{
+		Model: modelConfig.ID,
+		Input: responses.ResponseNewParamsInputUnion{
+			OfString: openai.String(prompt),
+		},
+	}
+
+	stream := client.Responses.NewStreaming(ctx, params)
+	for stream.Next() {
+		event := stream.Current()
+		if e, ok := event.AsAny().(responses.ResponseTextDeltaEvent); ok && e.Delta != "" {
+			if err := StreamToClient(response, StreamResponse{
+				Type: consts.MessageType.Message,
+				Data: ContentMessage{Content: e.Delta},
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := stream.Err(); err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+		return err
+	}
+
+	StreamDone(response)
+	return nil
 }
 
 // executeMCPToolCallByName executes an MCP tool by name and returns the result

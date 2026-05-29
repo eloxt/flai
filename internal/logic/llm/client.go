@@ -24,6 +24,7 @@ import (
 
 type Client interface {
 	StreamChat(ctx context.Context, assistantMessageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error
+	StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error
 	GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error)
 }
 
@@ -55,6 +56,14 @@ func StreamChat(ctx context.Context, req *v1.CreateReq, response *ghttp.Response
 		return err
 	}
 	return client.StreamChat(ctx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpTools, files, req.ThinkingIntensity)
+}
+
+func StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+	client, err := NewClient(providerInfo.ProviderType)
+	if err != nil {
+		return err
+	}
+	return client.StreamTranslate(ctx, response, providerInfo, modelConfig, prompt)
 }
 
 func GenerateTitle(ctx context.Context, messages []*entity.Message, content string) (*TitleGenerationResponse, error) {

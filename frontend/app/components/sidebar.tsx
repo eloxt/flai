@@ -13,6 +13,7 @@ import {
     Star,
     StarOff,
     ChevronDown,
+    Languages,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
@@ -265,6 +266,15 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                     <Search />
                                     <span>{t("components.sidebar.searchChat")}</span>
                                 </div>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem key={t("components.sidebar.translate")}>
+                            <SidebarMenuButton asChild tooltip={t("components.sidebar.translate")} isActive={location.pathname === "/translate"}>
+                                <NavLink to="/translate">
+                                    <Languages />
+                                    <span>{t("components.sidebar.translate")}</span>
+                                </NavLink>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>

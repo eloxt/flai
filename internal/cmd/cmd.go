@@ -12,6 +12,7 @@ import (
 	"flai/internal/controller/provider"
 	"flai/internal/controller/public"
 	"flai/internal/controller/share"
+	"flai/internal/controller/translate"
 	"flai/internal/controller/user"
 	"flai/internal/logic"
 	"flai/internal/middleware"
@@ -54,6 +55,7 @@ func RegisterRouter(s *ghttp.Server) {
 			user.NewV1(),
 			file.NewV1(),
 			share.NewV1(),
+			translate.NewV1(),
 			mcp.NewV1(),
 			notification.NewV1(),
 		)

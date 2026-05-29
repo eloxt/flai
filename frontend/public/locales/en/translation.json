@@ -116,6 +116,39 @@
             "title": "Search Under Construction",
             "description": "We are working hard to bring you the best search experience. Please check back later."
         },
+        "translate": {
+            "title": "Translate",
+            "sourceLanguage": "Source language",
+            "targetLanguage": "Target language",
+            "sourcePlaceholder": "Enter text to translate...",
+            "targetPlaceholder": "Translation appears here",
+            "streamingPlaceholder": "Generating translation...",
+            "translate": "Translate",
+            "translating": "Translating...",
+            "stop": "Stop",
+            "swap": "Swap languages and text",
+            "defaults": {
+                "source": "Chinese",
+                "target": "English"
+            },
+            "languages": [
+                "Chinese",
+                "English",
+                "Japanese",
+                "Korean",
+                "French",
+                "German",
+                "Spanish",
+                "Portuguese",
+                "Russian",
+                "Arabic"
+            ],
+            "errors": {
+                "emptyText": "Enter text to translate",
+                "failed": "Translation failed",
+                "noStream": "Translation response was empty"
+            }
+        },
         "share": {
             "error": "Failed to load shared conversation",
             "notFound": "Shared conversation not found",
@@ -343,6 +376,7 @@
         "sidebar": {
             "newChat": "New Chat",
             "searchChat": "Search Chat",
+            "translate": "Translate",
             "chats": "Chats",
             "favourites": "Favorites",
             "adminSettings": "Admin Settings",
