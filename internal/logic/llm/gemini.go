@@ -155,11 +155,13 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 			}
 
 			// Update usage metadata
-			metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
-			metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
-			metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
-			metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
-			metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
+			if resp.UsageMetadata != nil {
+				metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
+				metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
+				metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
+				metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
+				metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
+			}
 
 			for _, candidate := range resp.Candidates {
 				if candidate.Content != nil {
