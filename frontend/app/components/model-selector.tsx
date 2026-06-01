@@ -29,6 +29,10 @@ function flattenProviderModels(providers: Provider[]): ProviderModelOption[] {
     );
 }
 
+function getModelBadge(model: Model) {
+    return model.badge?.trim();
+}
+
 export default function ModelSelector() {
     const { t } = useTranslation();
     const { currentModel, setCurrentModel } = useModelStore();
@@ -163,22 +167,37 @@ export default function ModelSelector() {
                             )}
                             {provider.name}
                         </DropdownMenuLabel>
-                        {provider.model?.map((model) => (
-                            <HoverCard key={model.id} openDelay={150} closeDelay={150}>
-                                <HoverCardTrigger>
-                                    <DropdownMenuCheckboxItem
-                                        className="font-normal"
-                                        key={model.id}
-                                        checked={currentModel?.id === model.id}
-                                        onCheckedChange={() => handleModelSelect(model, provider.id)}>
-                                        {model.name}
-                                    </DropdownMenuCheckboxItem>
-                                </HoverCardTrigger>
-                                <HoverCardContent className="min-w-2xs max-w-sm" side="right" align="start" sideOffset={15}>
-                                    <ModelCardDetail model={model} />
-                                </HoverCardContent>
-                            </HoverCard>
-                        ))}
+                        {provider.model?.map((model) => {
+                            const badge = getModelBadge(model);
+
+                            return (
+                                <HoverCard key={model.id} openDelay={150} closeDelay={150}>
+                                    <HoverCardTrigger>
+                                        <DropdownMenuCheckboxItem
+                                            className="font-normal"
+                                            key={model.id}
+                                            checked={currentModel?.id === model.id}
+                                            onCheckedChange={() => handleModelSelect(model, provider.id)}>
+                                            <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                                                <span className="truncate">{model.name}</span>
+                                                {badge && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="h-5 max-w-24 truncate rounded-sm px-1.5 text-[10px] font-normal leading-none"
+                                                        title={badge}
+                                                    >
+                                                        {badge}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </DropdownMenuCheckboxItem>
+                                    </HoverCardTrigger>
+                                    <HoverCardContent className="min-w-2xs max-w-sm" side="right" align="start" sideOffset={15}>
+                                        <ModelCardDetail model={model} />
+                                    </HoverCardContent>
+                                </HoverCard>
+                            );
+                        })}
                         {index < providers.length - 1 && <DropdownMenuSeparator />}
                     </DropdownMenuGroup>
                 ))}
@@ -189,13 +208,26 @@ export default function ModelSelector() {
 
 function ModelCardDetail({ model }: ModelCardDetailProps) {
     const { t } = useTranslation();
+    const badge = getModelBadge(model);
+
     return (
         <div className="flex flex-col gap-4 text-xs">
             <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                    <span className="font-medium text-base">{model.name}</span>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-base font-medium">{model.name}</span>
+                        {badge && (
+                            <Badge
+                                variant="secondary"
+                                className="max-w-28 truncate rounded-sm font-normal"
+                                title={badge}
+                            >
+                                {badge}
+                            </Badge>
+                        )}
+                    </div>
                     {model.family && (
-                        <span className="text-muted-foreground">{model.family}</span>
+                        <span className="shrink-0 text-muted-foreground">{model.family}</span>
                     )}
                 </div>
                 {model.knowledge && (

@@ -15,6 +15,7 @@ var ProviderMap map[string]*SimpleProviderInfo
 type ModelConfig struct {
 	ID               string     `json:"id"`
 	Name             string     `json:"name"`
+	Badge            string     `json:"badge"`
 	Attachment       bool       `json:"attachment"`
 	Reasoning        bool       `json:"reasoning"`
 	ToolCall         bool       `json:"tool_call"`

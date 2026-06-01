@@ -326,6 +326,8 @@
                     "noModels": "暂无模型，点击添加模型",
                     "id": "模型 ID",
                     "name": "显示名称",
+                    "badge": "备注标签",
+                    "badgePlaceholder": "推荐",
                     "family": "模型家族",
                     "status": "状态",
                     "knowledge": "知识截止",

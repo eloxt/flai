@@ -326,6 +326,8 @@
                     "noModels": "No models yet. Click to add one.",
                     "id": "Model ID",
                     "name": "Display Name",
+                    "badge": "Badge Text",
+                    "badgePlaceholder": "Recommended",
                     "family": "Model Family",
                     "status": "Status",
                     "knowledge": "Knowledge Cutoff",

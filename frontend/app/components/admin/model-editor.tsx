@@ -39,6 +39,7 @@ function createEmptyModel(): Model {
     return {
         id: "",
         name: "",
+        badge: "",
         attachment: false,
         reasoning: false,
         tool_call: false,
@@ -121,6 +122,15 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
                             <CardTitle className="text-sm font-medium">
                                 {model.name || model.id || `${t("pages.admin.providers.model.model")} ${index + 1}`}
                             </CardTitle>
+                            {model.badge?.trim() && (
+                                <Badge
+                                    variant="outline"
+                                    className="max-w-32 truncate rounded-sm text-xs"
+                                    title={model.badge.trim()}
+                                >
+                                    {model.badge.trim()}
+                                </Badge>
+                            )}
                             {model.status && (
                                 <Badge variant="secondary" className="text-xs">
                                     {model.status}
@@ -154,6 +164,16 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
                                     className="h-8 text-sm"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <Label className="text-xs">{t("pages.admin.providers.model.badge")}</Label>
+                            <Input
+                                value={model.badge || ""}
+                                onChange={(e) => updateField("badge", e.target.value)}
+                                placeholder={t("pages.admin.providers.model.badgePlaceholder")}
+                                className="h-8 text-sm"
+                            />
                         </div>
 
                         <div className="grid grid-cols-3 gap-3">

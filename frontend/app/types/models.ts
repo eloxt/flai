@@ -23,6 +23,7 @@ export interface ModelLimit {
 export interface Model {
   id: string;
   name: string;
+  badge?: string;
   family?: string;
   provider_id?: string;
   attachment: boolean;
