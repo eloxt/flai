@@ -7,6 +7,7 @@ import (
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
 	"flai/internal/model/entity"
+	"slices"
 	"strings"
 
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -64,11 +65,19 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 	maxToolRounds := 10
 	currentMessages := messages
 
+	var modelName string
+	if strings.Contains(strings.ToLower(providerInfo.Name), "openrouter") && slices.Contains(tools, consts.InternalTools.WebSearch) {
+		modelName = modelConfig.ID + ":online"
+	} else {
+		modelName = modelConfig.ID
+	}
+	params := openai.ChatCompletionNewParams{
+		Model: modelName,
+	}
+
 	for range maxToolRounds {
-		params := openai.ChatCompletionNewParams{
-			Model:    modelConfig.ID,
-			Messages: currentMessages,
-		}
+
+		params.Messages = currentMessages
 
 		if len(chatTools) > 0 {
 			params.Tools = chatTools
