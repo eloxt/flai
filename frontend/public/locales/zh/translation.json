@@ -396,6 +396,12 @@
             "loadMore": "加载更多",
             "adminSettings": "管理员设置",
             "settings": "设置",
+            "theme": {
+                "title": "主题",
+                "system": "跟随系统",
+                "light": "浅色",
+                "dark": "深色"
+            },
             "logout": "注销",
             "addFavourite": "添加收藏",
             "removeFavourite": "取消收藏",

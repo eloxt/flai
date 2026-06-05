@@ -14,13 +14,18 @@ import {
     StarOff,
     ChevronDown,
     Languages,
+    SunMoon,
+    Sun,
+    Moon,
+    Monitor,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Conversation, useConversationStore } from "../store/conversation-store";
 import { getInitials } from "../lib/auth-client";
+import { useTheme } from "./theme-provider";
 import { useAuthStore } from "../store/auth-store";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTranslation } from "react-i18next";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -64,6 +69,7 @@ interface SearchResponse {
 
 export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { t } = useTranslation();
+    const { theme, setTheme } = useTheme();
     const location = useLocation();
     const user = useAuthStore((state) => state.user);
     const tokens = useAuthStore((state) => state.tokens);
@@ -404,6 +410,31 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                             <Settings className="mr-2 size-4" />
                                             <span>{t("components.sidebar.settings")}</span>
                                         </DropdownMenuItem>
+                                        <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger>
+                                                <SunMoon className="mr-2 size-4" />
+                                                <span>{t("components.sidebar.theme.title")}</span>
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent>
+                                                <DropdownMenuRadioGroup
+                                                    value={theme}
+                                                    onValueChange={(value) => setTheme(value as "system" | "light" | "dark")}
+                                                >
+                                                    <DropdownMenuRadioItem value="system">
+                                                        <Monitor className="mr-2 size-4" />
+                                                        <span>{t("components.sidebar.theme.system")}</span>
+                                                    </DropdownMenuRadioItem>
+                                                    <DropdownMenuRadioItem value="light">
+                                                        <Sun className="mr-2 size-4" />
+                                                        <span>{t("components.sidebar.theme.light")}</span>
+                                                    </DropdownMenuRadioItem>
+                                                    <DropdownMenuRadioItem value="dark">
+                                                        <Moon className="mr-2 size-4" />
+                                                        <span>{t("components.sidebar.theme.dark")}</span>
+                                                    </DropdownMenuRadioItem>
+                                                </DropdownMenuRadioGroup>
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
                                     </DropdownMenuGroup>
                                     <DropdownMenuSeparator />
 

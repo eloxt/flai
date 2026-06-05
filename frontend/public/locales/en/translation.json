@@ -396,6 +396,12 @@
             },
             "loadMore": "Load More",
             "settings": "Settings",
+            "theme": {
+                "title": "Theme",
+                "system": "System",
+                "light": "Light",
+                "dark": "Dark"
+            },
             "logout": "Logout",
             "addFavourite": "Add to Favorites",
             "removeFavourite": "Remove from Favorites",
