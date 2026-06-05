@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
 
+import { applyGoogleGroundingFootnotes } from "./chat/grounding-footnotes";
 import { MessageContent } from "./chat/MessageContent";
 import { MessageAttachments } from "./chat/MessageAttachments";
 import { GoogleGroundingChunks, OpenaiGroundingChunks } from "./chat/GroundingChunks";
@@ -53,6 +54,7 @@ export default function SharePage() {
         setError(null);
         try {
             const response = await api.get<ShareDetailResponse>(`/public/share/${id}`, undefined, { auth: false });
+            response.message?.forEach((message) => applyGoogleGroundingFootnotes(message));
             setShareData(response);
         } catch {
             setError(t("pages.share.error"));
@@ -258,3 +260,4 @@ function ShareMessageItem({ message, isExpanded, onToggleReasoning }: ShareMessa
         </div>
     );
 }
+
