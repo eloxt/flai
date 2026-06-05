@@ -277,7 +277,7 @@ export default function TranslatePage() {
                 </div>
 
                 <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-                    <section className="flex min-h-[22rem] flex-col rounded-md border bg-background">
+                    <section className="flex min-h-88 flex-col rounded-md border bg-background">
                         <div className="flex items-end gap-3 border-b p-3">
                             <div className="flex-1">
                                 <Label className="text-xs text-muted-foreground">
@@ -340,7 +340,7 @@ export default function TranslatePage() {
                             onChange={(event) => setSourceText(event.target.value)}
                             onPaste={handleSourcePaste}
                             placeholder={t("pages.translate.sourcePlaceholder")}
-                            className="min-h-[18rem] flex-1 resize-none border-0 shadow-none focus-visible:ring-0"
+                            className="min-h-66 flex-1 rounded-none resize-none border-0 shadow-none focus-visible:ring-0"
                         />
                     </section>
 
@@ -357,7 +357,7 @@ export default function TranslatePage() {
                         </Button>
                     </div>
 
-                    <section className="flex min-h-[22rem] flex-col rounded-md border bg-background">
+                    <section className="flex min-h-88 flex-col rounded-md border bg-background">
                         <div className="flex items-end gap-3 border-b p-3">
                             <div className="flex-1">
                                 <Label className="text-xs text-muted-foreground">
@@ -381,7 +381,7 @@ export default function TranslatePage() {
                             value={translatedText}
                             onChange={(event) => setTranslatedText(event.target.value)}
                             placeholder={isStreaming ? t("pages.translate.streamingPlaceholder") : t("pages.translate.targetPlaceholder")}
-                            className="min-h-[18rem] flex-1 resize-none border-0 shadow-none focus-visible:ring-0"
+                            className="min-h-66 flex-1 rounded-none resize-none border-0 shadow-none focus-visible:ring-0"
                         />
                     </section>
                 </div>
