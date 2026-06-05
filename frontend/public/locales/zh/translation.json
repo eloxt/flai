@@ -143,8 +143,13 @@
                 "俄语",
                 "阿拉伯语"
             ],
+            "customInstructionLabel": "翻译风格要求",
+            "customInstructionPlaceholder": "可选：输入想要的翻译风格（如：正式、口语化、保留专业术语）",
+            "addImage": "添加图片",
+            "removeImage": "移除图片",
             "errors": {
-                "emptyText": "请输入要翻译的内容",
+                "emptyInput": "请输入文本或添加图片",
+                "maxImages": "最多添加 5 张图片",
                 "failed": "翻译失败",
                 "noStream": "翻译响应为空"
             }

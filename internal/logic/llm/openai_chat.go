@@ -203,13 +203,28 @@ func (c *OpenAIChatClient) saveAndClose(ctx context.Context, message *entity.Mes
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
-func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client := c.getClient(providerInfo)
+
+	var userMessage openai.ChatCompletionMessageParamUnion
+	if len(images) == 0 {
+		userMessage = openai.UserMessage(prompt)
+	} else {
+		parts := []openai.ChatCompletionContentPartUnionParam{
+			openai.TextContentPart(prompt),
+		}
+		for _, f := range images {
+			parts = append(parts, openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
+				URL: f.PublicUrl,
+			}))
+		}
+		userMessage = openai.UserMessage(parts)
+	}
 
 	stream := client.Chat.Completions.NewStreaming(ctx, openai.ChatCompletionNewParams{
 		Model: modelConfig.ID,
 		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.UserMessage(prompt),
+			userMessage,
 		},
 	})
 

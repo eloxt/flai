@@ -393,14 +393,40 @@ func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
-func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client := c.getClient(providerInfo)
+
+	var input responses.ResponseNewParamsInputUnion
+	if len(images) == 0 {
+		input = responses.ResponseNewParamsInputUnion{
+			OfString: openai.String(prompt),
+		}
+	} else {
+		contentParts := []responses.ResponseInputContentUnionParam{
+			{
+				OfInputText: &responses.ResponseInputTextParam{
+					Text: prompt,
+				},
+			},
+		}
+		for _, f := range images {
+			contentParts = append(contentParts, responses.ResponseInputContentUnionParam{
+				OfInputImage: &responses.ResponseInputImageParam{
+					ImageURL: openai.String(f.PublicUrl),
+				},
+			})
+		}
+		inputItems := responses.ResponseInputParam{
+			responses.ResponseInputItemParamOfMessage(responses.ResponseInputMessageContentListParam(contentParts), responses.EasyInputMessageRoleUser),
+		}
+		input = responses.ResponseNewParamsInputUnion{
+			OfInputItemList: inputItems,
+		}
+	}
 
 	params := responses.ResponseNewParams{
 		Model: modelConfig.ID,
-		Input: responses.ResponseNewParamsInputUnion{
-			OfString: openai.String(prompt),
-		},
+		Input: input,
 	}
 
 	stream := client.Responses.NewStreaming(ctx, params)

@@ -143,8 +143,13 @@
                 "Russian",
                 "Arabic"
             ],
+            "customInstructionLabel": "Style requirements",
+            "customInstructionPlaceholder": "Optional: describe the translation style you want (e.g. formal, casual, keep technical terms)",
+            "addImage": "Add image",
+            "removeImage": "Remove image",
             "errors": {
-                "emptyText": "Enter text to translate",
+                "emptyInput": "Enter text or add an image to translate",
+                "maxImages": "You can add up to 5 images",
                 "failed": "Translation failed",
                 "noStream": "Translation response was empty"
             }

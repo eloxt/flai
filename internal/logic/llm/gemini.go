@@ -448,7 +448,7 @@ func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message
 	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
 }
 
-func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string) error {
+func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client, err := c.getClient(ctx, providerInfo)
 	if err != nil {
 		return err
@@ -456,6 +456,9 @@ func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Resp
 
 	contents := []*genai.Content{
 		genai.NewContentFromText(prompt, genai.RoleUser),
+	}
+	for _, f := range images {
+		contents = append(contents, genai.NewContentFromURI(f.PublicUrl, f.MimeType, genai.RoleUser))
 	}
 	config := &genai.GenerateContentConfig{}
 
