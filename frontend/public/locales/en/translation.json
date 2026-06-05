@@ -161,7 +161,7 @@
             "untitled": "Untitled Conversation",
             "sharedOn": "Shared on",
             "expiresOn": "Expires on",
-            "footer": "Shared via FlaiChat"
+            "footer": "Shared via <0>FlaiChat</0>"
         },
         "settings": {
             "title": "Settings",

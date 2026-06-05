@@ -161,7 +161,7 @@
             "untitled": "无标题对话",
             "sharedOn": "分享于",
             "expiresOn": "过期于",
-            "footer": "通过 FlaiChat 分享"
+            "footer": "通过 <0>FlaiChat</0> 分享"
         },
         "settings": {
             "title": "设置",

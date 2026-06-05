@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router";
-import { Clock } from "lucide-react";
+import { Clock, Monitor, Moon, Sun } from "lucide-react";
 import type { MetaFunction } from "react-router";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
 
 import { MessageContent } from "./chat/MessageContent";
@@ -32,6 +34,7 @@ interface ShareDetailResponse {
 
 export default function SharePage() {
     const { t } = useTranslation();
+    const { theme, setTheme } = useTheme();
     const { id } = useParams();
     const [shareData, setShareData] = useState<ShareDetailResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -68,6 +71,14 @@ export default function SharePage() {
             minute: "2-digit",
         });
     };
+
+    const cycleTheme = () => {
+        const order = ["system", "light", "dark"] as const;
+        const next = order[(order.indexOf(theme) + 1) % order.length];
+        setTheme(next);
+    };
+
+    const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
 
     const toggleReasoning = (messageId: string) => {
         setExpandedReasoning((prev) => {
@@ -106,8 +117,8 @@ export default function SharePage() {
         <div className="flex flex-col h-screen bg-background">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-background border-b px-4 py-3">
-                <div className="mx-auto max-w-5xl">
-                    <div className="flex items-center gap-2">
+                <div className="mx-auto max-w-5xl flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 min-w-0">
                         {shareData.conversation.icon && (
                             <span className="text-xl">{shareData.conversation.icon}</span>
                         )}
@@ -115,25 +126,24 @@ export default function SharePage() {
                             {shareData.conversation.title || t("pages.share.untitled")}
                         </h1>
                     </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                            <Clock className="size-3" />
-                            <span>{t("pages.share.sharedOn")} {formatDate(shareData.created_at)}</span>
-                        </div>
-                        {shareData.expires_at && (
-                            <div className="flex items-center gap-1">
-                                <span>{t("pages.share.expiresOn")} {formatDate(shareData.expires_at)}</span>
-                            </div>
-                        )}
-                    </div>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={cycleTheme}
+                        title={t(`components.sidebar.theme.${theme}`)}
+                        className="shrink-0"
+                    >
+                        <ThemeIcon className="size-4" />
+                    </Button>
                 </div>
             </header>
 
             {/* Messages */}
             <ScrollArea
-                className="flex-1 pt-2 px-4 overflow-y-hidden h-full"
+                className="flex-1 px-4 overflow-y-hidden h-full"
             >
-                <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full min-w-0 overflow-hidden">
+                <div className="mx-auto max-w-5xl flex flex-col gap-8 w-full min-w-0 overflow-hidden pt-6">
                     {shareData.message.map((message) => (
                         <ShareMessageItem
                             key={message.id}
@@ -143,15 +153,37 @@ export default function SharePage() {
                         />
                     ))}
                     <div ref={messagesEndRef} />
+
+                    {/* Footer */}
+                    <footer className="border-t py-4 flex flex-col items-center gap-1 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-center gap-4">
+                            <div className="flex items-center gap-1">
+                                <Clock className="size-3" />
+                                <span>{t("pages.share.sharedOn")} {formatDate(shareData.created_at)}</span>
+                            </div>
+                            {shareData.expires_at && (
+                                <span>{t("pages.share.expiresOn")} {formatDate(shareData.expires_at)}</span>
+                            )}
+                        </div>
+                        <span>
+                            <Trans
+                                i18nKey="pages.share.footer"
+                                components={[
+                                    <a
+                                        key="flai-link"
+                                        href="https://github.com/eloxt/flai"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline underline-offset-2 hover:text-foreground"
+                                    />,
+                                ]}
+                            />
+                        </span>
+                    </footer>
                 </div>
 
                 <ScrollBar orientation="horizontal" />
             </ScrollArea>
-
-            {/* Footer */}
-            <footer className="border-t px-4 py-3 text-center text-sm text-muted-foreground">
-                {t("pages.share.footer")}
-            </footer>
         </div>
     );
 }
@@ -226,4 +258,3 @@ function ShareMessageItem({ message, isExpanded, onToggleReasoning }: ShareMessa
         </div>
     );
 }
-
