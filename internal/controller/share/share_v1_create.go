@@ -46,6 +46,20 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 			Where(dao.Message.Columns().ConversationId, req.ConversationId).
 			WhereIn(dao.Message.Columns().Id, req.MessagePath).
 			Scan(&messages)
+		if err == nil {
+			// reorder messages to match the order of req.MessagePath
+			messageMap := make(map[string]*entity.Message, len(messages))
+			for _, msg := range messages {
+				messageMap[msg.Id] = msg
+			}
+			ordered := make([]*entity.Message, 0, len(messages))
+			for _, id := range req.MessagePath {
+				if msg, ok := messageMap[id]; ok {
+					ordered = append(ordered, msg)
+				}
+			}
+			messages = ordered
+		}
 	} else {
 		err = dao.Message.Ctx(ctx).
 			Where(dao.Message.Columns().ConversationId, req.ConversationId).
