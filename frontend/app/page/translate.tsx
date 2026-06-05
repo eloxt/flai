@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useAppStore } from "@/store/app-store";
 import { useModelStore } from "@/store/model-store";
+import { useTranslateStore } from "@/store/translate-store";
 import type { Attachment, ContentMessage, StreamResponse } from "@/types/chat";
 
 export const meta: MetaFunction = () => [{ title: "FlaiChat - Translate" }];
@@ -35,13 +36,23 @@ export default function TranslatePage() {
         [t]
     );
 
-    const [sourceLanguage, setSourceLanguage] = useState(t("pages.translate.defaults.source"));
-    const [targetLanguage, setTargetLanguage] = useState(t("pages.translate.defaults.target"));
+    const storedSourceLanguage = useTranslateStore((state) => state.sourceLanguage);
+    const storedTargetLanguage = useTranslateStore((state) => state.targetLanguage);
+    const customInstruction = useTranslateStore((state) => state.customInstruction);
+    const setSourceLanguage = useTranslateStore((state) => state.setSourceLanguage);
+    const setTargetLanguage = useTranslateStore((state) => state.setTargetLanguage);
+    const setCustomInstruction = useTranslateStore((state) => state.setCustomInstruction);
+    const sourceLanguage = storedSourceLanguage && languageOptions.includes(storedSourceLanguage)
+        ? storedSourceLanguage
+        : t("pages.translate.defaults.source");
+    const targetLanguage = storedTargetLanguage && languageOptions.includes(storedTargetLanguage)
+        ? storedTargetLanguage
+        : t("pages.translate.defaults.target");
+
     const [sourceText, setSourceText] = useState("");
     const [translatedText, setTranslatedText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [images, setImages] = useState<Attachment[]>([]);
-    const [customInstruction, setCustomInstruction] = useState("");
     const imageInputRef = useRef<HTMLInputElement>(null);
 
     const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
