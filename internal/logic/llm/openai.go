@@ -26,9 +26,10 @@ type OpenAIClient struct{}
 // Client Creation
 // ============================================================================
 
-func (c *OpenAIClient) getClient(providerInfo *logic.SimpleProviderInfo) openai.Client {
+func (c *OpenAIClient) getClient(providerInfo *logic.SimpleProviderInfo, messageId string) openai.Client {
 	opts := []option.RequestOption{
 		option.WithAPIKey(providerInfo.ApiKey),
+		option.WithHeader("x-request-id", messageId),
 	}
 	if providerInfo.BaseUrl != "" {
 		opts = append(opts, option.WithBaseURL(providerInfo.BaseUrl))
@@ -394,7 +395,7 @@ func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message
 }
 
 func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
-	client := c.getClient(providerInfo)
+	client := c.getClient(providerInfo, "")
 
 	var input responses.ResponseNewParamsInputUnion
 	if len(images) == 0 {
@@ -645,7 +646,7 @@ func (c *OpenAIClient) buildTools(tools []string, mcpTools []*MCPToolInfo) []res
 // ============================================================================
 
 func (c *OpenAIClient) GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error) {
-	client := c.getClient(providerInfo)
+	client := c.getClient(providerInfo, "")
 
 	jsonSchema := c.getTitleSchema()
 

@@ -10,6 +10,7 @@ import (
 	"flai/internal/model/entity"
 	"flai/internal/utility/s3"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -25,7 +26,7 @@ type GeminiClient struct{}
 // Client Creation
 // ============================================================================
 
-func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo) (*genai.Client, error) {
+func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo, messageId string) (*genai.Client, error) {
 	config := &genai.ClientConfig{
 		APIKey:  providerInfo.ApiKey,
 		Backend: genai.BackendGeminiAPI,
@@ -34,6 +35,9 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 	if providerInfo.BaseUrl != "" {
 		config.HTTPOptions = genai.HTTPOptions{
 			BaseURL: providerInfo.BaseUrl,
+			Headers: http.Header{
+				"x-request-id": []string{messageId},
+			},
 		}
 	}
 
@@ -45,7 +49,7 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // ============================================================================
 
 func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
-	client, err := c.getClient(ctx, providerInfo)
+	client, err := c.getClient(ctx, providerInfo, messageId)
 	if err != nil {
 		return err
 	}
@@ -449,7 +453,7 @@ func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message
 }
 
 func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
-	client, err := c.getClient(ctx, providerInfo)
+	client, err := c.getClient(ctx, providerInfo, "")
 	if err != nil {
 		return err
 	}
@@ -677,7 +681,7 @@ func (c *GeminiClient) buildMessageParts(ctx context.Context, newMessage *entity
 // ============================================================================
 
 func (c *GeminiClient) GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error) {
-	client, err := c.getClient(ctx, providerInfo)
+	client, err := c.getClient(ctx, providerInfo, "")
 	if err != nil {
 		return nil, err
 	}
