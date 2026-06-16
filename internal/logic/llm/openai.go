@@ -42,7 +42,7 @@ func (c *OpenAIClient) getClient(providerInfo *logic.SimpleProviderInfo, message
 // ============================================================================
 
 func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
-	client := c.getClient(providerInfo)
+	client := c.getClient(providerInfo, messageId)
 
 	// Build input items from history and new message
 	var err error
