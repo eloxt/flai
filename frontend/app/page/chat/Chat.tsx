@@ -54,6 +54,7 @@ export default function Chat() {
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
     const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const isPinnedToBottomRef = useRef(true);
     const setShowHeaderBorder = useAppStore((state) => state.setShowHeaderBorder);
 
     // Chat hook
@@ -91,13 +92,16 @@ export default function Chat() {
         setCurrentMessagePath(fullPath);
     }, [path, streamingMessage, setCurrentMessagePath]);
 
-    // Scroll to bottom when streaming message updates
+    // Scroll to bottom when streaming message updates.
+    // Use instant ("auto") scroll: tokens arrive in small increments, so each
+    // snap is tiny and looks silky. Smooth scroll here would restart its
+    // animation on every SSE event and cause visible jitter.
     useEffect(() => {
         if (!isStreaming) {
             return;
         }
-        if (!showScrollButton) {
-            scrollToBottom();
+        if (isPinnedToBottomRef.current) {
+            scrollToBottom("auto");
         }
     }, [streamingMessage]);
 
@@ -115,17 +119,24 @@ export default function Chat() {
         }
     }, [scrollToMessageId, setScrollToMessageId]);
 
-    const scrollToBottom = useCallback(() => {
+    const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
         requestAnimationFrame(() => {
             if (scrollAreaRef.current) {
-                scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: "smooth" });
+                scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior });
             }
         });
     }, []);
 
+    const handleScrollButtonClick = useCallback(() => {
+        isPinnedToBottomRef.current = true;
+        setShowScrollButton(false);
+        scrollToBottom("smooth");
+    }, [scrollToBottom]);
+
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
         const isBottom = scrollHeight - scrollTop - clientHeight < 100;
+        isPinnedToBottomRef.current = isBottom;
         setShowScrollButton(!isBottom);
         setShowHeaderBorder(scrollTop > 20);
     }, [setShowHeaderBorder]);
@@ -146,6 +157,7 @@ export default function Chat() {
     const handleSend = useCallback(() => {
         if (!input.trim()) return;
         sendMessage({ text: input });
+        isPinnedToBottomRef.current = true;
         scrollToBottom();
     }, [input, sendMessage, scrollToBottom]);
 
@@ -264,7 +276,7 @@ export default function Chat() {
                         variant="outline"
                         size="icon"
                         className="rounded-full shadow-lg bg-background/60 backdrop-blur-sm hover:bg-background"
-                        onClick={scrollToBottom}
+                        onClick={handleScrollButtonClick}
                     >
                         <ArrowDown className="size-4" />
                     </Button>
