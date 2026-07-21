@@ -8,7 +8,7 @@ import {
     EllipsisVertical,
     UserCog,
     Settings,
-    TentTree,
+    Tent,
     PanelLeft,
     Star,
     StarOff,
@@ -242,10 +242,10 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                         className="flex items-center justify-between overflow-hidden w-full transition-[width,height,padding] x text-sm"
                     >
                         <div className="flex h-8 w-8 items-center justify-center rounded-md p-2 group-data-[collapsible=icon]:hidden">
-                            <TentTree className="size-4" />
+                            <Tent className="size-4" />
                         </div>
                         <Button variant="ghost" onClick={toggleSidebar} className="hidden group-data-[collapsible=icon]:flex rounded-md p-2! h-8! group/toggle">
-                            <TentTree className="size-4 group-hover/toggle:hidden" />
+                            <Tent className="size-4 group-hover/toggle:hidden" />
                             <PanelLeft className="size-4 hidden group-hover/toggle:block" />
                         </Button>
                         <span className="text-base font-semibold w-full pl-2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pl-0 transition-[width,opacity,padding]">

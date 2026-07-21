@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Field, FieldGroup, FieldSeparator } from "@/components/ui/field";
-import { TentTree } from "lucide-react";
+import { Tent } from "lucide-react";
 
 import type { MetaFunction } from "react-router";
 import i18n from "../i18n";
@@ -62,7 +62,7 @@ export default function Login({
                 <FieldGroup>
                     <div className="flex flex-col items-center gap-2 text-center">
                         <div className="flex size-8 items-center justify-center rounded-md">
-                            <TentTree className="size-6" />
+                            <Tent className="size-6" />
                         </div>
                         <h1 className="text-xl font-bold">{t("pages.login.welcome")}</h1>
                     </div>
