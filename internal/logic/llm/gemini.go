@@ -1,6 +1,8 @@
 package llm
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -10,6 +12,7 @@ import (
 	"flai/internal/model/entity"
 	"flai/internal/utility/s3"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -23,22 +26,106 @@ import (
 type GeminiClient struct{}
 
 // ============================================================================
-// Client Creation
+// Client Creation & SSE Filter Transport
 // ============================================================================
 
+type sseFilteredBody struct {
+	reader io.ReadCloser
+	closer io.Closer
+}
+
+func (b *sseFilteredBody) Read(p []byte) (int, error) {
+	return b.reader.Read(p)
+}
+
+func (b *sseFilteredBody) Close() error {
+	var err1, err2 error
+	if b.reader != nil {
+		err1 = b.reader.Close()
+	}
+	if b.closer != nil {
+		err2 = b.closer.Close()
+	}
+	if err1 != nil {
+		return err1
+	}
+	return err2
+}
+
+// newSSECommentFilterReader filters out SSE comment lines (lines starting with ':')
+// such as `: heartbeat` or `: ping` before passing the stream to GenAI SDK.
+func newSSECommentFilterReader(body io.ReadCloser) io.ReadCloser {
+	pr, pw := io.Pipe()
+	go func() {
+		defer body.Close()
+		reader := bufio.NewReader(body)
+		for {
+			line, err := reader.ReadBytes('\n')
+			if len(line) > 0 {
+				trimmed := bytes.TrimLeft(line, " \t\r")
+				if len(trimmed) > 0 && trimmed[0] == ':' {
+					// Skip SSE comment/heartbeat lines
+				} else {
+					if _, wErr := pw.Write(line); wErr != nil {
+						return
+					}
+				}
+			}
+			if err != nil {
+				if err == io.EOF {
+					_ = pw.Close()
+				} else {
+					_ = pw.CloseWithError(err)
+				}
+				return
+			}
+		}
+	}()
+	return &sseFilteredBody{
+		reader: pr,
+		closer: body,
+	}
+}
+
+type sseHeartbeatTransport struct {
+	base http.RoundTripper
+}
+
+func (t *sseHeartbeatTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	resp, err := base.RoundTrip(req)
+	if err != nil || resp == nil || resp.Body == nil {
+		return resp, err
+	}
+
+	resp.Body = newSSECommentFilterReader(resp.Body)
+	return resp, nil
+}
+
 func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.SimpleProviderInfo, messageId string) (*genai.Client, error) {
+	headers := http.Header{}
+	if messageId != "" {
+		headers["x-request-id"] = []string{messageId}
+	}
+
 	config := &genai.ClientConfig{
 		APIKey:  providerInfo.ApiKey,
 		Backend: genai.BackendGeminiAPI,
+		HTTPOptions: genai.HTTPOptions{
+			Headers: headers,
+		},
+		HTTPClient: &http.Client{
+			Transport: &sseHeartbeatTransport{
+				base: http.DefaultTransport,
+			},
+		},
 	}
 
 	if providerInfo.BaseUrl != "" {
-		config.HTTPOptions = genai.HTTPOptions{
-			BaseURL: providerInfo.BaseUrl,
-			Headers: http.Header{
-				"x-request-id": []string{messageId},
-			},
-		}
+		config.HTTPOptions.BaseURL = providerInfo.BaseUrl
 	}
 
 	return genai.NewClient(ctx, config)
