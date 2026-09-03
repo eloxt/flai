@@ -52,22 +52,38 @@ func (b *sseFilteredBody) Close() error {
 	return err2
 }
 
-// newSSECommentFilterReader filters out SSE comment lines (lines starting with ':')
-// such as `: heartbeat` or `: ping` before passing the stream to GenAI SDK.
-func newSSECommentFilterReader(body io.ReadCloser) io.ReadCloser {
+// newSSEFilterReader removes SSE metadata and normalizes event boundaries before
+// passing the stream to the GenAI SDK. The SDK expects every event to contain
+// exactly one data payload and otherwise treats valid SSE heartbeats as errors.
+func newSSEFilterReader(body io.ReadCloser) io.ReadCloser {
 	pr, pw := io.Pipe()
 	go func() {
 		defer body.Close()
 		reader := bufio.NewReader(body)
+		lastWasBlank := true
+
 		for {
 			line, err := reader.ReadBytes('\n')
 			if len(line) > 0 {
-				trimmed := bytes.TrimLeft(line, " \t\r")
-				if len(trimmed) > 0 && trimmed[0] == ':' {
-					// Skip SSE comment/heartbeat lines
+				content := bytes.TrimSuffix(line, []byte{'\n'})
+				content = bytes.TrimSuffix(content, []byte{'\r'})
+				trimmed := bytes.TrimLeft(content, " \t")
+				lineEnding := line[len(content):]
+
+				if len(trimmed) == 0 {
+					if !lastWasBlank {
+						if _, wErr := pw.Write(lineEnding); wErr != nil {
+							return
+						}
+					}
+					lastWasBlank = true
 				} else {
-					if _, wErr := pw.Write(line); wErr != nil {
-						return
+					field, _, _ := bytes.Cut(trimmed, []byte{':'})
+					if trimmed[0] != ':' && string(field) != "event" && string(field) != "id" && string(field) != "retry" {
+						if _, wErr := pw.Write(append(trimmed, lineEnding...)); wErr != nil {
+							return
+						}
+						lastWasBlank = false
 					}
 				}
 			}
@@ -87,11 +103,11 @@ func newSSECommentFilterReader(body io.ReadCloser) io.ReadCloser {
 	}
 }
 
-type sseHeartbeatTransport struct {
+type sseFilterTransport struct {
 	base http.RoundTripper
 }
 
-func (t *sseHeartbeatTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *sseFilterTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	base := t.base
 	if base == nil {
 		base = http.DefaultTransport
@@ -101,7 +117,7 @@ func (t *sseHeartbeatTransport) RoundTrip(req *http.Request) (*http.Response, er
 		return resp, err
 	}
 
-	resp.Body = newSSECommentFilterReader(resp.Body)
+	resp.Body = newSSEFilterReader(resp.Body)
 	return resp, nil
 }
 
@@ -118,7 +134,7 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 			Headers: headers,
 		},
 		HTTPClient: &http.Client{
-			Transport: &sseHeartbeatTransport{
+			Transport: &sseFilterTransport{
 				base: http.DefaultTransport,
 			},
 		},
