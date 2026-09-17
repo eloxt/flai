@@ -182,24 +182,14 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	}()
 
 	// Create content config
-	var thinkingLevel genai.ThinkingLevel
-	switch thinkingIntensity {
-	case "minimal":
-		thinkingLevel = genai.ThinkingLevelMinimal
-	case "low":
-		thinkingLevel = genai.ThinkingLevelLow
-	case "medium":
-		thinkingLevel = genai.ThinkingLevelMedium
-	case "high":
-		thinkingLevel = genai.ThinkingLevelHigh
-	}
+
 	config := &genai.GenerateContentConfig{
 		SystemInstruction: &genai.Content{
 			Parts: []*genai.Part{genai.NewPartFromText(ComposeSystemPrompt())},
 		},
 		ThinkingConfig: &genai.ThinkingConfig{
 			IncludeThoughts: modelConfig.Reasoning,
-			ThinkingLevel:   thinkingLevel,
+			ThinkingLevel:   genai.ThinkingLevel(strings.ToUpper(thinkingIntensity)),
 		},
 		Tools: genaiTools,
 	}

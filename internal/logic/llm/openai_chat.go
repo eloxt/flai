@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/shared"
 )
 
 type OpenAIChatClient struct{}
@@ -77,7 +78,8 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 		modelName = modelConfig.ID
 	}
 	params := openai.ChatCompletionNewParams{
-		Model: modelName,
+		Model:           modelName,
+		ReasoningEffort: shared.ReasoningEffort(thinkingIntensity),
 	}
 
 	for range maxToolRounds {

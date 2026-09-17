@@ -187,6 +187,23 @@ describe("chat lifecycle", () => {
         expect(chat.isStreaming).toBe(false);
         expect(chat.path).toHaveLength(2);
     });
+    it.each([
+        { levels: ["low", "max"], selected: "max", expected: "max" },
+        { levels: ["low", "max"], selected: "high", expected: "low" },
+        { levels: [], selected: "high", expected: null },
+    ])("sends only a configured thinking level: $expected", async ({ levels, selected, expected }) => {
+        useModelStore.setState({ currentModel: { id: "custom-model", provider_id: "provider", thinking_levels: levels } as Model });
+        useInputStore.setState({ thinkingIntensity: selected });
+        let pending!: Promise<void>;
+        await act(async () => { pending = chat.sendMessage({ text: "hello" }); });
+        const call = vi.mocked(fetch).mock.calls.find(([url]) => url === "/api/messages")!;
+        expect(JSON.parse(call[1]!.body as string).thinking_intensity).toBe(expected);
+        await act(async () => {
+            stream.enqueue(new TextEncoder().encode('data: {"type":"message","data":{"content":"answer"}}\n\ndata: [DONE]\n\n'));
+            stream.close();
+            await pending;
+        });
+    });
     it("retains all images from a pure-image response", async () => {
         let pending!: Promise<void>;
         await act(async () => { pending = chat.sendMessage({ text: "draw" }); });

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flai/internal/logic"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"slices"
 
 	v1 "flai/api/admin/v1"
 	"flai/internal/dao"
@@ -33,6 +34,11 @@ func (c *ControllerV1) ProviderCreate(ctx context.Context, req *v1.ProviderCreat
 		for _, model := range models {
 			if model == nil || model.ID == "" {
 				return nil, gerror.New("Provider models must have an ID")
+			}
+			for i, level := range model.ThinkingLevels {
+				if !slices.Contains([]string{"none", "minimal", "low", "medium", "high", "xhigh", "max"}, level) || slices.Contains(model.ThinkingLevels[:i], level) {
+					return nil, gerror.New("Invalid or duplicate thinking level for model: " + model.ID)
+				}
 			}
 		}
 

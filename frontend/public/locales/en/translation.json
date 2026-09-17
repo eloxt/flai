@@ -356,6 +356,9 @@
                 },
                 "modelsCount": "models",
                 "model": {
+                    "thinkingLevels": "Available thinking levels",
+                    "thinkingLevelsHelp": "Enable only levels supported by this model. Leave empty to hide the selector and omit the effort parameter. The default level is used until another level is selected.",
+                    "defaultThinkingLevel": "Default thinking level",
                     "moveUp": "Move up",
                     "moveDown": "Move down",
                     "model": "Model",
@@ -501,6 +504,7 @@
             "thinkingIntensity": "Thinking",
             "default": "Default",
             "thinking": {
+                "max": "Maximum",
                 "none": "None",
                 "minimal": "Minimal",
                 "low": "Low",

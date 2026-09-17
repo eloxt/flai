@@ -151,6 +151,23 @@
     margin: -1px -1px 0;
 }
 
+.chat-composer-tools > button:hover {
+    background: color-mix(in oklab, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+}
+
+.chat-composer-tools > :is([data-state="on"], [data-active="true"]) {
+    background: color-mix(in oklab, var(--foreground) 10%, transparent);
+    color: var(--foreground);
+    outline: 1px solid color-mix(in oklab, var(--foreground) 15%, transparent);
+    outline-offset: -1px;
+}
+
+.chat-composer-tools > :is([data-state="on"], [data-active="true"]):hover {
+    background: color-mix(in oklab, var(--foreground) 14%, transparent);
+    color: var(--foreground);
+}
+
 /* Prevent horizontal overflow in chat messages */
 .markdown-body {
     font-size: 15px;

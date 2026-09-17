@@ -43,6 +43,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Provider, Model } from "@/types/models";
+import { useModelStore } from "@/store/model-store";
 import { ModelEditor } from "./model-editor";
 
 export function ProviderManagement() {
@@ -161,6 +162,11 @@ export function ProviderManagement() {
             }
 
             await api.put(`/admin/provider/${providerToEdit.id}`, updateData);
+            const selected = useModelStore.getState().currentModel;
+            if (selected?.provider_id === providerToEdit.id) {
+                const updated = editIsActive ? editModels.find(model => model.id === selected.id) : undefined;
+                useModelStore.getState().setCurrentModel(updated ? { ...updated, provider_id: providerToEdit.id } : null);
+            }
             toast.success(t("common.crud.updateSuccess"));
             setShowEditDialog(false);
             setProviderToEdit(null);

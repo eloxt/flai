@@ -27,6 +27,7 @@ type ModelConfig struct {
 	Badge            string     `json:"badge"`
 	Attachment       bool       `json:"attachment"`
 	Reasoning        bool       `json:"reasoning"`
+	ThinkingLevels   []string   `json:"thinking_levels"`
 	ToolCall         bool       `json:"tool_call"`
 	StructuredOutput bool       `json:"structured_output"`
 	Temperature      bool       `json:"temperature"`

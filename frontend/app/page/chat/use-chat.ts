@@ -477,7 +477,10 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
         const providerId = useModelStore.getState().currentModel?.provider_id;
         const modelName = useModelStore.getState().currentModel?.id;
-        const thinkingIntensity = useInputStore.getState().thinkingIntensity;
+        const thinkingLevels = useModelStore.getState().currentModel?.thinking_levels ?? [];
+        const selectedThinking = useInputStore.getState().thinkingIntensity;
+        const thinkingIntensity = selectedThinking && thinkingLevels.includes(selectedThinking)
+            ? selectedThinking : thinkingLevels[0] ?? null;
 
         if (!providerId || !modelName) {
             toast.error(t("common.error.modelProviderNotFound"));

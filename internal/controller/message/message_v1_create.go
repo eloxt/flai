@@ -13,6 +13,7 @@ import (
 	"flai/internal/model/entity"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -54,6 +55,13 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	providerInfo, modelConfig, err := c.validateProviderAndModel(req.ProviderId, req.ModelName)
 	if err != nil {
 		return nil, err
+	}
+
+	if req.ThinkingIntensity == "" && len(modelConfig.ThinkingLevels) > 0 {
+		req.ThinkingIntensity = modelConfig.ThinkingLevels[0]
+	}
+	if req.ThinkingIntensity != "" && !slices.Contains(modelConfig.ThinkingLevels, req.ThinkingIntensity) {
+		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "Thinking level is not configured for this model")
 	}
 
 	if providerInfo.ProviderType == consts.ProviderType.OpenAICompletion {

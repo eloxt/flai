@@ -106,22 +106,6 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		ModelName:    modelConfig.Name,
 	}
 
-	var reasoningLevel shared.ReasoningEffort
-	switch thinkingIntensity {
-	case "none":
-		reasoningLevel = shared.ReasoningEffortNone
-	case "minimal":
-		reasoningLevel = shared.ReasoningEffortMinimal
-	case "low":
-		reasoningLevel = shared.ReasoningEffortLow
-	case "medium":
-		reasoningLevel = shared.ReasoningEffortMedium
-	case "high":
-		reasoningLevel = shared.ReasoningEffortHigh
-	case "xhigh":
-		reasoningLevel = shared.ReasoningEffortXhigh
-	}
-
 	// Tool call loop - continues until model finishes without requesting tools
 	maxToolRounds := 10
 	currentInputItems := inputItems
@@ -135,11 +119,11 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			Input: responses.ResponseNewParamsInputUnion{
 				OfInputItemList: currentInputItems,
 			},
-			Reasoning: shared.ReasoningParam{
-				Summary: shared.ReasoningSummaryAuto,
-				Effort:  reasoningLevel,
-			},
 			Tools: openaiTools,
+		}
+
+		if thinkingIntensity != "" {
+			params.Reasoning = shared.ReasoningParam{Summary: shared.ReasoningSummaryAuto, Effort: shared.ReasoningEffort(thinkingIntensity)}
 		}
 
 		stream := client.Responses.NewStreaming(ctx, params)

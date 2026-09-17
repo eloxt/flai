@@ -28,6 +28,7 @@ export interface Model {
   provider_id?: string;
   attachment: boolean;
   reasoning: boolean;
+  thinking_levels?: string[];
   tool_call: boolean;
   interleaved?: boolean | { field: "reasoning_content" | "reasoning_details" };
   structured_output?: boolean;

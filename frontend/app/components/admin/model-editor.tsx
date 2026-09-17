@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +12,7 @@ import {
     Select,
     SelectContent,
     SelectItem,
+    SelectGroup,
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
@@ -28,6 +31,7 @@ import { useTranslation } from "react-i18next";
 import { Model, ModelLimit, ModelCost } from "@/types/models";
 
 const MODALITY_OPTIONS = ["text", "audio", "image", "video", "pdf"] as const;
+const THINKING_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
 const STATUS_OPTIONS = ["alpha", "beta", "deprecated"] as const;
 
 interface ModelEditorProps {
@@ -226,6 +230,30 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
                                 />
                             </div>
                         </div>
+
+                        <FieldGroup>
+                            <Field>
+                                <FieldLabel>{t("pages.admin.providers.model.thinkingLevels")}</FieldLabel>
+                                <ToggleGroup type="multiple" variant="outline" spacing={1} className="flex-wrap justify-start"
+                                    aria-label={t("pages.admin.providers.model.thinkingLevels")}
+                                    value={model.thinking_levels ?? []}
+                                    onValueChange={levels => updateField("thinking_levels", levels)}>
+                                    {THINKING_LEVELS.map(level => <ToggleGroupItem key={level} value={level} aria-label={level}>
+                                        {t(`components.chatInput.thinking.${level}`)}
+                                    </ToggleGroupItem>)}
+                                </ToggleGroup>
+                                <FieldDescription>{t("pages.admin.providers.model.thinkingLevelsHelp")}</FieldDescription>
+                            </Field>
+                            {(model.thinking_levels?.length ?? 0) > 0 && <Field>
+                                <FieldLabel htmlFor={`thinking-default-${index}`}>{t("pages.admin.providers.model.defaultThinkingLevel")}</FieldLabel>
+                                <Select value={model.thinking_levels![0]} onValueChange={level => updateField("thinking_levels", [level, ...model.thinking_levels!.filter(value => value !== level)])}>
+                                    <SelectTrigger id={`thinking-default-${index}`}><SelectValue /></SelectTrigger>
+                                    <SelectContent><SelectGroup>
+                                        {model.thinking_levels!.map(level => <SelectItem key={level} value={level}>{t(`components.chatInput.thinking.${level}`)}</SelectItem>)}
+                                    </SelectGroup></SelectContent>
+                                </Select>
+                            </Field>}
+                        </FieldGroup>
 
                         {/* Features (Boolean Switches) */}
                         <div className="space-y-2">

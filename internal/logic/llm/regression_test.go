@@ -110,3 +110,53 @@ func TestMinimalThinkingIsForwarded(t *testing.T) {
 		})
 	}
 }
+
+func TestThinkingEffortRequestPayload(t *testing.T) {
+	for _, providerType := range []string{consts.ProviderType.OpenAI, consts.ProviderType.OpenAICompletion, consts.ProviderType.Gemini} {
+		for _, level := range []string{"", "low", "high", "max"} {
+			t.Run(providerType+"/"+level, func(t *testing.T) {
+				bodies := make(chan map[string]any, 1)
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					var body map[string]any
+					if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+						t.Error(err)
+					}
+					bodies <- body
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(400)
+					_, _ = w.Write([]byte(`{"error":{"message":"test rejection","code":400}}`))
+				}))
+				defer server.Close()
+				client, _ := NewClient(providerType)
+				msg := &entity.Message{Content: `[{"type":"message","data":{"content":"hi"}}]`}
+				err := client.StreamChat(context.Background(), "test", func(any) error { return nil }, &logic.SimpleProviderInfo{BaseUrl: server.URL + "/", ApiKey: "test"}, &logic.ModelConfig{ID: "custom-name"}, nil, msg, nil, nil, nil, level)
+				if err == nil {
+					t.Fatal("expected rejection")
+				}
+				body := <-bodies
+				var sent any
+				switch providerType {
+				case consts.ProviderType.OpenAI:
+					reasoning, _ := body["reasoning"].(map[string]any)
+					sent = reasoning["effort"]
+					if level == "" && body["reasoning"] != nil {
+						t.Fatalf("default must omit reasoning entirely: %v", body)
+					}
+				case consts.ProviderType.OpenAICompletion:
+					sent = body["reasoning_effort"]
+				case consts.ProviderType.Gemini:
+					config, _ := body["generationConfig"].(map[string]any)
+					thinking, _ := config["thinkingConfig"].(map[string]any)
+					sent = thinking["thinkingLevel"]
+				}
+				expected := level
+				if providerType == consts.ProviderType.Gemini {
+					expected = strings.ToUpper(level)
+				}
+				if level == "" && sent != nil || level != "" && sent != expected {
+					t.Fatalf("level %q sent as %v: %v", level, sent, body)
+				}
+			})
+		}
+	}
+}

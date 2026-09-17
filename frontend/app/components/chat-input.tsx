@@ -13,6 +13,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuGroup,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
@@ -247,36 +248,19 @@ export function ChatInput({
 
     const totalAvailableTools = mcpConfigs.reduce((acc, config) => acc + (config.tools?.length || 0), 0);
 
-    // Get thinking intensity options based on model
-    const getThinkingIntensityOptions = () => {
-        const modelId = currentModel?.id || '';
-        if (modelId.startsWith('gpt-5.4')) {
-            return [
-                { value: 'none', label: t('components.chatInput.thinking.none') },
-                { value: 'low', label: t('components.chatInput.thinking.low') },
-                { value: 'medium', label: t('components.chatInput.thinking.medium') },
-                { value: 'high', label: t('components.chatInput.thinking.high') },
-                { value: 'xhigh', label: t('components.chatInput.thinking.xhigh') }
-            ];
-        } else if (modelId === 'gemini-3.1-pro-preview') {
-            return [
-                { value: 'low', label: t('components.chatInput.thinking.low') },
-                { value: 'medium', label: t('components.chatInput.thinking.medium') },
-                { value: 'high', label: t('components.chatInput.thinking.high') }
-            ];
-        } else if (modelId === 'gemini-3-flash-preview') {
-            return [
-                { value: 'minimal', label: t('components.chatInput.thinking.minimal') },
-                { value: 'low', label: t('components.chatInput.thinking.low') },
-                { value: 'medium', label: t('components.chatInput.thinking.medium') },
-                { value: 'high', label: t('components.chatInput.thinking.high') }
-            ];
-        }
-        return null;
-    };
+    const thinkingOptions = (currentModel?.thinking_levels ?? []).map(value => ({
+        value, label: t(`components.chatInput.thinking.${value}`),
+    }));
+    const effectiveThinkingIntensity = thinkingOptions.some(option => option.value === thinkingIntensity)
+        ? thinkingIntensity : thinkingOptions[0]?.value;
 
-    const thinkingOptions = getThinkingIntensityOptions();
-    const hasTools = totalAvailableTools > 0 || !!thinkingOptions ||
+    useEffect(() => {
+        if (thinkingIntensity && !currentModel?.thinking_levels?.includes(thinkingIntensity)) {
+            setThinkingIntensity(null);
+        }
+    }, [currentModel, thinkingIntensity, setThinkingIntensity]);
+
+    const hasTools = totalAvailableTools > 0 || thinkingOptions.length > 0 ||
         ["web_search", "url_context", "image_generation"].some(tool => currentModel?.internal_tools?.includes(tool));
 
     return (
@@ -400,12 +384,12 @@ export function ChatInput({
             </InputGroup>
             {hasTools && (
                 <ScrollArea className="min-w-0 px-2 py-1">
-                    <ToggleGroup className="text-muted-foreground" type="multiple" spacing={1} value={selectedTools} onValueChange={setSelectedTools}>
+                    <ToggleGroup className="chat-composer-tools text-muted-foreground" type="multiple" spacing={1} value={selectedTools} onValueChange={setSelectedTools}>
                     {/* MCP Tool Selector */}
                         {totalAvailableTools > 0 && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost">
+                                    <Button variant="ghost" data-active={selectedMcpTools.length > 0}>
                                         <Wrench className="size-4" />
                                         <span>{t("components.chatInput.mcpTools")}</span>
                                         <ChevronDown className="size-3 ml-1" />
@@ -441,33 +425,27 @@ export function ChatInput({
                             </DropdownMenu>
                         )}
 
-                        {thinkingOptions && (
+                        {thinkingOptions.length > 0 && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost">
+                                    <Button variant="ghost" data-active={!!thinkingIntensity}>
                                         <Brain className="size-4" />
-                                        {thinkingIntensity
-                                            ? thinkingOptions.find(o => o.value === thinkingIntensity)?.label
-                                            : t("components.chatInput.thinkingIntensity")}
+                                        {thinkingOptions.find(option => option.value === effectiveThinkingIntensity)?.label}
                                         <ChevronDown className="size-3 ml-1" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
-                                    <DropdownMenuCheckboxItem
-                                        checked={!thinkingIntensity}
-                                        onCheckedChange={() => setThinkingIntensity(null)}
-                                    >
-                                        {t("components.chatInput.default")}
-                                    </DropdownMenuCheckboxItem>
-                                    {thinkingOptions.map((option) => (
-                                        <DropdownMenuCheckboxItem
-                                            key={option.value}
-                                            checked={thinkingIntensity === option.value}
-                                            onCheckedChange={() => setThinkingIntensity(option.value)}
-                                        >
-                                            {option.label}
-                                        </DropdownMenuCheckboxItem>
-                                    ))}
+                                    <DropdownMenuGroup>
+                                        {thinkingOptions.map((option) => (
+                                            <DropdownMenuCheckboxItem
+                                                key={option.value}
+                                                checked={effectiveThinkingIntensity === option.value}
+                                                onCheckedChange={() => setThinkingIntensity(option.value)}
+                                            >
+                                                {option.label}
+                                            </DropdownMenuCheckboxItem>
+                                        ))}
+                                    </DropdownMenuGroup>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}

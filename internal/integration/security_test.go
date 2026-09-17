@@ -309,18 +309,37 @@ func TestSecurityRegressions(t *testing.T) {
 		release := make(chan struct{})
 		started := make(chan struct{}, 4)
 		upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Error(err)
+			}
+			if body["reasoning_effort"] != "low" {
+				t.Errorf("configured default not sent: %v", body)
+			}
 			started <- struct{}{}
 			<-release
 			w.Header().Set("Content-Type", "text/event-stream")
 			fmt.Fprint(w, "data: {\"id\":\"completion\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"answer\"},\"finish_reason\":null}]}\n\ndata: [DONE]\n\n")
 		}))
 		defer upstream.Close()
-		provider, err := admin.NewV1().ProviderCreate(a, &adminapi.ProviderCreateReq{Name: "test", APIKey: "test", ProviderType: "openai_completion", BaseURL: upstream.URL + "/", IsActive: true, Models: []*logic.ModelConfig{{ID: "model", Name: "Model"}}})
+		provider, err := admin.NewV1().ProviderCreate(a, &adminapi.ProviderCreateReq{Name: "test", APIKey: "test", ProviderType: "openai_completion", BaseURL: upstream.URL + "/", IsActive: true, Models: []*logic.ModelConfig{{ID: "model", Name: "Model", ThinkingLevels: []string{"low", "max"}}}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		if logic.GetProvider(provider.Id) == nil {
 			t.Fatal("new provider not cached")
+		}
+
+		if cached := logic.GetProvider(provider.Id).ModelIdMap["model"].ThinkingLevels; len(cached) != 2 || cached[1] != "max" {
+			t.Fatalf("thinking levels missing in cache: %v", cached)
+		}
+		for _, levels := range [][]string{{"invalid"}, {"low", "low"}} {
+			if _, err := admin.NewV1().ProviderUpdate(a, &adminapi.ProviderUpdateReq{Id: provider.Id, Models: []*logic.ModelConfig{{ID: "model", ThinkingLevels: levels}}}); err == nil {
+				t.Fatal("invalid levels accepted")
+			}
+		}
+		if _, err := message.NewV1().Create(a, &messageapi.CreateReq{Id: "invalid-level-user", AssistantMessageId: "invalid-level-assistant", ConversationId: "ca", ProviderId: provider.Id, ModelName: "model", Prompt: "hi", ThinkingIntensity: "high"}); err == nil || !strings.Contains(err.Error(), "not configured") {
+			t.Fatalf("unconfigured level accepted: %v", err)
 		}
 		token, _ := utility.TokenManagerInstance.GenerateAccessToken(users["a"])
 		payload := messageapi.CreateReq{Id: "stream-user", AssistantMessageId: "stream-assistant", ConversationId: "ca", ProviderId: provider.Id, ModelName: "model", Prompt: "hi"}

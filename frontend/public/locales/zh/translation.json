@@ -356,6 +356,9 @@
                 },
                 "modelsCount": "个模型",
                 "model": {
+                    "thinkingLevels": "可选思考强度",
+                    "thinkingLevelsHelp": "仅启用该模型支持的强度。未配置则隐藏选择器且不发送强度参数；未主动选择时使用默认强度。",
+                    "defaultThinkingLevel": "默认思考强度",
                     "moveUp": "上移",
                     "moveDown": "下移",
                     "model": "模型",
@@ -501,6 +504,7 @@
             "thinkingIntensity": "思考强度",
             "default": "默认",
             "thinking": {
+                "max": "最高",
                 "none": "无",
                 "minimal": "最小",
                 "low": "低",

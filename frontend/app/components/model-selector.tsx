@@ -93,7 +93,10 @@ export default function ModelSelector() {
                         (!currentModel.provider_id || providerId === currentModel.provider_id)
                 );
 
-                if (!currentExists) {
+                if (currentExists) {
+                    const selected = nextModels.find(({ model, providerId }) => model.id === currentModel.id && (!currentModel.provider_id || providerId === currentModel.provider_id))!;
+                    setCurrentModel({ ...selected.model, provider_id: selected.providerId });
+                } else {
                     const previousModels = flattenProviderModels(providers);
                     const previousIndex = previousModels.findIndex(
                         ({ model, providerId }) =>
@@ -132,7 +135,7 @@ export default function ModelSelector() {
     };
 
     return (
-        <DropdownMenu onOpenChange={setShowModelMenu}>
+        <DropdownMenu onOpenChange={open => { setShowModelMenu(open); if (open) void fetchProviders(); }}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
