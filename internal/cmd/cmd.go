@@ -33,7 +33,9 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) error {
 			utility.InitTokenManager(ctx)
-			logic.UpdateProviderCache(ctx)
+			if err := logic.UpdateProviderCache(ctx); err != nil {
+				return err
+			}
 			logic.UpdateSystemConfigCache(ctx)
 
 			s := g.Server()

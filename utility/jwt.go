@@ -2,6 +2,9 @@ package utility
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"flai/internal/model/entity"
 	"fmt"
 	"time"
@@ -25,9 +28,11 @@ type TokenPair struct {
 }
 
 type JWTClaims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	Purpose    string `json:"purpose"`
+	Credential string `json:"credential"`
+	UserID     string `json:"user_id"`
+	Email      string `json:"email"`
+	Role       string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -58,9 +63,11 @@ func InitTokenManager(ctx context.Context) {
 
 func (tm *TokenManager) GenerateAccessToken(user *entity.User) (string, error) {
 	claims := JWTClaims{
-		UserID: user.Id,
-		Email:  user.Email,
-		Role:   user.Role,
+		Purpose:    "access",
+		Credential: tm.credential(user),
+		UserID:     user.Id,
+		Email:      user.Email,
+		Role:       user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.accessExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -75,9 +82,11 @@ func (tm *TokenManager) GenerateAccessToken(user *entity.User) (string, error) {
 
 func (tm *TokenManager) GenerateRefreshToken(user *entity.User) (string, error) {
 	claims := JWTClaims{
-		UserID: user.Id,
-		Email:  user.Email,
-		Role:   user.Role,
+		Purpose:    "refresh",
+		Credential: tm.credential(user),
+		UserID:     user.Id,
+		Email:      user.Email,
+		Role:       user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.refreshExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -97,13 +106,13 @@ func (tm *TokenManager) ValidateToken(tokenString string) (*JWTClaims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return tm.secret, nil
-	})
+	}, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
-	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid && claims.Purpose == "access" && claims.UserID != "" {
 		return claims, nil
 	}
 
@@ -127,4 +136,16 @@ func (tm *TokenManager) GenerateTokenPair(user *entity.User) (*TokenPair, error)
 		TokenType:    "Bearer",
 		ExpiresIn:    int64(tm.accessExpiry.Seconds()),
 	}, nil
+}
+
+// Binding tokens to the password revokes existing sessions after a password change.
+func (tm *TokenManager) credential(user *entity.User) string {
+	mac := hmac.New(sha256.New, tm.secret)
+	mac.Write([]byte(user.Id + "\x00" + user.Password))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func (tm *TokenManager) MatchesUser(claims *JWTClaims, user *entity.User) bool {
+	return user != nil && user.IsActive == 1 && user.DeletedAt == nil && user.Id == claims.UserID &&
+		hmac.Equal([]byte(claims.Credential), []byte(tm.credential(user)))
 }

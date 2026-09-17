@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flai/internal/logic"
+	"github.com/gogf/gf/v2/errors/gerror"
 
 	v1 "flai/api/admin/v1"
 	"flai/internal/dao"
@@ -30,6 +31,16 @@ func (c *ControllerV1) ProviderUpdate(ctx context.Context, req *v1.ProviderUpdat
 		if err != nil {
 			return nil, err
 		}
+		var models []*logic.ModelConfig
+		if err := json.Unmarshal(modelsBytes, &models); err != nil {
+			return nil, gerror.New("Invalid provider models")
+		}
+		for _, model := range models {
+			if model == nil || model.ID == "" {
+				return nil, gerror.New("Provider models must have an ID")
+			}
+		}
+
 		updateData.Model = string(modelsBytes)
 	}
 	if req.IsActive != nil {
@@ -50,6 +61,8 @@ func (c *ControllerV1) ProviderUpdate(ctx context.Context, req *v1.ProviderUpdat
 		return nil, err
 	}
 
-	logic.UpdateProviderCache(ctx)
+	if err := logic.UpdateProviderCache(ctx); err != nil {
+		return nil, err
+	}
 	return &v1.ProviderUpdateRes{}, nil
 }

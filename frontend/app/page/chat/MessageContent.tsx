@@ -82,6 +82,7 @@ export function MessageContent({
                     <div className="overflow-hidden border-l border-border pl-4">
                         <div className="markdown-body pb-2">
                             <Streamdown
+                                className="streamdown-content"
                                 isAnimating={isStreaming}
                                 plugins={{ cjk: cjk, math: math }}
                             >
@@ -103,8 +104,9 @@ export function MessageContent({
     }
 
     return (
-        <div className="markdown-body overflow-x-auto w-full">
+        <div className="markdown-body min-w-0 w-full">
             <Streamdown
+                className="streamdown-content"
                 animated
                 isAnimating={isStreaming}
                 plugins={{ cjk: cjk, code: code, math: math, mermaid: mermaid }}

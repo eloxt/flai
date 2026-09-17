@@ -1,5 +1,6 @@
 {
     "common": {
+        "send": "Send",
         "loading": "Loading...",
         "generating": "Generating...",
         "search": "Search",
@@ -250,7 +251,16 @@
             "tabs": {
                 "users": "User Management",
                 "providers": "Provider Management",
-                "notification": "Notifications"
+                "notification": "Notifications",
+                "errorAlert": "Error Alerts"
+            },
+            "errorAlert": {
+                "title": "Error Alerts",
+                "description": "Notify the administrator via Bark when chat, translation, or title generation fails. Canceled requests do not trigger alerts.",
+                "urlLabel": "Bark Push URL",
+                "placeholder": "https://api.day.app/your-device-key",
+                "help": "Enter the full Bark push URL including the device key, such as https://api.day.app/your-device-key. Official and self-hosted services are supported. Changes take effect immediately after saving. Clear and save to disable alerts. Notifications include the provider, model, and error details.",
+                "saveError": "Failed to save error alert settings"
             },
             "users": {
                 "title": "Users",
@@ -326,6 +336,8 @@
                 },
                 "modelsCount": "models",
                 "model": {
+                    "moveUp": "Move up",
+                    "moveDown": "Move down",
                     "model": "Model",
                     "addModel": "Add Model",
                     "noModels": "No models yet. Click to add one.",
@@ -485,10 +497,14 @@
             "failed": "failed"
         },
         "inspectionPanel": {
-            "title": "Timeline",
+            "resize": "Resize conversation tree",
+            "title": "Conversation tree",
             "empty": "No messages yet",
             "responded": "Responded",
-            "end": "End of conversation"
+            "end": "End of conversation",
+            "user": "You",
+            "assistant": "Assistant",
+            "nonText": "Attachment, reasoning or tool message"
         }
     }
 }

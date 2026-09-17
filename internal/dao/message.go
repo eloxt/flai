@@ -9,6 +9,7 @@ import (
 	"flai/internal/dao/internal"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
+	"fmt"
 )
 
 // messageDao is the data access object for the table message.
@@ -22,14 +23,15 @@ var (
 	Message = messageDao{internal.NewMessageDao()}
 )
 
-func FetchMessageHistory(ctx context.Context, messagePath []string) ([]*entity.Message, error) {
+func FetchMessageHistory(ctx context.Context, conversationId string, messagePath []string) ([]*entity.Message, error) {
 	if len(messagePath) == 0 {
 		return nil, nil
 	}
 
 	var historyMessages []*entity.Message
 	err := Message.Ctx(ctx).Where(do.Message{
-		Id: messagePath,
+		Id:             messagePath,
+		ConversationId: conversationId,
 	}).Scan(&historyMessages)
 	if err != nil {
 		return nil, err
@@ -43,10 +45,15 @@ func FetchMessageHistory(ctx context.Context, messagePath []string) ([]*entity.M
 
 	// Reorder messages to match the input messagePath order
 	orderedMessages := make([]*entity.Message, 0, len(messagePath))
+	parent := ""
 	for _, id := range messagePath {
-		if msg, exists := messageMap[id]; exists {
-			orderedMessages = append(orderedMessages, msg)
+		msg, exists := messageMap[id]
+		if !exists || msg.ParentId != parent {
+			return nil, fmt.Errorf("invalid message path")
 		}
+		orderedMessages = append(orderedMessages, msg)
+		delete(messageMap, id)
+		parent = id
 	}
 
 	return orderedMessages, nil

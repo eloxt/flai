@@ -26,4 +26,6 @@ type IAdminV1 interface {
 	NotificationDelete(ctx context.Context, req *v1.NotificationDeleteReq) (res *v1.NotificationDeleteRes, err error)
 	NotificationList(ctx context.Context, req *v1.NotificationListReq) (res *v1.NotificationListRes, err error)
 	ConversationList(ctx context.Context, req *v1.ConversationListReq) (res *v1.ConversationListRes, err error)
+	ErrorAlertGet(ctx context.Context, req *v1.ErrorAlertGetReq) (res *v1.ErrorAlertGetRes, err error)
+	ErrorAlertUpdate(ctx context.Context, req *v1.ErrorAlertUpdateReq) (res *v1.ErrorAlertUpdateRes, err error)
 }

@@ -41,7 +41,7 @@ export function MessageActions({
     const { t } = useTranslation();
 
     // Don't show actions for the last message while streaming
-    if (messageIndex === pathLength - 1 && isStreaming) {
+    if (isStreaming) {
         return null;
     }
 

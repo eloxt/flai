@@ -6,6 +6,7 @@ import (
 	"flai/internal/dao"
 	"flai/internal/middleware"
 	"flai/internal/model/entity"
+	"time"
 
 	"flai/api/share/v1"
 
@@ -40,7 +41,7 @@ func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (res *v1.ListR
 			Id:                shares[share].Id,
 			ConversationTitle: conversation.Icon + " " + conversation.Title,
 			CreatedAt:         shares[share].CreatedAt.String(),
-			ExpiresAt:         shares[share].ExpiresAt.String(),
+			ExpiresAt:         shares[share].ExpiresAt.Layout(time.RFC3339),
 		})
 	}
 	return res, nil

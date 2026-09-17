@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Attachment, MCPConfig } from "@/types/chat";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { cn } from "@/lib/utils";
 
 // Allowed file types: plain text, PDF, and images
 const ALLOWED_MIME_TYPES = [
@@ -132,7 +133,7 @@ export function ChatInput({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
+        if (e.key === "Enter" && !isLoading && !isStreaming && !e.shiftKey && !isComposingRef.current) {
             e.preventDefault();
             onSend();
         }
@@ -275,10 +276,13 @@ export function ChatInput({
     };
 
     const thinkingOptions = getThinkingIntensityOptions();
+    const hasTools = totalAvailableTools > 0 || !!thinkingOptions ||
+        ["web_search", "url_context", "image_generation"].some(tool => currentModel?.internal_tools?.includes(tool));
 
     return (
         <div
-            className={`flex flex-col w-full gap-2 ${className || ""} relative`}
+            className={cn("chat-composer relative flex w-full min-w-0 flex-col rounded-2xl", hasTools && "border border-border bg-muted", className)}
+            data-has-tools={hasTools}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
@@ -295,7 +299,7 @@ export function ChatInput({
                 </div>
             )}
             <InputGroup
-                className="rounded-xl"
+                className="chat-composer-surface rounded-2xl has-[[data-slot=input-group-control]:focus-visible]:ring-2"
             >
                 <TextareaAutosize
                     data-slot="input-group-control"
@@ -309,148 +313,28 @@ export function ChatInput({
                     onPaste={handlePaste}
                     disabled={isLoading}
                     maxRows={7}
-                    minRows={1}
+                    minRows={2}
                     autoFocus={autoFocus}
-                    className="flex field-sizing-content w-full resize-none rounded-xl bg-transparent px-3 py-2.5 text-base transition-all outline-none md:text-sm"
+                    className="flex field-sizing-content w-full resize-none rounded-2xl bg-transparent px-4 pt-4 pb-2 text-base outline-none md:text-sm"
                 />
-                <InputGroupAddon align="block-end" className="items-end">
+                <InputGroupAddon align="block-end" className="items-end px-3 pb-3">
                     <input
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
                         onChange={handleFileChange}
                     />
+                    {currentModel?.attachment && (
+                        <InputGroupButton
+                            size="icon-sm"
+                            onClick={handleUploadClick}
+                            aria-label={t("common.attachment")}
+                            title={t("common.attachment")}
+                        >
+                            <Paperclip />
+                        </InputGroupButton>
+                    )}
                     <div className="flex flex-col gap-2 flex-1 min-w-0">
-                        <ScrollArea>
-                            <ToggleGroup className="p-1" type="multiple" spacing={2} value={selectedTools} onValueChange={setSelectedTools}>
-                            {/* MCP Tool Selector */}
-                                {totalAvailableTools > 0 && (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost">
-                                                <Wrench className="size-4" />
-                                                <span>{t("components.chatInput.mcpTools")}</span>
-                                                <ChevronDown className="size-3 ml-1" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-72" align="start">
-                                            {mcpConfigs.map((config, index) => (
-                                                <div key={config.id}>
-                                                    {index > 0 && <DropdownMenuSeparator />}
-                                                    <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                                        {config.name}
-                                                    </DropdownMenuLabel>
-                                                    {config.tools?.map((tool) => (
-                                                        <DropdownMenuCheckboxItem
-                                                            key={`${config.id}-${tool.name}`}
-                                                            checked={isToolSelected(config.id, tool.name)}
-                                                            onCheckedChange={() => handleToolToggle(config, tool)}
-                                                            onSelect={(e) => e.preventDefault()}
-                                                        >
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="text-sm font-medium truncate">{tool.name}</div>
-                                                                {tool.description && (
-                                                                    <div className="text-xs text-muted-foreground truncate">
-                                                                        {tool.description}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </DropdownMenuCheckboxItem>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                )}
-
-                                {thinkingOptions && (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost">
-                                                <Brain className="size-4" />
-                                                {thinkingIntensity
-                                                    ? thinkingOptions.find(o => o.value === thinkingIntensity)?.label
-                                                    : t("components.chatInput.thinkingIntensity")}
-                                                <ChevronDown className="size-3 ml-1" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start">
-                                            <DropdownMenuCheckboxItem
-                                                checked={!thinkingIntensity}
-                                                onCheckedChange={() => setThinkingIntensity(null)}
-                                            >
-                                                {t("components.chatInput.default")}
-                                            </DropdownMenuCheckboxItem>
-                                            {thinkingOptions.map((option) => (
-                                                <DropdownMenuCheckboxItem
-                                                    key={option.value}
-                                                    checked={thinkingIntensity === option.value}
-                                                    onCheckedChange={() => setThinkingIntensity(option.value)}
-                                                >
-                                                    {option.label}
-                                                </DropdownMenuCheckboxItem>
-                                            ))}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                )}
-
-                                {currentModel?.attachment && (
-                                    <Button
-                                        variant="ghost"
-                                        onClick={handleUploadClick}
-                                    >
-                                        <Paperclip className="size-4" />
-                                        {t("common.attachment")}
-                                    </Button>
-                                )}
-
-                                {currentModel?.internal_tools?.includes("web_search") && (
-                                    <ToggleGroupItem
-                                        value="web_search"
-                                    >
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <span className="flex items-center gap-1">
-                                                    <Globe />
-                                                    <span>{t("common.search")}</span>
-                                                </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>{t("components.chatInput.web_search_tooltip")}</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </ToggleGroupItem>
-                                )}
-                                {currentModel?.internal_tools?.includes("url_context") && (
-                                    <ToggleGroupItem
-                                        value="url_context"
-                                    >
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <span className="flex items-center gap-1">
-                                                    <Link />
-                                                    <span>{t("common.urlContext")}</span>
-                                                </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>{t("components.chatInput.url_context_tooltip")}</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </ToggleGroupItem>
-                                )}
-                                {currentModel?.internal_tools?.includes("image_generation") && (
-                                    <ToggleGroupItem
-                                        value="image_generation"
-                                    >
-                                        <Image />
-                                        <p>{t("common.imageGeneration")}</p>
-                                    </ToggleGroupItem>
-                                )}
-    
-                            </ToggleGroup>
-                            <ScrollBar orientation="horizontal" />
-                        </ScrollArea>
-
                         {/* Selected MCP Tools and Attachments Display */}
                         {(selectedMcpTools.length > 0 || attachments.length > 0) && (
                             <ScrollArea>
@@ -487,12 +371,12 @@ export function ChatInput({
                     {isStreaming ? (
                         <InputGroupButton
                             variant="destructive"
-                            className="rounded-full ml-auto"
-                            size="icon-xs"
+                            className="rounded-xl ml-auto"
+                            size="icon-sm"
                             onClick={onCancel}
                             title={t("common.cancel")}
                         >
-                            <Square className="size-3" />
+                            <Square />
                         </InputGroupButton>
                     ) : (
                         <div className="flex items-center gap-2 ml-auto">
@@ -501,17 +385,140 @@ export function ChatInput({
                             )}
                             <InputGroupButton
                                 variant="default"
-                                className="rounded-full"
-                                size="icon-xs"
+                                className="rounded-xl"
+                                size="icon-sm"
                                 onClick={onSend}
+                                aria-label={t("common.send")}
+                                title={t("common.send")}
                                 disabled={isLoading || (!value.trim() && attachments.length === 0)}
                             >
-                                <ArrowUpIcon className="size-3" />
+                                <ArrowUpIcon />
                             </InputGroupButton>
                         </div>
                     )}
                 </InputGroupAddon>
             </InputGroup>
+            {hasTools && (
+                <ScrollArea className="min-w-0 px-2 py-1">
+                    <ToggleGroup className="text-muted-foreground" type="multiple" spacing={1} value={selectedTools} onValueChange={setSelectedTools}>
+                    {/* MCP Tool Selector */}
+                        {totalAvailableTools > 0 && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost">
+                                        <Wrench className="size-4" />
+                                        <span>{t("components.chatInput.mcpTools")}</span>
+                                        <ChevronDown className="size-3 ml-1" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-72" align="start">
+                                    {mcpConfigs.map((config, index) => (
+                                        <div key={config.id}>
+                                            {index > 0 && <DropdownMenuSeparator />}
+                                            <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                                {config.name}
+                                            </DropdownMenuLabel>
+                                            {config.tools?.map((tool) => (
+                                                <DropdownMenuCheckboxItem
+                                                    key={`${config.id}-${tool.name}`}
+                                                    checked={isToolSelected(config.id, tool.name)}
+                                                    onCheckedChange={() => handleToolToggle(config, tool)}
+                                                    onSelect={(e) => e.preventDefault()}
+                                                >
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-medium truncate">{tool.name}</div>
+                                                        {tool.description && (
+                                                            <div className="text-xs text-muted-foreground truncate">
+                                                                {tool.description}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </DropdownMenuCheckboxItem>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+
+                        {thinkingOptions && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost">
+                                        <Brain className="size-4" />
+                                        {thinkingIntensity
+                                            ? thinkingOptions.find(o => o.value === thinkingIntensity)?.label
+                                            : t("components.chatInput.thinkingIntensity")}
+                                        <ChevronDown className="size-3 ml-1" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                    <DropdownMenuCheckboxItem
+                                        checked={!thinkingIntensity}
+                                        onCheckedChange={() => setThinkingIntensity(null)}
+                                    >
+                                        {t("components.chatInput.default")}
+                                    </DropdownMenuCheckboxItem>
+                                    {thinkingOptions.map((option) => (
+                                        <DropdownMenuCheckboxItem
+                                            key={option.value}
+                                            checked={thinkingIntensity === option.value}
+                                            onCheckedChange={() => setThinkingIntensity(option.value)}
+                                        >
+                                            {option.label}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+
+                        {currentModel?.internal_tools?.includes("web_search") && (
+                            <ToggleGroupItem
+                                value="web_search"
+                            >
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="flex items-center gap-1">
+                                            <Globe />
+                                            <span>{t("common.search")}</span>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{t("components.chatInput.web_search_tooltip")}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </ToggleGroupItem>
+                        )}
+                        {currentModel?.internal_tools?.includes("url_context") && (
+                            <ToggleGroupItem
+                                value="url_context"
+                            >
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="flex items-center gap-1">
+                                            <Link />
+                                            <span>{t("common.urlContext")}</span>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{t("components.chatInput.url_context_tooltip")}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </ToggleGroupItem>
+                        )}
+                        {currentModel?.internal_tools?.includes("image_generation") && (
+                            <ToggleGroupItem
+                                value="image_generation"
+                            >
+                                <Image />
+                                <p>{t("common.imageGeneration")}</p>
+                            </ToggleGroupItem>
+                        )}
+
+                    </ToggleGroup>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+            )}
         </div >
     );
 }

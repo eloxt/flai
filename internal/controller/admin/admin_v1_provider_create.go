@@ -3,6 +3,8 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"flai/internal/logic"
+	"github.com/gogf/gf/v2/errors/gerror"
 
 	v1 "flai/api/admin/v1"
 	"flai/internal/dao"
@@ -24,6 +26,16 @@ func (c *ControllerV1) ProviderCreate(ctx context.Context, req *v1.ProviderCreat
 		if err != nil {
 			return nil, err
 		}
+		var models []*logic.ModelConfig
+		if err := json.Unmarshal(modelsBytes, &models); err != nil {
+			return nil, gerror.New("Invalid provider models")
+		}
+		for _, model := range models {
+			if model == nil || model.ID == "" {
+				return nil, gerror.New("Provider models must have an ID")
+			}
+		}
+
 		modelsJson = string(modelsBytes)
 	}
 
@@ -40,6 +52,10 @@ func (c *ControllerV1) ProviderCreate(ctx context.Context, req *v1.ProviderCreat
 
 	_, err = dao.Provider.Ctx(ctx).Insert(newProvider)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := logic.UpdateProviderCache(ctx); err != nil {
 		return nil, err
 	}
 

@@ -142,7 +142,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
 
     const handleSearch = async () => {
         try {
-            const result = await api.get<SearchResponse[]>(`/api/conversation/search?query=${queryParam}`)
+            const result = await api.get<SearchResponse[]>("/api/conversation/search", { query: queryParam })
             console.log(result)
             setSearchResults(result);
         } catch (error) {
@@ -513,8 +513,12 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
                                             </div>
                                             <span
                                                 className="text-sm text-muted-foreground line-clamp-2 [&_em]:not-italic [&_em]:font-semibold [&_em]:text-foreground"
-                                                dangerouslySetInnerHTML={{ __html: result.highlight }}
-                                            />
+                                            >
+                                                {result.highlight.split(/(<em>|<\/em>)/g).map((part, index, parts) =>
+                                                    part === "<em>" || part === "</em>" ? null :
+                                                        parts[index - 1] === "<em>" ? <em key={index}>{part}</em> : part
+                                                )}
+                                            </span>
                                         </NavLink>
                                     </CommandItem>
                                 ))}

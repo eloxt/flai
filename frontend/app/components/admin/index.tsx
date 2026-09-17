@@ -1,9 +1,10 @@
-import { Users, Server, Bell } from "lucide-react";
+import { Users, Server, Bell, BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PanelLayout, PanelTab } from "@/components/panel-layout";
 import { UserManagement } from "./user-management";
 import { ProviderManagement } from "./provider-management";
 import { NotificationSettings } from "./notification-settings";
+import { ErrorAlertSettings } from "./error-alert-settings";
 
 export default function AdminPanel() {
     const { t } = useTranslation();
@@ -20,6 +21,12 @@ export default function AdminPanel() {
             label: t("pages.admin.tabs.providers"),
             icon: Server,
             component: <ProviderManagement />
+        },
+        {
+            id: "error-alert",
+            label: t("pages.admin.tabs.errorAlert"),
+            icon: BellRing,
+            component: <ErrorAlertSettings />
         },
         {
             id: "notification",

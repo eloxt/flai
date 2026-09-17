@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcfg"
 	"github.com/google/uuid"
 	"google.golang.org/genai"
@@ -151,7 +150,7 @@ func (c *GeminiClient) getClient(ctx context.Context, providerInfo *logic.Simple
 // Stream Chat
 // ============================================================================
 
-func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
+func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
 	client, err := c.getClient(ctx, providerInfo, messageId)
 	if err != nil {
 		return err
@@ -176,11 +175,16 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 
 	// MCP client cache - reuse clients for same endpoint
 	mcpClientCache := make(map[string]*mcp.MCPClient)
+	defer func() {
+		for _, client := range mcpClientCache {
+			_ = client.Close()
+		}
+	}()
 
 	// Create content config
 	var thinkingLevel genai.ThinkingLevel
 	switch thinkingIntensity {
-	case "minial":
+	case "minimal":
 		thinkingLevel = genai.ThinkingLevelMinimal
 	case "low":
 		thinkingLevel = genai.ThinkingLevelLow
@@ -255,8 +259,8 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		// Process stream
 		for resp, err := range iter {
 			if err != nil {
-				if HandleStreamError(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo) {
-					return nil
+				if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo); handled {
+					return saveErr
 				}
 				return err
 			}
@@ -286,6 +290,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 							if currentMessageType != "" && currentMessageType != partType {
 								appendContent(&currentContentBuilder, currentMessageType, currentImages, currentId, &contentList)
 								currentContentBuilder.Reset()
+								currentImages = nil
 							}
 
 							currentMessageType = partType
@@ -302,7 +307,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 								streamResponse.Data = ContentMessage{Content: part.Text}
 							}
 
-							if err := StreamToClient(response, streamResponse); err != nil {
+							if err := response(streamResponse); err != nil {
 								return err
 							}
 
@@ -313,6 +318,11 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 						}
 
 						if part.InlineData != nil && len(part.InlineData.Data) > 0 && strings.HasPrefix(part.InlineData.MIMEType, "image/") {
+							if currentMessageType == consts.MessageType.Reasoning {
+								appendContent(&currentContentBuilder, currentMessageType, nil, currentId, &contentList)
+								currentContentBuilder.Reset()
+							}
+							currentMessageType = consts.MessageType.Message
 							// Initialize S3 client for image upload
 							s3Client, err := s3.New(ctx)
 							if err != nil {
@@ -351,7 +361,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 								Data:      imageUrl,
 							}
 
-							if err := StreamToClient(response, streamResponse); err != nil {
+							if err := response(streamResponse); err != nil {
 								return err
 							}
 						}
@@ -378,7 +388,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 						Type:      consts.MessageType.MetaInfo,
 						Data:      metaInfo,
 					}
-					if err := StreamToClient(response, metaResponse); err != nil {
+					if err := response(metaResponse); err != nil {
 						return err
 					}
 
@@ -390,7 +400,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 							Type:      consts.MessageType.GoogleGroundingData,
 							Data:      candidate.GroundingMetadata,
 						}
-						if err := StreamToClient(response, groundingResponse); err != nil {
+						if err := response(groundingResponse); err != nil {
 							return err
 						}
 					}
@@ -401,9 +411,10 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		// Check if we need to execute function calls
 		if len(functionCalls) > 0 {
 			// Save any pending content before adding tool calls (ensures correct order: reasoning -> tool_call)
-			if currentContentBuilder.Len() > 0 {
+			if currentContentBuilder.Len() > 0 || len(currentImages) > 0 {
 				appendContent(&currentContentBuilder, currentMessageType, currentImages, currentId, &contentList)
 				currentContentBuilder.Reset()
+				currentImages = nil
 				currentMessageType = ""
 			}
 
@@ -439,7 +450,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 					Type:      consts.MessageType.ToolCall,
 					Data:      toolCall,
 				}
-				if err := StreamToClient(response, toolCallResponse); err != nil {
+				if err := response(toolCallResponse); err != nil {
 					return err
 				}
 
@@ -465,7 +476,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 					Type:      consts.MessageType.ToolResult,
 					Data:      toolResultData,
 				}
-				if err := StreamToClient(response, toolResultResponse); err != nil {
+				if err := response(toolResultResponse); err != nil {
 					return err
 				}
 
@@ -494,10 +505,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	}
 
 	// Save final message
-	c.saveAndClose(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
-	StreamDone(response)
-
-	return nil
+	return c.saveAndClose(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
 }
 
 // executeMCPToolCallByName executes an MCP tool by name and returns the result
@@ -548,14 +556,14 @@ func (c *GeminiClient) executeMCPToolCallByName(ctx context.Context, mcpToolMap 
 	return result
 }
 
-func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, images []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
-	if contentType != "" && contentBuilder.Len() > 0 {
+func (c *GeminiClient) saveAndClose(ctx context.Context, message *entity.Message, images []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) error {
+	if contentBuilder.Len() > 0 || len(images) > 0 {
 		appendContent(contentBuilder, contentType, images, currentId, contentList)
 	}
-	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
+	return SaveAssistantMessage(ctx, message, *contentList, metaInfo)
 }
 
-func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
+func (c *GeminiClient) StreamTranslate(ctx context.Context, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client, err := c.getClient(ctx, providerInfo, "")
 	if err != nil {
 		return err
@@ -572,7 +580,7 @@ func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Resp
 	for resp, err := range client.Models.GenerateContentStream(ctx, modelConfig.ID, contents, config) {
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil
+				return ctx.Err()
 			}
 			return err
 		}
@@ -587,7 +595,7 @@ func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Resp
 					continue
 				}
 
-				if err := StreamToClient(response, StreamResponse{
+				if err := response(StreamResponse{
 					Type: consts.MessageType.Message,
 					Data: ContentMessage{Content: part.Text},
 				}); err != nil {
@@ -597,7 +605,6 @@ func (c *GeminiClient) StreamTranslate(ctx context.Context, response *ghttp.Resp
 		}
 	}
 
-	StreamDone(response)
 	return nil
 }
 
@@ -827,8 +834,8 @@ func (c *GeminiClient) getTitleSchema(ctx context.Context) *genai.Schema {
 }
 
 func (c *GeminiClient) parseTitleResponse(resp *genai.GenerateContentResponse) (*TitleGenerationResponse, error) {
-	if len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
-		return nil, nil
+	if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0] == nil || resp.Candidates[0].Content == nil {
+		return nil, fmt.Errorf("upstream returned no title")
 	}
 
 	var result strings.Builder

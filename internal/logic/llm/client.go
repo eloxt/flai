@@ -14,8 +14,6 @@ import (
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
 )
 
 // ============================================================================
@@ -23,8 +21,8 @@ import (
 // ============================================================================
 
 type Client interface {
-	StreamChat(ctx context.Context, assistantMessageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error
-	StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error
+	StreamChat(ctx context.Context, assistantMessageId string, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error
+	StreamTranslate(ctx context.Context, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error
 	GenerateTitle(ctx context.Context, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, systemInstruction string, content string) (*TitleGenerationResponse, error)
 }
 
@@ -50,20 +48,24 @@ func NewClient(providerType string) (Client, error) {
 // Public API Functions
 // ============================================================================
 
-func StreamChat(ctx context.Context, req *v1.CreateReq, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, mcpTools []*MCPToolInfo, files []*entity.File) error {
+func StreamChat(ctx context.Context, req *v1.CreateReq, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, mcpTools []*MCPToolInfo, files []*entity.File) error {
 	client, err := NewClient(providerInfo.ProviderType)
 	if err != nil {
 		return err
 	}
-	return client.StreamChat(ctx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpTools, files, req.ThinkingIntensity)
+	err = client.StreamChat(ctx, req.AssistantMessageId, response, providerInfo, modelConfig, historyMessages, newMessage, req.Tools, mcpTools, files, req.ThinkingIntensity)
+	notifyError(ctx, "聊天", providerInfo, modelConfig, err)
+	return err
 }
 
-func StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
+func StreamTranslate(ctx context.Context, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client, err := NewClient(providerInfo.ProviderType)
 	if err != nil {
 		return err
 	}
-	return client.StreamTranslate(ctx, response, providerInfo, modelConfig, prompt, images)
+	err = client.StreamTranslate(ctx, response, providerInfo, modelConfig, prompt, images)
+	notifyError(ctx, "翻译", providerInfo, modelConfig, err)
+	return err
 }
 
 func GenerateTitle(ctx context.Context, messages []*entity.Message, content string) (*TitleGenerationResponse, error) {
@@ -76,8 +78,8 @@ func GenerateTitle(ctx context.Context, messages []*entity.Message, content stri
 	modelId := fmt.Sprintf("%v", config["model_name"])
 	template := fmt.Sprintf("%v", config["prompt"])
 
-	providerInfo, ok := logic.ProviderMap[providerId]
-	if !ok {
+	providerInfo := logic.GetProvider(providerId)
+	if providerInfo == nil {
 		return nil, gerror.New("Provider not found")
 	}
 
@@ -93,7 +95,9 @@ func GenerateTitle(ctx context.Context, messages []*entity.Message, content stri
 		return nil, err
 	}
 
-	return client.GenerateTitle(ctx, providerInfo, modelConfig, template, xmlContent)
+	title, err := client.GenerateTitle(ctx, providerInfo, modelConfig, template, xmlContent)
+	notifyError(ctx, "标题生成", providerInfo, modelConfig, err)
+	return title, err
 }
 
 // ============================================================================
@@ -116,60 +120,12 @@ func buildChatHistoryXML(messages []*entity.Message, content string) string {
 	return sb.String()
 }
 
-// StreamToClient sends SSE data to the client.
-func StreamToClient(response *ghttp.Response, content any) error {
-	if response == nil || response.Request == nil || response.BufferWriter == nil {
-		return nil
-	}
-	if response.BufferWriter.Writer == nil || response.BufferWriter.Writer.ResponseWriter == nil {
-		return nil
-	}
-	if response.Request.Context().Err() != nil {
-		response.BufferWriter = nil
-		return nil
-	}
-	data, err := json.Marshal(content)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if recover() != nil {
-			if response != nil {
-				response.BufferWriter = nil
-			}
-		}
-	}()
-	response.Writef("data: %s\n\n", data)
-	response.Flush()
-	return nil
-}
-
-// StreamDone sends the SSE done signal to the client.
-func StreamDone(response *ghttp.Response) {
-	if response == nil || response.Request == nil || response.BufferWriter == nil {
-		return
-	}
-	if response.BufferWriter.Writer == nil || response.BufferWriter.Writer.ResponseWriter == nil {
-		return
-	}
-	if response.Request.Context().Err() != nil {
-		response.BufferWriter = nil
-		return
-	}
-	defer func() {
-		if recover() != nil {
-			if response != nil {
-				response.BufferWriter = nil
-			}
-		}
-	}()
-	response.Writef("data: [DONE]\n\n")
-	response.Flush()
-}
-
 // appendContent appends content to the content list based on message type.
 func appendContent(contentBuilder *strings.Builder, messageType string, images []ContentImage, id string, contentList *[]Content) {
 	val := contentBuilder.String()
+	if val == "" && len(images) == 0 {
+		return
+	}
 	if messageType == consts.MessageType.Reasoning {
 		data := ContentReasoning{Id: id, Content: val}
 		content := Content{Type: consts.MessageType.Reasoning, Data: data}
@@ -185,38 +141,41 @@ func appendContent(contentBuilder *strings.Builder, messageType string, images [
 }
 
 // SaveAssistantMessage saves the assistant message to the database.
-func SaveAssistantMessage(ctx context.Context, message *entity.Message, contentList []Content, metaInfo MessageMetaInfo) {
+func SaveAssistantMessage(ctx context.Context, message *entity.Message, contentList []Content, metaInfo MessageMetaInfo) error {
+	if len(contentList) == 0 {
+		return fmt.Errorf("generation produced no content")
+	}
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+	defer cancel()
 	contentListByte, err := json.Marshal(contentList)
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to marshal content list: %v", err)
-		return
+		return fmt.Errorf("marshal assistant content: %w", err)
 	}
 	message.Content = string(contentListByte)
 
 	metaInfoByte, err := json.Marshal(metaInfo)
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to marshal meta info: %v", err)
-		return
+		return fmt.Errorf("marshal assistant metadata: %w", err)
 	}
 	message.MetaInfo = string(metaInfoByte)
 
-	_, err = dao.Message.Ctx(ctx).Data(message).Insert()
+	_, err = dao.Message.Ctx(persistCtx).Data(message).Insert()
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to save message: %v", err)
+		return fmt.Errorf("save assistant message: %w", err)
 	}
+	return nil
 }
 
 // HandleStreamError checks if the error is due to context cancellation
-// and saves the message accordingly. Returns true if the caller should return nil.
-func HandleStreamError(ctx context.Context, message *entity.Message, images []ContentImage, contentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) bool {
+// and saves partial output. A handled cancellation still propagates persistence errors.
+func HandleStreamError(ctx context.Context, message *entity.Message, images []ContentImage, contentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) (bool, error) {
 	if errors.Is(ctx.Err(), context.Canceled) {
-		if contentBuilder != nil && contentBuilder.Len() > 0 {
+		if contentBuilder != nil && (contentBuilder.Len() > 0 || len(images) > 0) {
 			appendContent(contentBuilder, contentType, images, contentId, contentList)
 		}
-		SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
-		return true
+		return true, SaveAssistantMessage(ctx, message, *contentList, metaInfo)
 	}
-	return false
+	return false, nil
 }
 
 // ParseMessageContent safely extracts the content string from a message.

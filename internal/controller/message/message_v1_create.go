@@ -11,7 +11,10 @@ import (
 	"flai/internal/middleware"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
+	"fmt"
+	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -36,19 +39,13 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 	}
 
 	// Fetch message history
-	historyMessages, err := c.fetchMessageHistory(ctx, req.MessagePath)
+	historyMessages, err := c.fetchMessageHistory(ctx, req.ConversationId, req.MessagePath)
 	if err != nil {
 		return nil, err
 	}
 
 	// Fetch files
-	files, err := c.fetchFiles(ctx, req.Files)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create and save a user message
-	newMessage, err := c.createUserMessage(ctx, req, historyMessages, files)
+	files, err := c.fetchFiles(ctx, user.Id, req.Files)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +56,12 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, err
 	}
 
-	// Setup SSE response
-	response, err := c.setupSSEResponse(ctx)
-	if err != nil {
-		return nil, err
+	if providerInfo.ProviderType == consts.ProviderType.OpenAICompletion {
+		for _, file := range files {
+			if !strings.HasPrefix(file.MimeType, "image/") {
+				return nil, gerror.New("Chat Completions supports image attachments only")
+			}
+		}
 	}
 
 	// Load MCP tools from database based on request
@@ -74,25 +73,89 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		}
 	}
 
-	// Stream chat response in a separate goroutine; keep generation running even if the client disconnects.
-	generationCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
-	llm.RegisterGeneration(req.AssistantMessageId, cancel)
-	done := make(chan error, 1)
-	go func() {
-		defer llm.UnregisterGeneration(req.AssistantMessageId)
-		done <- llm.StreamChat(generationCtx, req, response, providerInfo, modelConfig, historyMessages, newMessage, mcpToolInfos, files)
-	}()
-
-	select {
-	case err := <-done:
-		if err != nil {
-			return nil, err
+	if req.Id == req.AssistantMessageId {
+		return nil, gerror.New("Message IDs must differ")
+	}
+	generationCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 20*time.Minute)
+	if !llm.RegisterGeneration(user.Id, req.ConversationId, req.AssistantMessageId, cancel) {
+		cancel()
+		return nil, gerror.New("Generation already running")
+	}
+	started := false
+	defer func() {
+		if !started {
+			cancel()
+			llm.UnregisterGeneration(req.AssistantMessageId)
 		}
-	case <-ctx.Done():
-		response.BufferWriter = nil
+	}()
+	count, err := dao.Message.Ctx(ctx).Where("id", req.AssistantMessageId).Count()
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, gerror.New("Assistant message ID already exists")
 	}
 
-	return nil, nil
+	// Create and save a user message
+	newMessage, err := c.createUserMessage(ctx, req, historyMessages, files)
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup SSE response
+	response, err := c.setupSSEResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	events := make(chan any, 32)
+	emit := func(event any) error {
+		select {
+		case events <- event:
+		case <-ctx.Done(): // Disconnect only unsubscribes; generation can still persist.
+		}
+		return nil
+	}
+	started = true
+	go func() {
+		var generationErr error
+		defer cancel()
+		defer llm.UnregisterGeneration(req.AssistantMessageId)
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				generationErr = fmt.Errorf("generation failed: %v", recovered)
+			}
+			if generationErr != nil {
+				g.Log().Error(ctx, generationErr)
+				_ = emit(g.Map{"type": "error", "data": g.Map{"message": "Generation or message saving failed. Please retry."}})
+			} else {
+				_ = emit("[DONE]")
+			}
+			close(events)
+		}()
+		generationErr = llm.StreamChat(generationCtx, req, emit, providerInfo, modelConfig, historyMessages, newMessage, mcpToolInfos, files)
+	}()
+	for {
+		select {
+		case event, open := <-events:
+			if !open {
+				return nil, nil
+			}
+			if marker, ok := event.(string); ok && marker == "[DONE]" {
+				response.Writef("data: [DONE]\n\n")
+			} else {
+				data, err := json.Marshal(event)
+				if err != nil {
+					return nil, err
+				}
+				response.Writef("data: %s\n\n", data)
+			}
+			response.Flush()
+		case <-ctx.Done():
+			return nil, nil
+		}
+	}
+
 }
 
 // validateConversationAccess checks if the user has access to the conversation.
@@ -118,8 +181,8 @@ func (c *ControllerV1) validateConversationAccess(ctx context.Context, conversat
 }
 
 // fetchMessageHistory fetches and validates message history.
-func (c *ControllerV1) fetchMessageHistory(ctx context.Context, messagePath []string) ([]*entity.Message, error) {
-	historyMessages, err := dao.FetchMessageHistory(ctx, messagePath)
+func (c *ControllerV1) fetchMessageHistory(ctx context.Context, conversationId string, messagePath []string) ([]*entity.Message, error) {
+	historyMessages, err := dao.FetchMessageHistory(ctx, conversationId, messagePath)
 	if err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch message history")
 	}
@@ -132,17 +195,20 @@ func (c *ControllerV1) fetchMessageHistory(ctx context.Context, messagePath []st
 }
 
 // fetchFiles fetches files by IDs.
-func (c *ControllerV1) fetchFiles(ctx context.Context, fileIds []string) ([]*entity.File, error) {
+func (c *ControllerV1) fetchFiles(ctx context.Context, userId string, fileIds []string) ([]*entity.File, error) {
 	if len(fileIds) == 0 {
 		return nil, nil
 	}
 
 	var files []*entity.File
-	err := dao.File.Ctx(ctx).WhereIn(dao.File.Columns().Id, fileIds).Scan(&files)
+	err := dao.File.Ctx(ctx).WhereIn(dao.File.Columns().Id, fileIds).Where("user_id", userId).Order("id").Scan(&files)
 	if err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch files")
 	}
 
+	if len(files) != len(fileIds) {
+		return nil, gerror.New("Invalid files")
+	}
 	return files, nil
 }
 
@@ -185,8 +251,27 @@ func (c *ControllerV1) createUserMessage(ctx context.Context, req *v1.CreateReq,
 
 	// Insert message (ignore duplicate key errors for idempotency)
 	_, err = dao.Message.Ctx(ctx).Insert(newMessage)
-	if err != nil && !isDuplicateKeyError(err) {
-		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to save message")
+	if err != nil {
+		if !isDuplicateKeyError(err) {
+			return nil, gerror.Wrap(err, "Failed to save message")
+		}
+		var existing *entity.Message
+		if err := dao.Message.Ctx(ctx).Where(do.Message{Id: req.Id, ConversationId: req.ConversationId}).Scan(&existing); err != nil {
+			return nil, err
+		}
+		var storedContent, requestedContent any
+		if existing != nil {
+			if err := json.Unmarshal([]byte(existing.Content), &storedContent); err != nil {
+				return nil, err
+			}
+		}
+		if err := json.Unmarshal(contentByte, &requestedContent); err != nil {
+			return nil, err
+		}
+		if existing == nil || existing.Role != newMessage.Role || existing.ParentId != parentId || !reflect.DeepEqual(storedContent, requestedContent) {
+			return nil, gerror.New("Message ID already in use")
+		}
+		return existing, nil
 	}
 
 	return newMessage, nil
@@ -205,7 +290,7 @@ func isDuplicateKeyError(err error) bool {
 
 // validateProviderAndModel validates provider and model configuration.
 func (c *ControllerV1) validateProviderAndModel(providerId, modelName string) (*logic.SimpleProviderInfo, *logic.ModelConfig, error) {
-	providerInfo := logic.ProviderMap[providerId]
+	providerInfo := logic.GetProvider(providerId)
 	if providerInfo == nil {
 		return nil, nil, gerror.NewCode(gcode.CodeInvalidParameter, "Invalid provider ID")
 	}

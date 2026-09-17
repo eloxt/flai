@@ -111,3 +111,5 @@ CREATE TABLE "public"."user" (
   CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 )
 ;
+
+CREATE UNIQUE INDEX "user_email_active_unique" ON "public"."user" (lower(btrim(email))) WHERE deleted_at IS NULL;

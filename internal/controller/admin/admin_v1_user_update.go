@@ -2,6 +2,10 @@ package admin
 
 import (
 	"context"
+	"errors"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/lib/pq"
+	"strings"
 
 	v1 "flai/api/admin/v1"
 	"flai/internal/dao"
@@ -10,6 +14,7 @@ import (
 )
 
 func (c *ControllerV1) UserUpdate(ctx context.Context, req *v1.UserUpdateReq) (res *v1.UserUpdateRes, err error) {
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	updateData := do.User{}
 
 	if req.Email != "" {
@@ -39,6 +44,10 @@ func (c *ControllerV1) UserUpdate(ctx context.Context, req *v1.UserUpdateReq) (r
 		Id: req.Id,
 	}).Data(updateData).Update()
 	if err != nil {
+		var conflict *pq.Error
+		if errors.As(err, &conflict) && conflict.Code == "23505" && conflict.Constraint == "user_email_active_unique" {
+			return nil, gerror.New("Email already exists")
+		}
 		return nil, err
 	}
 

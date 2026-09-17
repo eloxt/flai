@@ -16,7 +16,7 @@ type CreateReq struct {
 	Tools              []string         `json:"tools"`
 	McpTools           []McpToolRequest `json:"mcp_tools"`
 	Files              []string         `json:"files"`
-	ThinkingIntensity  string           `json:"thinking_intensity"`
+	ThinkingIntensity  string           `json:"thinking_intensity" v:"in:none,minimal,low,medium,high,xhigh"`
 }
 
 type McpToolRequest struct {

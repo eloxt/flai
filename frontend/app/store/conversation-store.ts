@@ -1,3 +1,4 @@
+import { useAuthStore } from "./auth-store";
 import { create } from "zustand";
 import { api, ApiError, ApiPageResponse } from "@/lib/api";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     currentPage: 1,
     hasMore: true,
     fetchConversations: async () => {
+        const sessionVersion = useAuthStore.getState().sessionVersion;
         set({ isLoading: true, currentPage: 1, hasMore: true });
         try {
             const response = await api.get<ApiPageResponse<Conversation>>("/api/conversation", {
@@ -60,16 +62,19 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             }));
             set({ conversations: records, currentPage: 1, hasMore });
         } catch (error) {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             if (error instanceof ApiError) {
                 toast.error(error.message);
             } else {
                 toast.error(t("error.network"));
             }
         } finally {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             set({ isLoading: false });
         }
     },
     fetchFavourites: async () => {
+        const sessionVersion = useAuthStore.getState().sessionVersion;
         set({ isLoadingFavourites: true });
         try {
             const response = await api.get<Conversation[]>("/api/conversation/favourite");
@@ -85,16 +90,19 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 })),
             }));
         } catch (error) {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             if (error instanceof ApiError) {
                 toast.error(error.message);
             } else {
                 toast.error(t("error.network"));
             }
         } finally {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             set({ isLoadingFavourites: false });
         }
     },
     fetchMoreConversations: async () => {
+        const sessionVersion = useAuthStore.getState().sessionVersion;
         const { isLoadingMore, hasMore, currentPage, conversations } = get();
         if (isLoadingMore || !hasMore) return;
 
@@ -121,12 +129,14 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 hasMore: newHasMore,
             });
         } catch (error) {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             if (error instanceof ApiError) {
                 toast.error(error.message);
             } else {
                 toast.error(t("error.network"));
             }
         } finally {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             set({ isLoadingMore: false });
         }
     },
@@ -144,38 +154,42 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         set((state) => ({ conversations: [newConversation, ...state.conversations] }));
     },
     generateTitle: async (id: string, content?: string) => {
+        const sessionVersion = useAuthStore.getState().sessionVersion;
+        set((state) => ({
+            conversations: state.conversations.map(c => c.id === id ? { ...c, generating: true } : c),
+            favouriteConversations: state.favouriteConversations.map(c => c.id === id ? { ...c, generating: true } : c),
+        }));
         try {
+            const result = await api.post<GenerateTitleResponse>(`/api/conversation/${id}/generate-title`, { content });
             set((state) => ({
-                conversations: state.conversations.map((c) =>
-                    c.id === id ? { ...c, generating: true } : c
-                ),
-            }));
-            const result = await api.post<GenerateTitleResponse>(`/api/conversation/${id}/generate-title`, {
-                content,
-            });
-            set((state) => ({
-                conversations: state.conversations.map((c) =>
-                    c.id === id ? { ...c, title: result.title, icon: result.icon, generating: false } : c
-                ),
+                conversations: state.conversations.map(c => c.id === id ? { ...c, ...result } : c),
+                favouriteConversations: state.favouriteConversations.map(c => c.id === id ? { ...c, ...result } : c),
             }));
         } catch (error) {
-            if (error instanceof ApiError) {
-                toast.error(error.message);
-            } else {
-                toast.error(t("error.network"));
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
+            toast.error(error instanceof Error ? error.message : t("error.network"));
+        } finally {
+            if (sessionVersion === useAuthStore.getState().sessionVersion) {
+                set((state) => ({
+                    conversations: state.conversations.map(c => c.id === id ? { ...c, generating: false } : c),
+                    favouriteConversations: state.favouriteConversations.map(c => c.id === id ? { ...c, generating: false } : c),
+                }));
             }
         }
     },
     deleteConversation: async (id: string) => {
+        const sessionVersion = useAuthStore.getState().sessionVersion;
         try {
             await api.del(`/api/conversation/${id}`);
             toast.success(t("common.success.deleted"))
         } catch (error) {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
             if (error instanceof ApiError) {
                 toast.error(error.message);
             } else {
                 toast.error(t("error.network"));
             }
+            return;
         }
         set((state) => ({
             conversations: state.conversations.filter((c) => c.id !== id),
@@ -183,41 +197,26 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         }));
     },
     toggleFavourite: async (id: string, isFavourite: boolean) => {
+        const sessionVersion = useAuthStore.getState().sessionVersion;
         try {
-            if (isFavourite) {
-                await api.del(`/api/conversation/${id}/favourite`);
-            } else {
-                await api.post(`/api/conversation/${id}/favourite`);
-            }
-            const nextFavourite = isFavourite ? 0 : 1;
+            if (isFavourite) await api.del(`/api/conversation/${id}/favourite`);
+            else await api.post(`/api/conversation/${id}/favourite`);
             set((state) => {
-                const updatedConversations = state.conversations.map((record) =>
-                    record.id === id ? { ...record, favourite: nextFavourite, updated_at: new Date().toISOString() } : record
-                );
-                const existingFavourite = state.favouriteConversations.find((record) => record.id === id);
-                const sourceConversation = state.conversations.find((record) => record.id === id) || existingFavourite;
-                let updatedFavourites = state.favouriteConversations;
-                if (nextFavourite === 1) {
-                    if (sourceConversation) {
-                        updatedFavourites = [
-                            { ...sourceConversation, favourite: 1 },
-                            ...state.favouriteConversations.filter((record) => record.id !== id),
-                        ];
-                    }
-                } else {
-                    updatedFavourites = state.favouriteConversations.filter((record) => record.id !== id);
+                const source = [...state.conversations, ...state.favouriteConversations].find(c => c.id === id);
+                const conversations = state.conversations.filter(c => c.id !== id);
+                const favourites = state.favouriteConversations.filter(c => c.id !== id);
+                if (source) {
+                    if (isFavourite) conversations.push({ ...source, favourite: 0 });
+                    else favourites.unshift({ ...source, favourite: 1 });
                 }
-                return {
-                    conversations: updatedConversations,
-                    favouriteConversations: updatedFavourites,
-                };
+                conversations.sort((a, b) => b.created_at.localeCompare(a.created_at));
+                return { conversations, favouriteConversations: favourites };
             });
+            // Moving a record changes page boundaries; reload the first page before loading more.
+            await get().fetchConversations();
         } catch (error) {
-            if (error instanceof ApiError) {
-                toast.error(error.message);
-            } else {
-                toast.error(t("error.network"));
-            }
+            if (sessionVersion !== useAuthStore.getState().sessionVersion) return;
+            toast.error(error instanceof Error ? error.message : t("error.network"));
         }
     },
 }));

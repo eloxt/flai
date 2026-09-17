@@ -7,10 +7,10 @@ import (
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
 	"flai/internal/model/entity"
+	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -28,7 +28,7 @@ func (c *OpenAIChatClient) getClient(providerInfo *logic.SimpleProviderInfo) ope
 	return openai.NewClient(opts...)
 }
 
-func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
+func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
 	client := c.getClient(providerInfo)
 
 	messages, err := c.buildMessages(historyMessages, newMessage, files)
@@ -44,6 +44,11 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 	}
 
 	mcpClientCache := make(map[string]*mcp.MCPClient)
+	defer func() {
+		for _, client := range mcpClientCache {
+			_ = client.Close()
+		}
+	}()
 
 	var currentContentBuilder strings.Builder
 	var contentList []Content
@@ -84,6 +89,7 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 		}
 
 		stream := client.Chat.Completions.NewStreaming(ctx, params)
+		defer stream.Close()
 		acc := openai.ChatCompletionAccumulator{}
 
 		for stream.Next() {
@@ -112,19 +118,22 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 			}
 
 			if shouldSend {
-				if err := StreamToClient(response, streamResponse); err != nil {
+				if err := response(streamResponse); err != nil {
 					return err
 				}
 			}
 		}
 
 		if err := stream.Err(); err != nil {
-			if HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo) {
-				return nil
+			if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo); handled {
+				return saveErr
 			}
 			return err
 		}
 
+		if len(acc.Choices) == 0 {
+			return fmt.Errorf("upstream returned an empty completion")
+		}
 		toolCalls := acc.Choices[0].Message.ToolCalls
 		if len(toolCalls) > 0 {
 			if currentContentBuilder.Len() > 0 {
@@ -154,7 +163,7 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 					Data: toolCall,
 				})
 
-				if err := StreamToClient(response, StreamResponse{
+				if err := response(StreamResponse{
 					MessageId: messageId,
 					Type:      consts.MessageType.ToolCall,
 					Data:      toolCall,
@@ -176,7 +185,7 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 					Data: toolResultData,
 				})
 
-				if err := StreamToClient(response, StreamResponse{
+				if err := response(StreamResponse{
 					MessageId: messageId,
 					Type:      consts.MessageType.ToolResult,
 					Data:      toolResultData,
@@ -192,18 +201,15 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 		break
 	}
 
-	c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
-	StreamDone(response)
-
-	return nil
+	return c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
 }
 
-func (c *OpenAIChatClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+func (c *OpenAIChatClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) error {
 	appendContent(contentBuilder, contentType, imageUrls, currentId, contentList)
-	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
+	return SaveAssistantMessage(ctx, message, *contentList, metaInfo)
 }
 
-func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
+func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client := c.getClient(providerInfo)
 
 	var userMessage openai.ChatCompletionMessageParamUnion
@@ -228,6 +234,7 @@ func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.
 		},
 	})
 
+	defer stream.Close()
 	for stream.Next() {
 		chunk := stream.Current()
 		if len(chunk.Choices) == 0 {
@@ -239,7 +246,7 @@ func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.
 			continue
 		}
 
-		if err := StreamToClient(response, StreamResponse{
+		if err := response(StreamResponse{
 			Type: consts.MessageType.Message,
 			Data: ContentMessage{Content: delta},
 		}); err != nil {
@@ -249,12 +256,11 @@ func (c *OpenAIChatClient) StreamTranslate(ctx context.Context, response *ghttp.
 
 	if err := stream.Err(); err != nil {
 		if ctx.Err() != nil {
-			return nil
+			return ctx.Err()
 		}
 		return err
 	}
 
-	StreamDone(response)
 	return nil
 }
 
@@ -321,13 +327,21 @@ func (c *OpenAIChatClient) buildMessages(historyMessages []*entity.Message, newM
 				return nil, err
 			}
 
-			if data.Content != "" {
-				if msg.Role == consts.MessageRole.Assistant {
+			if msg.Role == consts.MessageRole.Assistant {
+				if data.Content != "" {
 					messages = append(messages, openai.AssistantMessage(data.Content))
-				} else {
-					messages = append(messages, openai.UserMessage(data.Content))
 				}
+				if len(data.Images) == 0 && len(data.Files) == 0 {
+					continue
+				}
+				data.Content = "Previously generated images:"
 			}
+			parts, err := chatContentParts(data.Content, data.Files, data.Images)
+			if err != nil {
+				return nil, err
+			}
+			messages = append(messages, openai.UserMessage(parts))
+
 		}
 	}
 
@@ -335,7 +349,11 @@ func (c *OpenAIChatClient) buildMessages(historyMessages []*entity.Message, newM
 	if err != nil {
 		return nil, err
 	}
-	messages = append(messages, openai.UserMessage(content))
+	parts, err := chatContentParts(content, files, nil)
+	if err != nil {
+		return nil, err
+	}
+	messages = append(messages, openai.UserMessage(parts))
 
 	return messages, nil
 }
@@ -387,10 +405,27 @@ func (c *OpenAIChatClient) GenerateTitle(ctx context.Context, providerInfo *logi
 		return nil, err
 	}
 
+	if resp == nil || len(resp.Choices) == 0 {
+		return nil, fmt.Errorf("upstream returned no title")
+	}
 	var titleResp TitleGenerationResponse
 	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &titleResp); err != nil {
 		return nil, err
 	}
 
 	return &titleResp, nil
+}
+
+func chatContentParts(text string, files []*entity.File, images []ContentImage) ([]openai.ChatCompletionContentPartUnionParam, error) {
+	parts := []openai.ChatCompletionContentPartUnionParam{openai.TextContentPart(text)}
+	for _, file := range files {
+		if file == nil || !strings.HasPrefix(file.MimeType, "image/") {
+			return nil, fmt.Errorf("Chat Completions supports image attachments only")
+		}
+		parts = append(parts, openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{URL: file.PublicUrl}))
+	}
+	for _, image := range images {
+		parts = append(parts, openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{URL: image.PublicUrl}))
+	}
+	return parts, nil
 }

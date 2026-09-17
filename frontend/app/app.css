@@ -6,7 +6,7 @@
 :root {
     font-family: var(--font-family-sans);
     --font-family-sans:
-        "IBM Plex Sans", "Liberation Sans", "Hiragino Sans GB", "PingFang SC",
+        "IBM Plex Sans", "Liberation Sans", "PingFang SC",
         "Noto Sans CJK SC", "Source Han Sans SC", "Source Han Sans CN",
         "Microsoft YaHei", "Wenquanyi Micro Hei", "WenQuanYi Zen Hei",
         "ST Heiti", SimHei, "WenQuanYi Zen Hei Sharp", sans-serif;
@@ -141,16 +141,146 @@
     }
 }
 
+.chat-composer > .chat-composer-surface {
+    background: var(--background);
+}
+
+/* The input surface overlaps the shared edge only when the tool card is shown. */
+.chat-composer[data-has-tools="true"] > .chat-composer-surface {
+    width: calc(100% + 2px);
+    margin: -1px -1px 0;
+}
+
 /* Prevent horizontal overflow in chat messages */
 .markdown-body {
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.7;
     overflow-wrap: break-word;
     word-break: break-word;
     max-width: 100%;
 }
 
+/* Keep paragraph spacing consistent with Streamdown's block layout. */
+.markdown-body .streamdown-content > *,
+.markdown-body blockquote > * {
+    margin-block: 0;
+}
+
+.markdown-body .streamdown-content > * + *,
+.markdown-body blockquote > * + * {
+    margin-block-start: 12px;
+}
+
+.markdown-body [data-streamdown^="heading-"] {
+    line-height: 1.4;
+}
+
+.markdown-body .streamdown-content > [data-streamdown^="heading-"]:not(:first-child),
+.markdown-body blockquote > [data-streamdown^="heading-"]:not(:first-child) {
+    margin-block-start: 20px;
+}
+
+.markdown-body .streamdown-content > [data-streamdown^="heading-"] + *,
+.markdown-body blockquote > [data-streamdown^="heading-"] + * {
+    margin-block-start: 8px;
+}
+
+.markdown-body [data-streamdown="list-item"] {
+    padding-block: 2px;
+}
+
+.markdown-body [data-streamdown="list-item"] > p ~ p {
+    display: block;
+    margin-block-start: 12px;
+}
+
+.markdown-body [data-streamdown="heading-1"] {
+    font-size: 22px;
+}
+
+.markdown-body [data-streamdown="heading-2"] {
+    font-size: 20px;
+}
+
+.markdown-body [data-streamdown="heading-3"] {
+    font-size: 18px;
+}
+
+.markdown-body [data-streamdown="heading-4"] {
+    font-size: 17px;
+}
+
+.markdown-body [data-streamdown="heading-5"] {
+    font-size: 16px;
+}
+
+.markdown-body [data-streamdown="heading-6"] {
+    font-size: 15px;
+}
+
 .markdown-body pre {
     overflow-x: auto;
     max-width: 100%;
+}
+
+/* Keep Streamdown controls, without nesting padded cards around content. */
+.markdown-body [data-streamdown="table-wrapper"],
+.markdown-body [data-streamdown="code-block"] {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.markdown-body [data-streamdown="table-wrapper"] > div:has(> table) {
+    border: 0;
+    border-radius: 0;
+}
+
+.markdown-body [data-streamdown="table-header"] {
+    background: transparent;
+}
+
+.markdown-body [data-streamdown="table-header-cell"],
+.markdown-body [data-streamdown="table-cell"] {
+    padding: 0.5rem 0.75rem;
+}
+
+.markdown-body [data-streamdown="table-header-cell"] {
+    font-weight: 500;
+}
+
+.markdown-body [data-streamdown="code-block"] {
+    gap: 0;
+    border-radius: var(--radius-md);
+    background: var(--muted);
+}
+
+.markdown-body [data-streamdown="code-block-header"] {
+    padding-inline: 0.75rem;
+}
+
+.markdown-body [data-streamdown="code-block-header"] > span {
+    margin-left: 0;
+}
+
+/* Align the sticky controls with the header after removing the wrapper gap. */
+.markdown-body [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
+    margin-top: -2rem;
+    padding-inline: 0.5rem;
+}
+
+.markdown-body [data-streamdown="code-block-actions"] {
+    border: 0;
+    background: var(--muted);
+    backdrop-filter: none;
+}
+
+.markdown-body [data-streamdown="code-block-body"] {
+    padding: 0.75rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 /* Fix Radix ScrollArea table display issue */

@@ -12,6 +12,8 @@ interface AppState {
   setShowHeaderBorder: (show: boolean) => void;
   currentMessagePath: TreeNode[];
   setCurrentMessagePath: (path: TreeNode[]) => void;
+  currentMessageTree: Map<string, TreeNode>;
+  isChatStreaming: boolean;
   isInspectionPanelOpen: boolean;
   toggleInspectionPanel: () => void;
   scrollToMessageId: string | null;
@@ -31,6 +33,8 @@ export const useAppStore = create<AppState>()(
       showHeaderBorder: false,
       setShowHeaderBorder: (show) => set({ showHeaderBorder: show }),
       currentMessagePath: [],
+      currentMessageTree: new Map(),
+      isChatStreaming: false,
       setCurrentMessagePath: (path) => set({ currentMessagePath: path }),
       isInspectionPanelOpen: false,
       toggleInspectionPanel: () =>

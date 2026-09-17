@@ -33,7 +33,7 @@ func UpdateSystemConfigCache(ctx context.Context) {
 // GetSystemConfigFromDB reads config directly from database (no cache)
 func GetSystemConfigFromDB(ctx context.Context, key string) (map[string]any, error) {
 	var config *entity.SystemConfig
-	err := g.DB().Model(&entity.SystemConfig{}).Where(do.SystemConfig{Key: key}).Scan(&config)
+	err := g.DB().Model(&entity.SystemConfig{}).Ctx(ctx).Where(do.SystemConfig{Key: key}).Scan(&config)
 	if err != nil {
 		return nil, err
 	}

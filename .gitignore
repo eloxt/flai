@@ -19,3 +19,4 @@ bin
 **/config/config.yaml
 resource/public/
 internal/packed/*
+.pnpm-store/

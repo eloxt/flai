@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"flai/internal/consts"
 	"flai/internal/dao"
-	"flai/internal/model/do"
 	"flai/internal/model/entity"
 	"flai/utility"
+	"strings"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
@@ -15,10 +15,9 @@ import (
 )
 
 func (c *ControllerV1) Login(ctx context.Context, req *v1.LoginReq) (res *v1.LoginRes, err error) {
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	var user *entity.User
-	err = dao.User.Ctx(ctx).Where(do.User{
-		Email: req.Email,
-	}).Scan(&user)
+	err = dao.User.Ctx(ctx).Where("lower(btrim(email)) = ?", req.Email).Scan(&user)
 	if err != nil {
 		return nil, err
 	}

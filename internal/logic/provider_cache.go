@@ -5,12 +5,21 @@ import (
 	"encoding/json"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
+	"fmt"
+	"sync"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// ProviderMap provider id -> model id -> model
-var ProviderMap map[string]*SimpleProviderInfo
+var providerMu sync.RWMutex
+var providerMap map[string]*SimpleProviderInfo
+
+// Published snapshots and their nested model maps are immutable.
+func GetProvider(id string) *SimpleProviderInfo {
+	providerMu.RLock()
+	defer providerMu.RUnlock()
+	return providerMap[id]
+}
 
 type ModelConfig struct {
 	ID               string     `json:"id"`
@@ -57,37 +66,32 @@ type SimpleProviderInfo struct {
 	ModelIdMap   map[string]*ModelConfig
 }
 
-func UpdateProviderCache(ctx context.Context) {
-	var providerList []*entity.Provider
-	err := g.DB().Model(&entity.Provider{}).Where(do.Provider{IsActive: 1}).Scan(&providerList)
-	if err != nil {
-		g.Log().Fatal(ctx, err)
+func UpdateProviderCache(ctx context.Context) error {
+	providerMu.Lock()
+	defer providerMu.Unlock()
+	// A failed reload must not leave deleted credentials usable.
+	providerMap = nil
+	var providers []*entity.Provider
+	if err := g.DB().Model(&entity.Provider{}).Ctx(ctx).Where(do.Provider{IsActive: 1}).Scan(&providers); err != nil {
+		return err
 	}
-
-	ProviderMap = make(map[string]*SimpleProviderInfo)
-	for _, provider := range providerList {
-		model := provider.Model
-		if model == "" {
-			continue
-		}
-		if _, ok := ProviderMap[provider.Id]; !ok {
-			modelInfo := SimpleProviderInfo{
-				ProviderType: provider.ProviderType,
-				Name:         provider.Name,
-				ApiKey:       provider.ApiKey,
-				BaseUrl:      provider.BaseUrl,
-				ModelIdMap:   make(map[string]*ModelConfig),
+	snapshot := make(map[string]*SimpleProviderInfo, len(providers))
+	for _, provider := range providers {
+		info := &SimpleProviderInfo{ProviderType: provider.ProviderType, Name: provider.Name, ApiKey: provider.ApiKey, BaseUrl: provider.BaseUrl, ModelIdMap: make(map[string]*ModelConfig)}
+		if provider.Model != "" {
+			var models []*ModelConfig
+			if err := json.Unmarshal([]byte(provider.Model), &models); err != nil {
+				return fmt.Errorf("invalid provider model configuration: %w", err)
 			}
-			ProviderMap[provider.Id] = &modelInfo
+			for _, model := range models {
+				if model == nil || model.ID == "" {
+					return fmt.Errorf("invalid provider model")
+				}
+				info.ModelIdMap[model.ID] = model
+			}
 		}
-		var modelConfigList []*ModelConfig
-		err := json.Unmarshal([]byte(model), &modelConfigList)
-		if err != nil {
-			g.Log().Fatalf(ctx, "Provider model config unmarshal err: %v", err)
-		}
-		for _, modelConfig := range modelConfigList {
-			ProviderMap[provider.Id].ModelIdMap[modelConfig.ID] = modelConfig
-		}
+		snapshot[provider.Id] = info
 	}
-	g.Log().Infof(ctx, "Provider cache updated")
+	providerMap = snapshot
+	return nil
 }

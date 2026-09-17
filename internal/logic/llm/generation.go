@@ -5,35 +5,34 @@ import (
 	"sync"
 )
 
-var generationCancels sync.Map
-
-// RegisterGeneration stores a cancel function for a running assistant message.
-func RegisterGeneration(messageId string, cancel context.CancelFunc) {
-	if messageId == "" || cancel == nil {
-		return
-	}
-	if existing, ok := generationCancels.LoadAndDelete(messageId); ok {
-		existing.(context.CancelFunc)()
-	}
-	generationCancels.Store(messageId, cancel)
+type generation struct {
+	userID         string
+	conversationID string
+	cancel         context.CancelFunc
 }
 
-// CancelGeneration cancels a running assistant generation by message ID.
-func CancelGeneration(messageId string) bool {
-	if messageId == "" {
+var generationCancels sync.Map
+
+// RegisterGeneration reserves the ID without interrupting an existing generation.
+func RegisterGeneration(userID, conversationID, messageID string, cancel context.CancelFunc) bool {
+	if messageID == "" || cancel == nil {
 		return false
 	}
-	if existing, ok := generationCancels.LoadAndDelete(messageId); ok {
-		existing.(context.CancelFunc)()
-		return true
+	_, loaded := generationCancels.LoadOrStore(messageID, generation{userID, conversationID, cancel})
+	return !loaded
+}
+
+func CancelGeneration(userID, conversationID, messageID string) bool {
+	if value, ok := generationCancels.Load(messageID); ok {
+		task := value.(generation)
+		if task.userID == userID && task.conversationID == conversationID {
+			task.cancel()
+			return true
+		}
 	}
 	return false
 }
 
-// UnregisterGeneration removes the cancel function for a completed generation.
-func UnregisterGeneration(messageId string) {
-	if messageId == "" {
-		return
-	}
-	generationCancels.Delete(messageId)
+func UnregisterGeneration(messageID string) {
+	generationCancels.Delete(messageID)
 }

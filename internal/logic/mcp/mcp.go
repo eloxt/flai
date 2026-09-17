@@ -3,8 +3,13 @@ package mcp
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
+	"net"
 	"net/http"
+	"net/netip"
+	"net/url"
 	"sync"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -16,11 +21,12 @@ import (
 
 // MCPClient wraps the MCP client and provides methods for tool operations.
 type MCPClient struct {
-	client   *mcp.Client
-	session  *mcp.ClientSession
-	endpoint string
-	headers  map[string]string
-	mu       sync.RWMutex
+	client    *mcp.Client
+	session   *mcp.ClientSession
+	endpoint  string
+	headers   map[string]string
+	transport *http.Transport
+	mu        sync.RWMutex
 }
 
 // MCPClientOption represents configuration options for creating an MCP client.
@@ -69,6 +75,10 @@ func (c *MCPClient) Connect(ctx context.Context) error {
 		return nil // Already connected
 	}
 
+	endpoint, err := url.Parse(c.endpoint)
+	if err != nil || (endpoint.Scheme != "https" && endpoint.Scheme != "http") || endpoint.Hostname() == "" || endpoint.User != nil {
+		return gerror.New("MCP endpoint must be an HTTP(S) URL without credentials")
+	}
 	transport := &mcp.StreamableClientTransport{
 		Endpoint:   c.endpoint,
 		HTTPClient: c.createHTTPClient(),
@@ -88,6 +98,9 @@ func (c *MCPClient) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.transport != nil {
+		defer c.transport.CloseIdleConnections()
+	}
 	if c.session == nil {
 		return nil
 	}
@@ -122,17 +135,49 @@ func (t *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // createHTTPClient creates an HTTP client with custom headers.
 func (c *MCPClient) createHTTPClient() *http.Client {
-	if len(c.headers) == 0 {
-		return nil // Use default client
+	base := http.DefaultTransport.(*http.Transport).Clone()
+	c.transport = base
+	base.Proxy = nil
+	base.ResponseHeaderTimeout = 30 * time.Second
+	base.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		addresses, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+		if err != nil {
+			return nil, err
+		}
+		if len(addresses) == 0 {
+			return nil, fmt.Errorf("MCP hostname has no addresses")
+		}
+		// Validate the complete answer and dial the validated IP, preventing DNS rebinding.
+		for _, ip := range addresses {
+			if !publicMCPAddress(ip) {
+				return nil, fmt.Errorf("MCP endpoint must resolve to public addresses")
+			}
+		}
+		dialer := net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
+		var lastErr error
+		for _, ip := range addresses {
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+		}
+		return nil, lastErr
 	}
-
-	base := http.DefaultTransport
 	return &http.Client{
-		Transport: &headerTransport{
-			base:    base,
-			headers: c.headers,
+		Transport: &headerTransport{base: base, headers: c.headers},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 || req.URL.Scheme != via[0].URL.Scheme || req.URL.Host != via[0].URL.Host || req.URL.User != nil {
+				return fmt.Errorf("MCP cross-origin or excessive redirect rejected")
+			}
+			return nil
 		},
 	}
+
 }
 
 // ensureConnected ensures that the client is connected to the MCP server.
@@ -279,4 +324,20 @@ func CallToolOnServer(ctx context.Context, endpoint string, params *CallToolPara
 	defer client.Close()
 
 	return client.CallTool(ctx, params)
+}
+
+func publicMCPAddress(ip netip.Addr) bool {
+	ip = ip.Unmap()
+	if ip.Is6() && !netip.MustParsePrefix("2000::/3").Contains(ip) {
+		return false
+	}
+	if !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+		return false
+	}
+	for _, prefix := range []string{"0.0.0.0/8", "100.64.0.0/10", "192.0.0.0/24", "192.0.2.0/24", "198.18.0.0/15", "198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4", "2001:db8::/32", "2001::/23", "64:ff9b::/96", "64:ff9b:1::/48", "2002::/16"} {
+		if netip.MustParsePrefix(prefix).Contains(ip) {
+			return false
+		}
+	}
+	return true
 }

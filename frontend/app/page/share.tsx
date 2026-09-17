@@ -14,7 +14,7 @@ import { applyGoogleGroundingFootnotes } from "./chat/grounding-footnotes";
 import { MessageContent } from "./chat/MessageContent";
 import { MessageAttachments } from "./chat/MessageAttachments";
 import { GoogleGroundingChunks, OpenaiGroundingChunks } from "./chat/GroundingChunks";
-import type { TreeNode, ContentMessage } from "./chat/types";
+import type { TreeNode, ContentMessage } from "../types/chat";
 
 export const meta: MetaFunction = () => {
     return [{ title: "FlaiChat - Shared Conversation" }];
@@ -204,7 +204,7 @@ function ShareMessageItem({ message, isExpanded, onToggleReasoning }: ShareMessa
                 message.content.map((content, index) => (
                     <div
                         key={index}
-                        className={`flex flex-col min-w-0 ${message.role === "user" ? "self-end items-end" : "self-start items-start"
+                        className={`flex flex-col min-w-0 ${message.role === "user" ? "self-end items-end" : "w-full items-start"
                             }`}
                         style={{
                             maxWidth: message.role === "user" ? "80%" : "100%",
@@ -227,6 +227,7 @@ function ShareMessageItem({ message, isExpanded, onToggleReasoning }: ShareMessa
                                 }`}
                         >
                             <MessageContent
+                                role={message.role === "user" ? "user" : "assistant"}
                                 content={content}
                                 contentIndex={index}
                                 messageId={message.id}
@@ -260,4 +261,3 @@ function ShareMessageItem({ message, isExpanded, onToggleReasoning }: ShareMessa
         </div>
     );
 }
-

@@ -69,6 +69,7 @@ export default function Chat() {
         deleteMessage,
         cancelGeneration,
         switchNode,
+        selectNode,
     } = useChat(conversationId, useMemo(() => ({
         onExpandReasoning: (messageId: string, index: number) => {
             setExpandedReasoning((prev) => new Set(prev).add(messageId + "-" + index));
@@ -92,6 +93,17 @@ export default function Chat() {
         setCurrentMessagePath(fullPath);
     }, [path, streamingMessage, setCurrentMessagePath]);
 
+    useEffect(() => {
+        useAppStore.setState({ currentMessageTree: nodeMap, isChatStreaming: isStreaming });
+    }, [nodeMap, isStreaming]);
+
+    useEffect(() => () => {
+        useAppStore.setState({
+            currentMessagePath: [], currentMessageTree: new Map(),
+            isChatStreaming: false, scrollToMessageId: null,
+        });
+    }, []);
+
     // Scroll to bottom when streaming message updates.
     // Use instant ("auto") scroll: tokens arrive in small increments, so each
     // snap is tiny and looks silky. Smooth scroll here would restart its
@@ -105,19 +117,37 @@ export default function Chat() {
         }
     }, [streamingMessage]);
 
-    // Scroll to specific message when triggered from timeline
+    // Wait for the selected branch to render before locating its message.
     const scrollToMessageId = useAppStore((state) => state.scrollToMessageId);
     const setScrollToMessageId = useAppStore((state) => state.setScrollToMessageId);
     useEffect(() => {
-        if (scrollToMessageId) {
-            const messageElement = document.querySelector(`[data-message-id="${scrollToMessageId}"]`);
-            if (messageElement) {
-                messageElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (!scrollToMessageId || isLoading) return;
+        const onPath = path.some(message => message.id === scrollToMessageId)
+            || streamingMessage?.id === scrollToMessageId;
+        if (!onPath) {
+            if (!isStreaming && nodeMap.has(scrollToMessageId)) {
+                selectNode(scrollToMessageId);
+                return;
             }
-            // Reset the scroll target
+            setScrollToMessageId(null);
+            return;
+        }
+        const scrollArea = scrollAreaRef.current;
+        const messageElement = scrollArea?.querySelector<HTMLElement>(
+            `[data-message-id="${CSS.escape(scrollToMessageId)}"]`
+        );
+        if (scrollArea && messageElement) {
+            isPinnedToBottomRef.current = false;
+            // scrollIntoView also scrolls overflow-hidden ancestors (including the panel).
+            // Only move the chat scroller so the header, input and scrollbar stay in place.
+            scrollArea.scrollTo({
+                top: scrollArea.scrollTop + messageElement.getBoundingClientRect().top
+                    - scrollArea.getBoundingClientRect().top - scrollArea.clientTop,
+                behavior: "smooth",
+            });
             setScrollToMessageId(null);
         }
-    }, [scrollToMessageId, setScrollToMessageId]);
+    }, [scrollToMessageId, path, streamingMessage, isLoading, isStreaming, nodeMap, selectNode, setScrollToMessageId]);
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
         requestAnimationFrame(() => {
@@ -174,7 +204,7 @@ export default function Chat() {
     }, []);
 
     const handleEditSubmit = useCallback(() => {
-        if (!editValue.trim() || !editingMessageId) return;
+        if (isStreaming || !editValue.trim() || !editingMessageId) return;
 
         const messageIndex = path.findIndex((m) => m.id === editingMessageId);
         if (messageIndex === -1) return;
@@ -187,7 +217,7 @@ export default function Chat() {
             pathParam: newPath,
         });
         setEditValue("");
-    }, [editValue, editingMessageId, path, sendMessage]);
+    }, [editValue, editingMessageId, path, sendMessage, isStreaming]);
 
     // Calculate context usage percentage from latest assistant message
     const contextUsagePercentage = (() => {
@@ -225,6 +255,7 @@ export default function Chat() {
                                     messageIndex={messageIndex}
                                     pathLength={path.length + (streamingMessage ? 1 : 0)}
                                     isStreaming={false}
+                                    actionsDisabled={isStreaming}
                                     expandedReasoning={expandedReasoning}
                                     nodeMap={nodeMap}
                                     previousMessageId={messageIndex > 0 ? path[messageIndex - 1].id : undefined}
@@ -264,13 +295,10 @@ export default function Chat() {
 
             <div className={`absolute ${isMobile ? "bottom-8" : "bottom-4"} left-0 right-0 z-50 px-4 md:px-8 pointer-events-none `}>
                 <div
-                    className={`absolute left-1/2 -translate-x-1/2 mb-4 transition-opacity ${showScrollButton
+                    className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-4 transition-opacity ${showScrollButton
                         ? "opacity-100 pointer-events-auto"
                         : "opacity-0 pointer-events-none"
                         }`}
-                    style={{
-                        bottom: `${inputHeight + 70 + (attachments.length > 0 ? 48 : 0)}px`,
-                    }}
                 >
                     <Button
                         variant="outline"

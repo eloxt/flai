@@ -7,6 +7,7 @@ import (
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
 
+	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 
@@ -19,53 +20,59 @@ func (c *ControllerV1) Delete(ctx context.Context, req *v1.DeleteReq) (res *v1.D
 		return nil, gerror.New("User not found")
 	}
 
-	// Make sure user has access to the conversation
-	var conversation entity.Conversation
-	err = dao.Conversation.Ctx(ctx).Where(do.Conversation{
-		Id:     req.ConversationId,
-		UserId: user.Id,
-	}).
-		WhereNull("deleted_at").
-		Scan(&conversation)
-	if err != nil {
-		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to fetch conversation")
-	}
-	if conversation.Id == "" {
-		return nil, gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
-	}
-
-	// Delete message
+	ids := req.Ids
 	if req.Id != "" {
-		_, err = dao.Message.Ctx(ctx).Delete(do.Message{
-			Id:             req.Id,
-			ConversationId: req.ConversationId,
-		})
-		if err != nil {
-			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
+		ids = []string{req.Id}
+	}
+	if len(ids) == 0 {
+		return nil, gerror.New("Message IDs are required")
+	}
+	err = dao.Message.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		var conversation *entity.Conversation
+		if err := dao.Conversation.Ctx(ctx).Where(do.Conversation{Id: req.ConversationId, UserId: user.Id}).LockUpdate().Scan(&conversation); err != nil {
+			return err
 		}
-		// Change children's parent
-		if len(req.Children) > 0 {
-			_, err = dao.Message.Ctx(ctx).Data(do.Message{
-				ParentId:       req.ParentId,
-				ConversationId: req.ConversationId,
-			}).Where(do.Message{
-				Id: req.Children,
-			}).Update()
-			if err != nil {
-				return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
+		if conversation == nil {
+			return gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
+		}
+		var messages []*entity.Message
+		if err := dao.Message.Ctx(ctx).Where("conversation_id", req.ConversationId).LockUpdate().Scan(&messages); err != nil {
+			return err
+		}
+		byID := make(map[string]*entity.Message, len(messages))
+		for _, msg := range messages {
+			byID[msg.Id] = msg
+		}
+		deleting := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			if byID[id] == nil {
+				return gerror.NewCode(gcode.CodeNotFound, "Message not found")
+			}
+			deleting[id] = true
+		}
+		// Derive children and surviving parents from the stored tree, never from the request.
+		for _, msg := range messages {
+			if deleting[msg.Id] || !deleting[msg.ParentId] {
+				continue
+			}
+			parent := msg.ParentId
+			seen := make(map[string]bool)
+			for deleting[parent] {
+				if seen[parent] {
+					return gerror.New("Invalid message tree")
+				}
+				seen[parent] = true
+				parent = byID[parent].ParentId
+			}
+			if _, err := dao.Message.Ctx(ctx).Where(do.Message{Id: msg.Id, ConversationId: req.ConversationId}).Data("parent_id", parent).Update(); err != nil {
+				return err
 			}
 		}
-		return nil, nil
-	} else if len(req.Ids) > 0 {
-		_, err = dao.Message.Ctx(ctx).Delete(do.Message{
-			Id:             req.Ids,
-			ConversationId: req.ConversationId,
-		})
-		if err != nil {
-			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to delete message")
-		}
-		return nil, nil
+		_, err := dao.Message.Ctx(ctx).Where(do.Message{Id: ids, ConversationId: req.ConversationId}).Delete()
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, gerror.NewCode(gcode.CodeInternalError, "Ids and id cannot be both empty")
+	return &v1.DeleteRes{}, nil
 }

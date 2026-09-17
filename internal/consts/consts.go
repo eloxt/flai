@@ -65,10 +65,12 @@ var SystemConfig = struct {
 	TitleGeneration string
 	SystemPrompt    string
 	Notification    string
+	ErrorAlert      string
 }{
 	TitleGeneration: "title_generation",
 	SystemPrompt:    "system_prompt",
 	Notification:    "notification",
+	ErrorAlert:      "error_alert",
 }
 
 // Internal tools

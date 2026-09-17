@@ -22,7 +22,7 @@ func (c *ControllerV1) Search(ctx context.Context, req *v1.SearchReq) (res *v1.S
 	}
 
 	var queryResult []dao.ConversationSearch
-	err = dao.Conversation.Ctx(ctx).Raw("SELECT ts_headline('zhcfg', \"content\", to_tsquery('zhcfg', ?), 'StartSel=<em>, StopSel=</em>, MaxWords=50, MinWords=10') as highlight, conversation_id, title, icon, conversation.created_at FROM message LEFT JOIN conversation ON message.conversation_id = conversation.id WHERE tsv_content @@ to_tsquery('zhcfg', ?) AND conversation.user_id = ? AND conversation.deleted_at IS NULL AND message.deleted_at IS NULL", req.Query, req.Query, user.Id).Scan(&queryResult)
+	err = dao.Conversation.Ctx(ctx).Raw("SELECT ts_headline('zhcfg', \"content\", websearch_to_tsquery('zhcfg', ?), 'StartSel=<em>, StopSel=</em>, MaxWords=50, MinWords=10') as highlight, conversation_id, title, icon, conversation.created_at FROM message LEFT JOIN conversation ON message.conversation_id = conversation.id WHERE tsv_content @@ websearch_to_tsquery('zhcfg', ?) AND conversation.user_id = ? AND conversation.deleted_at IS NULL AND message.deleted_at IS NULL", req.Query, req.Query, user.Id).Scan(&queryResult)
 	if err != nil {
 		return nil, err
 	}

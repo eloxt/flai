@@ -577,15 +577,16 @@ export function ProviderManagement() {
             </Dialog>
 
             <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-                <DialogContent>
+                <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>{t("pages.admin.providers.form.importJsonTitle")}</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="min-h-0 overflow-y-auto px-1 py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="import-json">{t("pages.admin.providers.form.importJsonDescription")}</Label>
                             <Textarea
                                 id="import-json"
+                                className="field-sizing-fixed max-h-[50dvh] resize-none overflow-y-auto"
                                 value={importJsonText}
                                 onChange={(e) => setImportJsonText(e.target.value)}
                                 placeholder={t("pages.admin.providers.form.importJsonPlaceholder")}

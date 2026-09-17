@@ -2,24 +2,25 @@ package admin
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	v1 "flai/api/admin/v1"
 	"flai/internal/consts"
 	"flai/internal/dao"
-	"flai/internal/model/do"
 	"flai/internal/model/entity"
 	"flai/utility"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 func (c *ControllerV1) UserCreate(ctx context.Context, req *v1.UserCreateReq) (res *v1.UserCreateRes, err error) {
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	// Check if email already exists
 	var existingUser *entity.User
-	err = dao.User.Ctx(ctx).Where(do.User{
-		Email: req.Email,
-	}).Scan(&existingUser)
+	err = dao.User.Ctx(ctx).Where("lower(btrim(email)) = ?", req.Email).Scan(&existingUser)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +57,10 @@ func (c *ControllerV1) UserCreate(ctx context.Context, req *v1.UserCreateReq) (r
 
 	_, err = dao.User.Ctx(ctx).Insert(newUser)
 	if err != nil {
+		var conflict *pq.Error
+		if errors.As(err, &conflict) && conflict.Code == "23505" && conflict.Constraint == "user_email_active_unique" {
+			return nil, gerror.New("Email already exists")
+		}
 		return nil, err
 	}
 

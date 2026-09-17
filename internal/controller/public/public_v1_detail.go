@@ -8,6 +8,7 @@ import (
 	"flai/internal/logic/llm"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -16,7 +17,7 @@ import (
 )
 
 func (c *ControllerV1) Detail(ctx context.Context, req *v1.DetailReq) (res *v1.DetailRes, err error) {
-	var share entity.Share
+	var share *entity.Share
 	err = dao.Share.Ctx(ctx).Where(do.Share{
 		Id: req.Id,
 	}).Scan(&share)
@@ -24,6 +25,9 @@ func (c *ControllerV1) Detail(ctx context.Context, req *v1.DetailReq) (res *v1.D
 		return nil, err
 	}
 
+	if share == nil || (share.ExpiresAt != nil && !share.ExpiresAt.IsZero() && !share.ExpiresAt.Time.After(time.Now())) {
+		return nil, gerror.NewCode(gcode.CodeNotFound, "Share not found or expired")
+	}
 	var conversation entity.Conversation
 	err = json.Unmarshal([]byte(share.Conversation), &conversation)
 	if err != nil {
@@ -62,7 +66,7 @@ func (c *ControllerV1) Detail(ctx context.Context, req *v1.DetailReq) (res *v1.D
 		Conversation: conversation,
 		Message:      messageResult,
 		CreatedAt:    share.CreatedAt.String(),
-		ExpiresAt:    share.ExpiresAt.String(),
+		ExpiresAt:    share.ExpiresAt.Layout(time.RFC3339),
 	}
 	return
 }

@@ -14,6 +14,7 @@ interface MessageItemProps {
     messageIndex: number;
     pathLength: number;
     isStreaming: boolean;
+    actionsDisabled?: boolean;
     expandedReasoning: Set<string>;
     nodeMap: Map<string, TreeNode>;
     previousMessageId?: string;
@@ -34,6 +35,7 @@ export const MessageItem = React.memo(function MessageItem({
     messageIndex,
     pathLength,
     isStreaming,
+    actionsDisabled = isStreaming,
     expandedReasoning,
     nodeMap,
     previousMessageId,
@@ -91,7 +93,7 @@ export const MessageItem = React.memo(function MessageItem({
     const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Escape") {
             onEditCancel?.();
-        } else if (e.key === "Enter" && !e.shiftKey) {
+        } else if (e.key === "Enter" && !e.shiftKey && !actionsDisabled) {
             e.preventDefault();
             onEditSubmit?.();
         }
@@ -110,7 +112,7 @@ export const MessageItem = React.memo(function MessageItem({
                 message.content.map((content, index) => (
                     <div
                         key={index}
-                        className={`flex flex-col min-w-0 ${message.role === "user" ? "self-end items-end" : "self-start items-start"
+                        className={`flex flex-col min-w-0 ${message.role === "user" ? "self-end items-end" : "w-full items-start"
                             }`}
                         style={{
                             maxWidth: message.role === "user" ? "80%" : "100%",
@@ -200,7 +202,7 @@ export const MessageItem = React.memo(function MessageItem({
                     message={message}
                     messageIndex={messageIndex}
                     pathLength={pathLength}
-                    isStreaming={isStreaming}
+                    isStreaming={actionsDisabled}
                     nodeMap={nodeMap}
                     onSwitchNode={onSwitchNode}
                     onRetry={onRetry}

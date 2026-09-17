@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,11 +56,14 @@ interface ModelItemEditorProps {
     index: number;
     onChange: (model: Model) => void;
     onDelete: () => void;
+    onMoveUp?: () => void;
+    onMoveDown?: () => void;
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
 }
 
-function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorProps) {
+function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDown, isOpen, onOpenChange }: ModelItemEditorProps) {
     const { t } = useTranslation();
-    const [isOpen, setIsOpen] = useState(false);
 
     const updateField = <K extends keyof Model>(field: K, value: Model[K]) => {
         onChange({ ...model, [field]: value });
@@ -110,16 +113,16 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
 
     return (
         <Card className="mx-2 py-2">
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <Collapsible open={isOpen} onOpenChange={onOpenChange}>
                 <CardHeader className="px-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-6 w-6">
                                     {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </Button>
                             </CollapsibleTrigger>
-                            <CardTitle className="text-sm font-medium">
+                            <CardTitle className="min-w-0 break-all text-sm font-medium">
                                 {model.name || model.id || `${t("pages.admin.providers.model.model")} ${index + 1}`}
                             </CardTitle>
                             {model.badge?.trim() && (
@@ -137,9 +140,19 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
                                 </Badge>
                             )}
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-1">
+                            <Button variant="ghost" size="icon-xs" onClick={onMoveUp} disabled={!onMoveUp}
+                                aria-label={t("pages.admin.providers.model.moveUp")} title={t("pages.admin.providers.model.moveUp")}>
+                                <ArrowUp />
+                            </Button>
+                            <Button variant="ghost" size="icon-xs" onClick={onMoveDown} disabled={!onMoveDown}
+                                aria-label={t("pages.admin.providers.model.moveDown")} title={t("pages.admin.providers.model.moveDown")}>
+                                <ArrowDown />
+                            </Button>
+                            <Button variant="ghost" size="icon-xs" onClick={onDelete} aria-label={t("common.actions.delete")}>
+                                <Trash2 className="text-destructive" />
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CollapsibleContent>
@@ -383,6 +396,7 @@ function ModelItemEditor({ model, index, onChange, onDelete }: ModelItemEditorPr
 
 export function ModelEditor({ models, onChange }: ModelEditorProps) {
     const { t } = useTranslation();
+    const [expandedIndexes, setExpandedIndexes] = useState<number[]>([]);
 
     const addModel = () => {
         onChange([...models, createEmptyModel()]);
@@ -395,7 +409,15 @@ export function ModelEditor({ models, onChange }: ModelEditorProps) {
     };
 
     const deleteModel = (index: number) => {
+        setExpandedIndexes(indexes => indexes.filter(i => i !== index).map(i => i > index ? i - 1 : i));
         onChange(models.filter((_, i) => i !== index));
+    };
+
+    const moveModel = (index: number, targetIndex: number) => {
+        const updated = [...models];
+        [updated[index], updated[targetIndex]] = [updated[targetIndex], updated[index]];
+        setExpandedIndexes(indexes => indexes.map(i => i === index ? targetIndex : i === targetIndex ? index : i));
+        onChange(updated);
     };
 
     return (
@@ -419,6 +441,10 @@ export function ModelEditor({ models, onChange }: ModelEditorProps) {
                             index={index}
                             onChange={(m) => updateModel(index, m)}
                             onDelete={() => deleteModel(index)}
+                            onMoveUp={index > 0 ? () => moveModel(index, index - 1) : undefined}
+                            onMoveDown={index < models.length - 1 ? () => moveModel(index, index + 1) : undefined}
+                            isOpen={expandedIndexes.includes(index)}
+                            onOpenChange={open => setExpandedIndexes(indexes => open ? [...indexes, index] : indexes.filter(i => i !== index))}
                         />
                     ))
                 )}

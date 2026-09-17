@@ -2,6 +2,7 @@ package translate
 
 import (
 	"context"
+	"encoding/json"
 	v1 "flai/api/translate/v1"
 	"flai/internal/consts"
 	"flai/internal/dao"
@@ -47,7 +48,7 @@ func (c *ControllerV1) Translate(ctx context.Context, req *v1.TranslateReq) (res
 		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "Custom instruction must not exceed 500 characters")
 	}
 
-	providerInfo := logic.ProviderMap[req.ProviderId]
+	providerInfo := logic.GetProvider(req.ProviderId)
 	if providerInfo == nil {
 		return nil, gerror.NewCode(gcode.CodeInvalidParameter, "Invalid provider ID")
 	}
@@ -98,8 +99,24 @@ func (c *ControllerV1) Translate(ctx context.Context, req *v1.TranslateReq) (res
 		return nil, err
 	}
 
-	if err := llm.StreamTranslate(ctx, response, providerInfo, modelConfig, prompt, images); err != nil {
-		return nil, err
+	emit := func(event any) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		data, err := json.Marshal(event)
+		if err != nil {
+			return err
+		}
+		response.Writef("data: %s\n\n", data)
+		response.Flush()
+		return nil
+	}
+	if err := llm.StreamTranslate(ctx, emit, providerInfo, modelConfig, prompt, images); err != nil {
+		g.Log().Error(ctx, err)
+		_ = emit(g.Map{"type": "error", "data": g.Map{"message": "Translation failed. Please retry."}})
+	} else if ctx.Err() == nil {
+		response.Writef("data: [DONE]\n\n")
+		response.Flush()
 	}
 
 	return nil, nil

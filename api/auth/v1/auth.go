@@ -12,7 +12,7 @@ type RegisterReq struct {
 	g.Meta   `path:"/register" method:"post" tag:"Auth" summary:"Register"`
 	Email    string `json:"email" v:"required|email"`
 	Username string `json:"username" v:"required|length:5,20"`
-	Password string `json:"password"`
+	Password string `json:"password" v:"required|min-length:8"`
 }
 
 type RegisterRes struct {

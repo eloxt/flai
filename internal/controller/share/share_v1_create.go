@@ -22,6 +22,15 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, gerror.New("User not found")
 	}
 
+	var expiresAt *gtime.Time
+	if req.ExpiresAt != "" {
+		parsed := gtime.NewFromStr(req.ExpiresAt)
+		if parsed == nil {
+			return nil, gerror.New("Invalid share expiry")
+		}
+		expiresAt = parsed.UTC()
+	}
+
 	// fetch conversation
 	var conversation entity.Conversation
 	err = dao.Conversation.Ctx(ctx).
@@ -39,35 +48,11 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		return nil, err
 	}
 
-	// fetch messages by path if provided, otherwise fetch all
-	var messages []*entity.Message
-	if len(req.MessagePath) > 0 {
-		err = dao.Message.Ctx(ctx).
-			Where(dao.Message.Columns().ConversationId, req.ConversationId).
-			WhereIn(dao.Message.Columns().Id, req.MessagePath).
-			Scan(&messages)
-		if err == nil {
-			// reorder messages to match the order of req.MessagePath
-			messageMap := make(map[string]*entity.Message, len(messages))
-			for _, msg := range messages {
-				messageMap[msg.Id] = msg
-			}
-			ordered := make([]*entity.Message, 0, len(messages))
-			for _, id := range req.MessagePath {
-				if msg, ok := messageMap[id]; ok {
-					ordered = append(ordered, msg)
-				}
-			}
-			messages = ordered
-		}
-	} else {
-		err = dao.Message.Ctx(ctx).
-			Where(dao.Message.Columns().ConversationId, req.ConversationId).
-			Scan(&messages)
-	}
+	messages, err := dao.FetchMessageHistory(ctx, req.ConversationId, req.MessagePath)
 	if err != nil {
 		return nil, err
 	}
+
 	if len(messages) == 0 {
 		return nil, gerror.New("No message to share")
 	}
@@ -83,7 +68,7 @@ func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (res *v1.C
 		UserId:       user.Id,
 		Conversation: string(conversationJsonStr),
 		Message:      string(messagesJsonString),
-		ExpiresAt:    gtime.NewFromStr(req.ExpiresAt),
+		ExpiresAt:    expiresAt,
 	}).Insert()
 	if err != nil {
 		return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to create share")

@@ -1,5 +1,6 @@
 {
     "common": {
+        "send": "发送",
         "loading": "加载中...",
         "generating": "生成中...",
         "search": "搜索",
@@ -250,7 +251,16 @@
             "tabs": {
                 "users": "用户管理",
                 "providers": "服务商管理",
-                "notification": "站内通知"
+                "notification": "站内通知",
+                "errorAlert": "报错告警"
+            },
+            "errorAlert": {
+                "title": "报错告警",
+                "description": "聊天、翻译或标题生成请求报错时，通过 Bark 通知管理员。主动取消请求不会触发告警。",
+                "urlLabel": "Bark 推送地址",
+                "placeholder": "https://api.day.app/你的设备Key",
+                "help": "填写包含设备 Key 的完整 Bark 推送地址，支持官方或自建服务，例如 https://api.day.app/你的设备Key。保存后立即生效，清空并保存即可关闭告警。通知包含服务商、模型和错误信息。",
+                "saveError": "保存告警设置失败"
             },
             "users": {
                 "title": "用户",
@@ -326,6 +336,8 @@
                 },
                 "modelsCount": "个模型",
                 "model": {
+                    "moveUp": "上移",
+                    "moveDown": "下移",
                     "model": "模型",
                     "addModel": "添加模型",
                     "noModels": "暂无模型，点击添加模型",
@@ -485,10 +497,14 @@
             "failed": "失败"
         },
         "inspectionPanel": {
-            "title": "时间线",
+            "resize": "调整会话树宽度",
+            "title": "会话树",
             "empty": "暂无消息",
             "responded": "已回复",
-            "end": "对话结束"
+            "end": "对话结束",
+            "user": "你",
+            "assistant": "助手",
+            "nonText": "附件、思考或工具消息"
         }
     }
 }

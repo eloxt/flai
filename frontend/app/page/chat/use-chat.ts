@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, readSSE } from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useModelStore } from "@/store/model-store";
 import { useInputStore } from "@/store/input-store";
@@ -180,6 +180,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
 
     // RAF batching: flush streamingMessage updates at ~60fps
     const rafRef = useRef<number | null>(null);
+    const detailAbortRef = useRef<AbortController | null>(null);
 
     const scheduleFlush = useCallback(() => {
         if (rafRef.current !== null) return; // already scheduled
@@ -283,15 +284,19 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
     const fetchMessages = useCallback(async () => {
         if (!conversationId || !tokens?.access_token) return;
 
+        detailAbortRef.current?.abort();
+        const controller = new AbortController();
+        detailAbortRef.current = controller;
         setIsLoading(true);
         try {
-            const result = await api.get<Message[]>(`/api/conversation/${conversationId}`);
-            processTree(result);
+            const result = await api.get<Message[]>(`/api/conversation/${conversationId}`, undefined, { signal: controller.signal });
+            if (!controller.signal.aborted) processTree(result);
         } catch (error) {
+            if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return;
             const message = error instanceof ApiError ? error.message : t("common.error.network");
             toast.error(message);
         } finally {
-            setIsLoading(false);
+            if (detailAbortRef.current === controller && !controller.signal.aborted) setIsLoading(false);
         }
     }, [conversationId, tokens?.access_token, processTree, t]);
 
@@ -299,7 +304,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
      * Switch to sibling node in the tree
      */
     const switchNode = useCallback((message: TreeNode, isNext: boolean) => {
-        if (!message.parent_id) return;
+        if (assistantMessageIdRef.current || !message.parent_id) return;
 
         const parent = nodeMap.get(message.parent_id);
         if (!parent?.children) return;
@@ -326,6 +331,26 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             newPath.push(lastChild);
         }
 
+        setPath(newPath);
+    }, [nodeMap, path]);
+
+    // Select any branch, keeping its continuation visible after the target.
+    const selectNode = useCallback((messageId: string) => {
+        if (assistantMessageIdRef.current || path.some(node => node.id === messageId)) return;
+        const target = nodeMap.get(messageId);
+        if (!target || messageId === ROOT_NODE_ID) return;
+
+        const newPath: TreeNode[] = [];
+        let current: TreeNode | undefined = target;
+        while (current && current.id !== ROOT_NODE_ID) {
+            newPath.unshift(current);
+            current = nodeMap.get(current.parent_id);
+        }
+        current = target.children[0];
+        while (current) {
+            newPath.push(current);
+            current = current.children[0];
+        }
         setPath(newPath);
     }, [nodeMap, path]);
 
@@ -400,8 +425,14 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         // Handle image
         if (streamContentType === "image") {
             const imageUrl = streamResponse.data as string;
-            const lastContent = assistantMsg.content[assistantMsg.content.length - 1];
-            (lastContent.data as ContentMessage).images = [{ id: "", public_url: imageUrl }];
+            let lastContent = assistantMsg.content[assistantMsg.content.length - 1];
+            if (lastContent?.type !== "message") {
+                lastContent = { type: "message", data: { content: "" } };
+                assistantMsg.content = assistantMsg.content.filter((content) => content.type !== "pending");
+                assistantMsg.content.push(lastContent);
+            }
+            const data = lastContent.data as ContentMessage;
+            data.images = [...(data.images || []), { id: "", public_url: imageUrl }];
             scheduleFlush();
             ctx.lastMessageType = "message";
             return;
@@ -431,44 +462,9 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         reader: ReadableStreamDefaultReader<Uint8Array>,
         ctx: StreamContext
     ): Promise<void> => {
-        const decoder = new TextDecoder();
-        let buffer = ""; // Buffer for handling lines split across TCP chunks
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? ""; // Keep the last incomplete line in buffer
-
-            for (const line of lines) {
-                // Check for non-SSE JSON error response (backend exception)
-                if (line.startsWith("{") && !line.startsWith("data: ")) {
-                    try {
-                        const errorResponse = JSON.parse(line);
-                        if (errorResponse.code !== undefined && errorResponse.code !== 0) {
-                            const errorMessage = errorResponse.message || t("common.error.network");
-                            toast.error(errorMessage);
-                            return;
-                        }
-                    } catch {
-                        // Not valid JSON, continue processing
-                    }
-                }
-
-                if (!line.startsWith("data: ")) continue;
-
-                const dataStr = line.slice(6);
-                if (dataStr === "[DONE]") return;
-
-                try {
-                    const streamResponse: StreamResponse = JSON.parse(dataStr);
-                    handleStreamChunk(ctx, streamResponse);
-                } catch (e) {
-                    console.error("Error parsing SSE:", e);
-                }
-            }
+        for await (const event of readSSE<StreamResponse>(reader)) {
+            if (assistantMessageIdRef.current !== ctx.assistantMessageId) return;
+            handleStreamChunk(ctx, event);
         }
     }, [handleStreamChunk]);
 
@@ -476,7 +472,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
      * Send a new message
      */
     const sendMessage = useCallback(async ({ text, retry, pathParam, messageId }: SendMessageParams) => {
-        if (!text.trim() || !conversationId || !tokens?.access_token) return;
+        if (assistantMessageIdRef.current || !text.trim() || !conversationId || !tokens?.access_token) return;
+        const sessionVersion = useAuthStore.getState().sessionVersion;
 
         const providerId = useModelStore.getState().currentModel?.provider_id;
         const modelName = useModelStore.getState().currentModel?.id;
@@ -494,7 +491,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         assistantMessageIdRef.current = assistantMessageId;
         const abortController = new AbortController();
         streamAbortRef.current = abortController;
-        let newPath = pathParam || [...path];
+        let completed = false;
+        const newPath = pathParam || [...path];
         const newMap = new Map(nodeMap);
 
         // Create placeholder assistant message (will be rendered separately as streamingMessage)
@@ -561,7 +559,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             if (!response.ok) throw new Error("Failed to send message");
 
             const reader = response.body?.getReader();
-            if (!reader) return;
+            if (!reader) throw new Error("Missing response stream");
 
             const ctx: StreamContext = {
                 newPath,
@@ -573,6 +571,8 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
             };
 
             await processStream(reader, ctx);
+            completed = true;
+            if (assistantMessageIdRef.current !== assistantMessageId) return;
 
             // Send browser notification when stream completes and page is not focused
             if (document.hidden && "Notification" in window) {
@@ -593,27 +593,37 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 }
             }
         } catch (error) {
-            if (error instanceof DOMException && error.name === "AbortError") {
+            if (sessionVersion !== useAuthStore.getState().sessionVersion || assistantMessageIdRef.current !== assistantMessageId || (error instanceof DOMException && error.name === "AbortError")) {
                 return;
             }
             console.error(error);
-            toast.error(t("common.error.sendMessage"));
-        } finally {
-            // Cancel any pending RAF
-            if (rafRef.current !== null) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
+            toast.error(error instanceof Error ? error.message : t("common.error.sendMessage"));
+            if (assistantMessageIdRef.current === assistantMessageId) {
+                await fetchMessages();
+                if (sessionVersion === useAuthStore.getState().sessionVersion && assistantMessageIdRef.current === assistantMessageId && !retry && !useInputStore.getState().chatInputs[conversationId]) setChatInput(conversationId, text);
             }
-
-            // Merge streaming message back into path
-            if (streamingMessageRef.current) {
-                const finalMsg = streamingMessageRef.current;
-                setPath(prev => [...prev, finalMsg]);
+        } finally {
+            if (assistantMessageIdRef.current === assistantMessageId) {
+                if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+                if (!completed) {
+                    setNodeMap(previous => {
+                        // A recovery fetch may already have replaced the placeholder
+                        // with the saved reply. Keep that reply in the message tree.
+                        if (previous.get(assistantMessageId) !== assistantPlaceholder) return previous;
+                        const next = new Map(previous);
+                        next.delete(assistantMessageId);
+                        const parent = next.get(userMsgId);
+                        if (parent) next.set(userMsgId, { ...parent, children: parent.children.filter(child => child.id !== assistantMessageId) });
+                        return next;
+                    });
+                }
+                if (completed && streamingMessageRef.current) {
+                    const finalMsg = streamingMessageRef.current;
+                    setPath(prev => [...prev, finalMsg]);
+                }
                 streamingMessageRef.current = null;
                 setStreamingMessage(null);
-            }
-
-            if (assistantMessageIdRef.current === assistantMessageId) {
                 assistantMessageIdRef.current = null;
                 streamAbortRef.current = null;
                 setIsStreaming(false);
@@ -621,14 +631,13 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         }
     }, [
         conversationId, tokens?.access_token, path, nodeMap, attachments,
-        selectedTools, setChatInput, clearAttachments, processStream, t
+        selectedTools, selectedMcpTools, setChatInput, clearAttachments, processStream, fetchMessages, t
     ]);
 
     const cancelGeneration = useCallback(async () => {
         if (!conversationId || !assistantMessageIdRef.current) return;
 
         const assistantMessageId = assistantMessageIdRef.current;
-        streamAbortRef.current?.abort();
 
         try {
             await api.post("/api/messages/cancel", {
@@ -638,26 +647,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         } catch (error) {
             const message = error instanceof ApiError ? error.message : t("common.error.network");
             toast.error(message);
-        } finally {
-            // Cancel any pending RAF
-            if (rafRef.current !== null) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
-            }
-
-            // Merge streaming message back into path on cancel
-            if (streamingMessageRef.current) {
-                const finalMsg = streamingMessageRef.current;
-                setPath(prev => [...prev, finalMsg]);
-                streamingMessageRef.current = null;
-                setStreamingMessage(null);
-            }
-
-            if (assistantMessageIdRef.current === assistantMessageId) {
-                assistantMessageIdRef.current = null;
-                streamAbortRef.current = null;
-                setIsStreaming(false);
-            }
         }
     }, [conversationId, t]);
 
@@ -665,6 +654,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
      * Retry message from a specific point
      */
     const retryMessage = useCallback(async (message: TreeNode) => {
+        if (assistantMessageIdRef.current) return;
         const newPath = [...path];
         const index = newPath.indexOf(message);
 
@@ -674,7 +664,7 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         setPath(newPath);
 
         const lastMessage = newPath[newPath.length - 1];
-        if (lastMessage?.role === "assistant") {
+        if (!lastMessage || lastMessage.role === "assistant") {
             toast.error(t("common.error.retry"));
             return;
         }
@@ -692,13 +682,13 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
      * Delete the last message
      */
     const deleteMessage = useCallback(async () => {
-        if (path.length === 0 || !conversationId) return;
+        if (assistantMessageIdRef.current || path.length === 0 || !conversationId) return;
 
         const lastMessage = path[path.length - 1];
 
         try {
             await api.del("/api/messages", {
-                ids: lastMessage.id,
+                ids: [lastMessage.id],
                 conversation_id: conversationId,
             });
         } catch (error) {
@@ -755,8 +745,22 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
                 await fetchMessages();
             }
         };
-        init();
-    }, [conversationId, tokens]);
+        // StrictMode replays setup/cleanup synchronously in development. Only the
+        // surviving setup may consume the pending draft and submit its request.
+        let active = true;
+        queueMicrotask(() => {
+            if (active) void init();
+        });
+        return () => {
+            active = false;
+            detailAbortRef.current?.abort();
+            streamAbortRef.current?.abort();
+            assistantMessageIdRef.current = null;
+            streamingMessageRef.current = null;
+            if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        };
+    }, [conversationId, tokens?.access_token]);
 
     // ========================================================================
     // Return
@@ -777,5 +781,6 @@ export function useChat(conversationId?: string, options?: UseChatOptions) {
         deleteMessage,
         cancelGeneration,
         switchNode,
+        selectNode,
     };
 }

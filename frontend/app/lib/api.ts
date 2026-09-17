@@ -12,8 +12,7 @@ export interface ApiRequestInit extends RequestInit {
 
 export async function request<T>(url: string, options?: ApiRequestInit): Promise<T> {
     const { auth = true, headers, ...rest } = options || {};
-    // const logout = useAuthStore((state) => state.logout);
-    // const navigate = useNavigate();
+    const sessionVersion = useAuthStore.getState().sessionVersion;
 
     const defaultHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -40,12 +39,18 @@ export async function request<T>(url: string, options?: ApiRequestInit): Promise
 
     try {
         const response = await fetch(url, config);
+        if (auth && sessionVersion !== useAuthStore.getState().sessionVersion) {
+            await response.body?.cancel();
+            throw new DOMException("Session changed", "AbortError");
+        }
+        if (response.status === 401 && auth) useAuthStore.getState().logout();
 
         if (!response.ok) {
             throw new ApiError(response.status, `HTTP error! status: ${response.status}`);
         }
 
         const res = await response.json() as ApiResponse<T>;
+        if (auth && sessionVersion !== useAuthStore.getState().sessionVersion) throw new DOMException("Session changed", "AbortError");
 
         if (res.code !== 0) {
             if (res.code === 401) {
@@ -58,7 +63,7 @@ export async function request<T>(url: string, options?: ApiRequestInit): Promise
         return res.data as T;
 
     } catch (error) {
-        if (error instanceof ApiError) {
+        if (error instanceof ApiError || (error instanceof DOMException && error.name === "AbortError")) {
             throw error;
         }
         throw new ApiError(-1, error instanceof Error ? error.message : 'Network request failed');
@@ -99,6 +104,7 @@ export const api = {
     },
     stream: async (url: string, options?: ApiRequestInit): Promise<Response> => {
         const { auth = true, headers, ...rest } = options || {};
+        const sessionVersion = useAuthStore.getState().sessionVersion;
 
         const defaultHeaders: Record<string, string> = {
             'Content-Type': 'application/json',
@@ -120,11 +126,58 @@ export const api = {
         };
 
         const response = await fetch(url, config);
+        if (auth && sessionVersion !== useAuthStore.getState().sessionVersion) {
+            await response.body?.cancel();
+            throw new DOMException("Session changed", "AbortError");
+        }
+        if (response.status === 401 && auth) useAuthStore.getState().logout();
 
         if (!response.ok) {
             throw new ApiError(response.status, `HTTP error! status: ${response.status}`);
         }
 
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("text/event-stream")) {
+            if (contentType.includes("application/json")) {
+                const result = await response.json() as ApiResponse<unknown>;
+                if (auth && sessionVersion !== useAuthStore.getState().sessionVersion) throw new DOMException("Session changed", "AbortError");
+                if (result.code === 401 && auth) useAuthStore.getState().logout();
+                throw new ApiError(result.code || -1, result.message || "Expected an event stream");
+            }
+            await response.body?.cancel();
+            throw new ApiError(-1, "Expected an event stream");
+        }
         return response;
     }
 };
+
+// Both chat and translation use the same SSE completion and error contract.
+export async function* readSSE<T>(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<T> {
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let data: string[] = [];
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+            if (done) buffer += "\n\n"; // Also consume a final event without a trailing newline.
+            let newline: number;
+            while ((newline = buffer.indexOf("\n")) >= 0) {
+                const line = buffer.slice(0, newline).replace(/\r$/, "");
+                buffer = buffer.slice(newline + 1);
+                if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
+                else if (line === "" && data.length > 0) {
+                    const payload = data.join("\n");
+                    data = [];
+                    if (payload === "[DONE]") return;
+                    const event = JSON.parse(payload);
+                    if (event.type === "error") throw new ApiError(-1, event.data?.message || "Generation failed");
+                    yield event as T;
+                }
+            }
+            if (done) throw new ApiError(-1, "Stream ended before completion");
+        }
+    } finally {
+        try { await reader.cancel(); } finally { reader.releaseLock(); }
+    }
+}

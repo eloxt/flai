@@ -32,7 +32,7 @@ func (c *ControllerV1) DeleteFile(ctx context.Context, req *v1.DeleteFileReq) (r
 		return nil, err
 	}
 
-	if len(files) == 0 {
+	if len(files) == 0 || len(files) != len(deleteIds) {
 		return nil, gerror.New("File not found")
 	}
 
@@ -43,7 +43,7 @@ func (c *ControllerV1) DeleteFile(ctx context.Context, req *v1.DeleteFileReq) (r
 	}
 
 	// 2. Batch delete from DB
-	_, err = dao.File.Ctx(ctx).WhereIn(dao.File.Columns().Id, deleteIds).Delete()
+	_, err = dao.File.Ctx(ctx).WhereIn(dao.File.Columns().Id, deleteIds).Where(dao.File.Columns().UserId, user.Id).Delete()
 	if err != nil {
 		return nil, gerror.Wrap(err, "Failed to delete files from db")
 	}

@@ -49,7 +49,8 @@ export default function ChatHeader() {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                title={t("common.settings")}
+                                title={t("components.inspectionPanel.title")}
+                                aria-label={t("components.inspectionPanel.title")}
                                 onClick={toggleInspectionPanel}
                             >
                                 <PanelRight />

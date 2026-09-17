@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/google/uuid"
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -41,7 +40,7 @@ func (c *OpenAIClient) getClient(providerInfo *logic.SimpleProviderInfo, message
 // Stream Chat
 // ============================================================================
 
-func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
+func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, historyMessages []*entity.Message, newMessage *entity.Message, tools []string, mcpTools []*MCPToolInfo, files []*entity.File, thinkingIntensity string) error {
 	client := c.getClient(providerInfo, messageId)
 
 	// Build input items from history and new message
@@ -83,6 +82,11 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 
 	// MCP client cache - reuse clients for same endpoint
 	mcpClientCache := make(map[string]*mcp.MCPClient)
+	defer func() {
+		for _, client := range mcpClientCache {
+			_ = client.Close()
+		}
+	}()
 
 	// Initialize stream state
 	var currentContentBuilder strings.Builder
@@ -106,7 +110,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	switch thinkingIntensity {
 	case "none":
 		reasoningLevel = shared.ReasoningEffortNone
-	case "minial":
+	case "minimal":
 		reasoningLevel = shared.ReasoningEffortMinimal
 	case "low":
 		reasoningLevel = shared.ReasoningEffortLow
@@ -139,6 +143,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		}
 
 		stream := client.Responses.NewStreaming(ctx, params)
+		defer stream.Close()
 
 		var functionCalls []responses.ResponseFunctionToolCall
 
@@ -153,6 +158,10 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			shouldSend := false
 
 			switch e := event.AsAny().(type) {
+			case responses.ResponseFailedEvent:
+				return fmt.Errorf("OpenAI response failed (%s): %s", e.Response.Error.Code, e.Response.Error.Message)
+			case responses.ResponseErrorEvent:
+				return fmt.Errorf("OpenAI stream error (%s): %s", e.Code, e.Message)
 			case responses.ResponseReasoningSummaryTextDeltaEvent:
 				if e.Delta != "" {
 					contentType = consts.MessageType.Reasoning
@@ -224,7 +233,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 						Type:      consts.MessageType.Image,
 						Data:      imageUrl,
 					}
-					if err := StreamToClient(response, imageStreamResponse); err != nil {
+					if err := response(imageStreamResponse); err != nil {
 						return err
 					}
 				}
@@ -244,7 +253,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 						Type:      consts.MessageType.OpenaiGroundingData,
 						Data:      annotations,
 					}
-					if err := StreamToClient(response, annotationResponse); err != nil {
+					if err := response(annotationResponse); err != nil {
 						return err
 					}
 				}
@@ -275,15 +284,15 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			}
 
 			if shouldSend {
-				if err := StreamToClient(response, streamResponse); err != nil {
+				if err := response(streamResponse); err != nil {
 					return err
 				}
 			}
 		}
 
 		if err := stream.Err(); err != nil {
-			if HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo) {
-				return nil
+			if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo); handled {
+				return saveErr
 			}
 			return err
 		}
@@ -332,7 +341,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					Type:      consts.MessageType.ToolCall,
 					Data:      toolCall,
 				}
-				if err := StreamToClient(response, toolCallResponse); err != nil {
+				if err := response(toolCallResponse); err != nil {
 					return err
 				}
 
@@ -358,7 +367,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					Type:      consts.MessageType.ToolResult,
 					Data:      toolResultData,
 				}
-				if err := StreamToClient(response, toolResultResponse); err != nil {
+				if err := response(toolResultResponse); err != nil {
 					return err
 				}
 
@@ -383,18 +392,15 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	}
 
 	// Save final message
-	c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
-	StreamDone(response)
-
-	return nil
+	return c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
 }
 
-func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) {
+func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) error {
 	appendContent(contentBuilder, contentType, imageUrls, currentId, contentList)
-	SaveAssistantMessage(context.WithoutCancel(ctx), message, *contentList, metaInfo)
+	return SaveAssistantMessage(ctx, message, *contentList, metaInfo)
 }
 
-func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Response, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
+func (c *OpenAIClient) StreamTranslate(ctx context.Context, response func(any) error, providerInfo *logic.SimpleProviderInfo, modelConfig *logic.ModelConfig, prompt string, images []*entity.File) error {
 	client := c.getClient(providerInfo, "")
 
 	var input responses.ResponseNewParamsInputUnion
@@ -431,10 +437,17 @@ func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Resp
 	}
 
 	stream := client.Responses.NewStreaming(ctx, params)
+	defer stream.Close()
 	for stream.Next() {
 		event := stream.Current()
+		switch e := event.AsAny().(type) {
+		case responses.ResponseFailedEvent:
+			return fmt.Errorf("OpenAI response failed (%s): %s", e.Response.Error.Code, e.Response.Error.Message)
+		case responses.ResponseErrorEvent:
+			return fmt.Errorf("OpenAI stream error (%s): %s", e.Code, e.Message)
+		}
 		if e, ok := event.AsAny().(responses.ResponseTextDeltaEvent); ok && e.Delta != "" {
-			if err := StreamToClient(response, StreamResponse{
+			if err := response(StreamResponse{
 				Type: consts.MessageType.Message,
 				Data: ContentMessage{Content: e.Delta},
 			}); err != nil {
@@ -445,12 +458,11 @@ func (c *OpenAIClient) StreamTranslate(ctx context.Context, response *ghttp.Resp
 
 	if err := stream.Err(); err != nil {
 		if ctx.Err() != nil {
-			return nil
+			return ctx.Err()
 		}
 		return err
 	}
 
-	StreamDone(response)
 	return nil
 }
 

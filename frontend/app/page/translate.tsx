@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { api, readSSE } from "@/lib/api";
 import { useAppStore } from "@/store/app-store";
 import { useModelStore } from "@/store/model-store";
 import { useTranslateStore } from "@/store/translate-store";
@@ -129,41 +129,10 @@ export default function TranslatePage() {
     }, [images.length, t, uploadImage]);
 
     const processStream = useCallback(async (reader: ReadableStreamDefaultReader<Uint8Array>) => {
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-                if (!line.startsWith("data: ")) {
-                    continue;
-                }
-
-                const dataStr = line.slice(6).trim();
-                if (dataStr === "[DONE]") {
-                    return;
-                }
-
-                try {
-                    const streamResponse: StreamResponse = JSON.parse(dataStr);
-                    if (streamResponse.type !== "message") {
-                        continue;
-                    }
-
-                    const data = streamResponse.data as ContentMessage;
-                    if (typeof data.content === "string") {
-                        setTranslatedText((current) => current + data.content);
-                    }
-                } catch (error) {
-                    console.error("Error parsing translate SSE:", error);
-                }
-            }
+        for await (const streamResponse of readSSE<StreamResponse>(reader)) {
+            if (streamResponse.type !== "message") continue;
+            const data = streamResponse.data as ContentMessage;
+            if (typeof data.content === "string") setTranslatedText((current) => current + data.content);
         }
     }, []);
 

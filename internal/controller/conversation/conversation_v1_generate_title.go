@@ -7,6 +7,7 @@ import (
 	"flai/internal/middleware"
 	"flai/internal/model/do"
 	"flai/internal/model/entity"
+	"time"
 
 	v1 "flai/api/conversation/v1"
 
@@ -50,19 +51,30 @@ func (c *ControllerV1) GenerateTitle(ctx context.Context, req *v1.GenerateTitleR
 		err error
 	}
 
-	generationCtx := context.WithoutCancel(ctx)
+	generationCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
 	done := make(chan titleResult, 1)
 
 	go func() {
+		defer cancel()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				done <- titleResult{err: gerror.New("Title generation failed")}
+			}
+		}()
+
 		title, err := llm.GenerateTitle(generationCtx, messages, req.Content)
 		if err != nil {
 			done <- titleResult{err: err}
 			return
 		}
 
+		if title == nil {
+			done <- titleResult{err: gerror.New("Empty title result")}
+			return
+		}
 		_, err = dao.Conversation.Ctx(generationCtx).
 			Data(do.Conversation{Title: title.Title, Icon: title.Icon}).
-			Where(do.Conversation{Id: conversation.Id}).
+			Where(do.Conversation{Id: conversation.Id, UserId: user.Id}).
 			Update()
 		if err != nil {
 			done <- titleResult{err: gerror.WrapCode(gcode.CodeInternalError, err, "Failed to update conversation")}

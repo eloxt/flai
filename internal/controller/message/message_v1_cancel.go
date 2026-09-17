@@ -24,7 +24,7 @@ func (c *ControllerV1) Cancel(ctx context.Context, req *v1.CancelReq) (res *v1.C
 		return nil, gerror.NewCode(gcode.CodeNotFound, "Conversation not found")
 	}
 
-	if !llm.CancelGeneration(req.AssistantMessageId) {
+	if !llm.CancelGeneration(user.Id, req.ConversationId, req.AssistantMessageId) {
 		return nil, gerror.NewCode(gcode.CodeNotFound, "Generation not found")
 	}
 
