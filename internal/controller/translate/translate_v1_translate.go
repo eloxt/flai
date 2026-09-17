@@ -123,8 +123,8 @@ func (c *ControllerV1) Translate(ctx context.Context, req *v1.TranslateReq) (res
 }
 
 func (c *ControllerV1) buildTranslatePrompt(sourceLanguage, targetLanguage, text, customInstruction string) (string, error) {
-	systemPromptObject, ok := logic.SystemConfigMap[consts.SystemConfig.SystemPrompt]
-	if !ok {
+	systemPromptObject := logic.GetSystemConfig(consts.SystemConfig.SystemPrompt)
+	if systemPromptObject == nil {
 		return "", gerror.NewCode(gcode.CodeInternalError, "System prompt config not found")
 	}
 

@@ -69,8 +69,8 @@ func StreamTranslate(ctx context.Context, response func(any) error, providerInfo
 }
 
 func GenerateTitle(ctx context.Context, messages []*entity.Message, content string) (*TitleGenerationResponse, error) {
-	config, ok := logic.SystemConfigMap[consts.SystemConfig.TitleGeneration]
-	if !ok {
+	config := logic.GetSystemConfig(consts.SystemConfig.TitleGeneration)
+	if config == nil {
 		return nil, gerror.New("Title generation config not found")
 	}
 
@@ -211,8 +211,8 @@ func ParseHistoryContents(msg *entity.Message) ([]Content, error) {
 }
 
 func ComposeSystemPrompt() string {
-	systemPromptObject, ok := logic.SystemConfigMap[consts.SystemConfig.SystemPrompt]
-	if !ok {
+	systemPromptObject := logic.GetSystemConfig(consts.SystemConfig.SystemPrompt)
+	if systemPromptObject == nil {
 		return ""
 	}
 	systemPromptString, ok := systemPromptObject["prompt"].(string)

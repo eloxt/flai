@@ -36,7 +36,9 @@ var (
 			if err := logic.UpdateProviderCache(ctx); err != nil {
 				return err
 			}
-			logic.UpdateSystemConfigCache(ctx)
+			if err := logic.UpdateSystemConfigCache(ctx); err != nil {
+				return err
+			}
 
 			s := g.Server()
 			RegisterRouter(s)

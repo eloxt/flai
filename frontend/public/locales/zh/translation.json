@@ -247,6 +247,26 @@
             }
         },
         "admin": {
+            "systemConfig": {
+                "systemPrompt": "系统提示词",
+                "titleGeneration": "标题生成",
+                "promptDescription": "设置聊天与翻译使用的系统提示词，保存后对后续请求生效。",
+                "titleDescription": "选择自动生成会话标题的服务商、模型与提示词。",
+                "saved": "配置已保存并更新缓存",
+                "reload": "重新加载",
+                "provider": "服务商",
+                "model": "模型",
+                "selectProvider": "选择服务商",
+                "selectModel": "选择模型",
+                "unavailable": "不可用",
+                "modelHelp": "仅显示已启用服务商的模型。切换服务商后请重新选择模型。",
+                "titlePrompt": "标题生成提示词",
+                "chatPrompt": "聊天系统提示词",
+                "translatePrompt": "翻译提示词",
+                "titleHelp": "描述标题生成的要求。会话内容会单独传入，返回结构由系统设置。",
+                "chatHelp": "可留空。支持变量：{{currentDateTime}}（当前日期时间）。",
+                "translateHelp": "支持变量：{{sourceLanguage}}（源语言）、{{targetLanguage}}（目标语言）、{{text}}（待翻译内容）。"
+            },
             "title": "管理员设置",
             "tabs": {
                 "users": "用户管理",

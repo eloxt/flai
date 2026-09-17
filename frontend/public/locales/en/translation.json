@@ -247,6 +247,26 @@
             }
         },
         "admin": {
+            "systemConfig": {
+                "systemPrompt": "System prompts",
+                "titleGeneration": "Title generation",
+                "promptDescription": "Configure chat and translation prompts. Saved changes apply to subsequent requests.",
+                "titleDescription": "Choose the provider, model and prompt for automatic conversation titles.",
+                "saved": "Settings saved and cache updated",
+                "reload": "Reload settings",
+                "provider": "Provider",
+                "model": "Model",
+                "selectProvider": "Select a provider",
+                "selectModel": "Select a model",
+                "unavailable": "Unavailable",
+                "modelHelp": "Only models from active providers are shown. Select a new model after changing providers.",
+                "titlePrompt": "Title generation prompt",
+                "chatPrompt": "Chat system prompt",
+                "translatePrompt": "Translation prompt",
+                "titleHelp": "Describe the title requirements. Conversation content is supplied separately and the output structure is managed by the system.",
+                "chatHelp": "Optional. Supports {{currentDateTime}} for the current date and time.",
+                "translateHelp": "Supports {{sourceLanguage}}, {{targetLanguage}} and {{text}} for source language, target language and input text."
+            },
             "title": "Admin Settings",
             "tabs": {
                 "users": "User Management",

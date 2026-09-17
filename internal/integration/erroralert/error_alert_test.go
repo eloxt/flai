@@ -75,11 +75,12 @@ func TestErrorAlertSettingsAndDelivery(t *testing.T) {
 	provider := &logic.SimpleProviderInfo{Name: "Test provider", ProviderType: consts.ProviderType.OpenAI, BaseUrl: upstream.URL + "/", ApiKey: "secret-key"}
 	model := &logic.ModelConfig{ID: "test-model"}
 	message := &entity.Message{Content: `[{"type":"message","data":{"content":"private prompt"}}]`}
-	oldConfig := logic.SystemConfigMap
-	t.Cleanup(func() { logic.SystemConfigMap = oldConfig })
-	logic.SystemConfigMap = map[string]map[string]any{
-		consts.SystemConfig.TitleGeneration: {"provider_id": "alert-provider", "model_name": model.ID, "prompt": "generate a title"},
+	if err := logic.SaveSystemConfigToDB(ctx, consts.SystemConfig.TitleGeneration, map[string]any{
+		"provider_id": "alert-provider", "model_name": model.ID, "prompt": "generate a title",
+	}); err != nil {
+		t.Fatal(err)
 	}
+
 	for _, providerType := range []string{consts.ProviderType.OpenAI, consts.ProviderType.OpenAICompletion, consts.ProviderType.Gemini} {
 		provider.ProviderType = providerType
 		if _, err := db.Exec(ctx, `INSERT INTO provider (id, name, provider_type, base_url, api_key, model, is_active) VALUES ('alert-provider', 'Test provider', $1, $2, 'secret-key', '[{"id":"test-model"}]', 1) ON CONFLICT (id) DO UPDATE SET provider_type = EXCLUDED.provider_type`, providerType, provider.BaseUrl); err != nil {
