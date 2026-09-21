@@ -279,7 +279,7 @@
                 "description": "聊天、翻译或标题生成请求报错时，通过 Bark 通知管理员。主动取消请求不会触发告警。",
                 "urlLabel": "Bark 推送地址",
                 "placeholder": "https://api.day.app/你的设备Key",
-                "help": "填写包含设备 Key 的完整 Bark 推送地址，支持官方或自建服务，例如 https://api.day.app/你的设备Key。保存后立即生效，清空并保存即可关闭告警。通知包含服务商、模型和错误信息。",
+                "help": "填写包含设备 Key 的完整 Bark 推送地址，支持官方或自建服务，例如 https://api.day.app/你的设备Key。保存后立即生效，清空并保存即可关闭告警。通知包含服务商、模型和错误信息。用户反馈也使用此地址；清空后将无法接收反馈。",
                 "saveError": "保存告警设置失败"
             },
             "users": {
@@ -415,6 +415,14 @@
         }
     },
     "components": {
+        "feedback": {
+            "title": "反馈",
+            "content": "反馈内容",
+            "placeholder": "请填写反馈，例如：“XX 模型不能使用了”、“缺少 XX 功能”…",
+            "sending": "发送中…",
+            "success": "反馈已发送，感谢你的建议！",
+            "error": "反馈发送失败，请稍后重试或联系管理员确认 Bark 配置。"
+        },
         "sidebar": {
             "newChat": "新聊天",
             "searchChat": "搜索聊天",

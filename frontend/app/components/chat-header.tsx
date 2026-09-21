@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MessageSquareShare, PanelLeft, PanelRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ShareDialog from "./share-dialog";
+import FeedbackDialog from "./feedback-dialog";
 import { useAppStore } from "@/store/app-store";
 
 export default function ChatHeader() {
@@ -46,6 +47,7 @@ export default function ChatHeader() {
                             >
                                 <MessageSquareShare />
                             </Button>
+                            <FeedbackDialog />
                             <Button
                                 variant="ghost"
                                 size="icon"

@@ -279,7 +279,7 @@
                 "description": "Notify the administrator via Bark when chat, translation, or title generation fails. Canceled requests do not trigger alerts.",
                 "urlLabel": "Bark Push URL",
                 "placeholder": "https://api.day.app/your-device-key",
-                "help": "Enter the full Bark push URL including the device key, such as https://api.day.app/your-device-key. Official and self-hosted services are supported. Changes take effect immediately after saving. Clear and save to disable alerts. Notifications include the provider, model, and error details.",
+                "help": "Enter the full Bark push URL including the device key, such as https://api.day.app/your-device-key. Official and self-hosted services are supported. Changes take effect immediately after saving. Clear and save to disable alerts. Notifications include the provider, model, and error details. User feedback also uses this address; clearing it disables feedback delivery.",
                 "saveError": "Failed to save error alert settings"
             },
             "users": {
@@ -415,6 +415,14 @@
         }
     },
     "components": {
+        "feedback": {
+            "title": "Feedback",
+            "content": "Feedback content",
+            "placeholder": "Share your feedback (up to 2,000 characters)…",
+            "sending": "Sending…",
+            "success": "Feedback sent. Thank you!",
+            "error": "Could not send feedback. Please try again later or ask the administrator to check the Bark settings."
+        },
         "sidebar": {
             "newChat": "New Chat",
             "searchChat": "Search Chat",
