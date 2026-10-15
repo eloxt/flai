@@ -15,7 +15,6 @@ import {
   StarOffIcon,
   SunIcon,
   SunMoonIcon,
-  TentIcon,
   Trash2Icon,
   UserCogIcon,
 } from "lucide-react"
@@ -23,6 +22,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, useLocation, useNavigate } from "react-router"
 import { ConfirmDialog } from "~/components/confirm-dialog"
+import { FlaiMark } from "~/components/flai-mark"
 import { type Theme, useTheme } from "~/components/theme-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
 import { Button } from "~/components/ui/button"
@@ -127,10 +127,10 @@ export function AppSidebar() {
             {/* Expanded: the logo is static and the collapse button sits on the right (desktop only).
                 Collapsed: the logo itself is the expand button and shows the panel icon on hover. */}
             <span className="flex size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:hidden">
-              <TentIcon className="size-4" />
+              <FlaiMark className="size-4" />
             </span>
             <Button variant="ghost" size="icon" className="group/brand hidden shrink-0 group-data-[collapsible=icon]:flex" aria-label={t("components.sidebar.toggle")} onClick={toggleSidebar}>
-              <TentIcon className="group-hover/brand:hidden" />
+              <FlaiMark className="group-hover/brand:hidden" />
               <PanelLeftIcon className="hidden group-hover/brand:block" />
             </Button>
             <span className={cn("min-w-0 flex-1 truncate text-base font-normal tracking-tight", FADE_ON_COLLAPSE)}>FlaiChat</span>
