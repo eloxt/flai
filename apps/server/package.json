@@ -1,0 +1,44 @@
+{
+  "name": "@flai/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=../../.env src/db/migrate.ts",
+    "migrate:legacy": "tsx --env-file-if-exists=../../.env scripts/migrate-from-flai.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.95",
+    "@ai-sdk/openai": "^4.0.93",
+    "@ai-sdk/openai-compatible": "^3.0.68",
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@flai/shared": "workspace:*",
+    "@hono/node-server": "^1.19.17",
+    "@mastra/ai-sdk": "^1.11.1",
+    "@mastra/core": "^1.77.0",
+    "@modelcontextprotocol/client": "2.2.0",
+    "ai": "^7.0.140",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "jose": "^6.2.12",
+    "pg": "^8.23.1",
+    "undici": "^7.30.0",
+    "zod": "^4.6.7"
+  }
+}

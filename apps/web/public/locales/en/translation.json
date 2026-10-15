@@ -1,0 +1,583 @@
+{
+  "common": {
+    "send": "Send",
+    "loading": "Loading...",
+    "generating": "Generating...",
+    "search": "Search",
+    "attachment": "Attachment",
+    "urlContext": "URL Context",
+    "uploading": "Uploading...",
+    "fileUploaded": "File uploaded",
+    "uploadFailed": "Failed to upload file",
+    "fileTypeNotAllowed": "Only text, PDF, and image files are allowed",
+    "dropFilesHere": "Drop files here",
+    "allowedFileTypes": "Text, PDF, and images only",
+    "shareConversation": "Share conversation",
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "delete": "Delete",
+      "update": "Update",
+      "back": "Back"
+    },
+    "crud": {
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteSuccess": "Deleted successfully",
+      "fetchError": "Failed to fetch data",
+      "createError": "Failed to create",
+      "updateError": "Failed to update",
+      "deleteError": "Failed to delete"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "empty": {
+      "noItems": "No items yet",
+      "noResults": "No results found"
+    },
+    "table": {
+      "actions": "Actions",
+      "status": "Status",
+      "createdAt": "Created At",
+      "name": "Name",
+      "email": "Email"
+    },
+    "dialog": {
+      "confirmDelete": "Are you sure you want to delete this item?",
+      "confirmAction": "Are you sure you want to proceed?"
+    },
+    "error": {
+      "network": "Network error, please try again later.",
+      "fetchMessages": "Failed to fetch messages",
+      "sendMessage": "Failed to send message",
+      "modelProviderNotFound": "Model provider not found. Please select a model.",
+      "retry": "Something went wrong, please try again.",
+      "generic": "Something went wrong"
+    },
+    "success": {
+      "saved": "Saved successfully",
+      "deleted": "Deleted successfully",
+      "updated": "Updated successfully"
+    },
+    "edit": "Edit"
+  },
+  "pages": {
+    "login": {
+      "welcome": "Welcome to FlaiChat.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login",
+      "submitting": "Logging in...",
+      "noAccount": "No account yet?",
+      "register": "Register",
+      "expired": "Login expired, please login again",
+      "placeholder": {
+        "email": "you@example.com",
+        "password": "At least 8 characters"
+      }
+    },
+    "register": {
+      "title": "Create an account",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Register",
+      "submitting": "Creating...",
+      "hasAccount": "Already have an account?",
+      "login": "Login directly",
+      "success": "Registration successful, redirecting...",
+      "placeholder": {
+        "username": "username",
+        "email": "you@example.com",
+        "password": "At least 8 characters"
+      },
+      "usernameHint": "5–20 characters"
+    },
+    "activationPending": {
+      "title": "Waiting for Admin Activation",
+      "description": "Your account has been successfully registered. Please wait for the administrator to activate your account to continue.",
+      "backToLogin": "Back to Login"
+    },
+    "chat": {
+      "pending": "Thinking...",
+      "greeting": "How can I help you?",
+      "placeholder": "Ask anything...",
+      "reasoning": {
+        "process": "Reasoning",
+        "done": "Reasoned"
+      },
+      "newChat": "New Chat",
+      "notification": {
+        "complete": "Response Complete",
+        "messageReady": "Your AI response is ready"
+      },
+      "actions": {
+        "copy": "Copy",
+        "edit": "Edit",
+        "info": "Details",
+        "next": "Next version",
+        "previous": "Previous version",
+        "regenerate": "Regenerate",
+        "stop": "Stop generating"
+      },
+      "deleteMessage": {
+        "title": "Delete this message?",
+        "description": "The message will be removed; any replies below it stay in the conversation."
+      },
+      "stopped": "Stopped before finishing",
+      "streamInterrupted": "The reply was interrupted. Please try again.",
+      "navLabel": "Conversation navigation",
+      "navAttachmentOnly": "Attachment message",
+      "navAttachments_one": "{{count}} attachment",
+      "navAttachments_other": "{{count}} attachments"
+    },
+    "search": {
+      "title": "Search Under Construction",
+      "description": "We are working hard to bring you the best search experience. Please check back later.",
+      "placeholder": "Search conversations and press Enter"
+    },
+    "translate": {
+      "title": "Translate",
+      "sourceLanguage": "Source language",
+      "targetLanguage": "Target language",
+      "sourcePlaceholder": "Enter text to translate...",
+      "targetPlaceholder": "Translation appears here",
+      "streamingPlaceholder": "Generating translation...",
+      "translate": "Translate",
+      "translating": "Translating...",
+      "stop": "Stop",
+      "swap": "Swap languages and text",
+      "defaults": {
+        "source": "Chinese",
+        "target": "English"
+      },
+      "languages": [
+        "Chinese",
+        "English",
+        "Japanese",
+        "Korean",
+        "French",
+        "German",
+        "Spanish",
+        "Portuguese",
+        "Russian",
+        "Arabic"
+      ],
+      "customInstructionLabel": "Style requirements",
+      "customInstructionPlaceholder": "Optional: describe the translation style you want (e.g. formal, casual, keep technical terms)",
+      "addImage": "Add image",
+      "removeImage": "Remove image",
+      "errors": {
+        "emptyInput": "Enter text or add an image to translate",
+        "maxImages": "You can add up to 5 images",
+        "failed": "Translation failed",
+        "noStream": "Translation response was empty"
+      }
+    },
+    "share": {
+      "error": "Failed to load shared conversation",
+      "notFound": "Shared conversation not found",
+      "notFoundDescription": "This share link may have expired or been deleted.",
+      "untitled": "Untitled Conversation",
+      "sharedOn": "Shared on",
+      "expiresOn": "Expires on",
+      "footer": "Shared via <0>FlaiChat</0>"
+    },
+    "settings": {
+      "title": "Settings",
+      "tabs": {
+        "account": "Account & Security",
+        "mcp": "MCP Servers",
+        "preference": "Preferences",
+        "share": "Shared Links"
+      },
+      "account": {
+        "title": "Profile",
+        "description": "Update your public profile information.",
+        "username": "Username",
+        "usernamePlaceholder": "Your username",
+        "avatar": "Avatar URL",
+        "avatarPlaceholder": "https://example.com/avatar.png",
+        "save": "Save Changes",
+        "saving": "Saving...",
+        "success": "Profile updated successfully",
+        "error": "Failed to update profile",
+        "usernameRequired": "Username is required",
+        "changeAvatar": "Upload new avatar"
+      },
+      "security": {
+        "title": "Security",
+        "description": "Manage your password and account security.",
+        "currentPassword": "Current Password",
+        "currentPasswordPlaceholder": "Enter current password",
+        "newPassword": "New Password",
+        "newPasswordPlaceholder": "Enter new password",
+        "update": "Update Password",
+        "updating": "Updating...",
+        "success": "Password updated successfully",
+        "error": "Failed to update password",
+        "fillAll": "Please fill in both password fields",
+        "hint": "At least 8 characters. Other devices will be signed out."
+      },
+      "preference": {
+        "title": "Preferences",
+        "description": "Personalize how the app looks and behaves.",
+        "sidebarEmoji": "Show emojis in sidebar",
+        "sidebarEmojiDescription": "Display conversation emojis in the sidebar list.",
+        "updateSuccess": "Preferences updated",
+        "updateError": "Failed to update preferences"
+      },
+      "mcp": {
+        "title": "MCP Servers",
+        "description": "Configure Model Context Protocol (MCP) servers to extend AI capabilities.",
+        "add": "Add Server",
+        "addTitle": "Add MCP Server",
+        "editTitle": "Edit MCP Server",
+        "dialogDescription": "Configure an MCP server endpoint to enable tool calling.",
+        "name": "Server Name",
+        "namePlaceholder": "My MCP Server",
+        "connectionType": "Connection Type",
+        "endpoint": "Endpoint",
+        "endpointPlaceholder": "https://mcp.example.com/sse",
+        "headers": "Custom Headers (JSON)",
+        "headersPlaceholder": "{\n  \"Authorization\": \"Bearer xxx\"\n}",
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "refreshTools": "Refresh Tools",
+        "saveError": "Failed to save MCP server",
+        "refreshSuccess": "Refreshed {{count}} tools",
+        "refreshError": "Failed to refresh tools",
+        "toggleError": "Failed to toggle server status",
+        "invalidHeaders": "Invalid headers JSON format",
+        "confirmDelete": "Delete this MCP server?",
+        "emptyHint": "Connect a Streamable HTTP MCP server to give models extra tools.",
+        "httpOnly": "Streamable HTTP endpoints only. The address must be publicly reachable.",
+        "noTools": "No tools loaded yet. Use refresh to fetch them."
+      },
+      "share": {
+        "title": "Shared Links",
+        "description": "Manage your shared conversation links.",
+        "untitled": "Untitled Conversation",
+        "expired": "Expired",
+        "never": "Never",
+        "createdAt": "Created",
+        "expiresAt": "Expires",
+        "copyLink": "Copy Link",
+        "openLink": "Open Link",
+        "copied": "Link copied to clipboard",
+        "editTitle": "Update Share Link",
+        "editDescription": "Update the expiration time and refresh the conversation content.",
+        "conversation": "Conversation",
+        "newExpiration": "New Expiration"
+      }
+    },
+    "admin": {
+      "systemConfig": {
+        "systemPrompt": "System prompts",
+        "titleGeneration": "Title generation",
+        "promptDescription": "Configure chat and translation prompts. Saved changes apply to subsequent requests.",
+        "titleDescription": "Choose the provider, model and prompt for automatic conversation titles.",
+        "saved": "Settings saved and cache updated",
+        "reload": "Reload settings",
+        "provider": "Provider",
+        "model": "Model",
+        "selectProvider": "Select a provider",
+        "selectModel": "Select a model",
+        "unavailable": "Unavailable",
+        "modelHelp": "Only models from active providers are shown. Select a new model after changing providers.",
+        "titlePrompt": "Title generation prompt",
+        "chatPrompt": "Chat system prompt",
+        "translatePrompt": "Translation prompt",
+        "titleHelp": "Describe the title requirements. Conversation content is supplied separately and the output structure is managed by the system.",
+        "chatHelp": "Optional. Supports {{currentDateTime}} for the current date and time.",
+        "translateHelp": "Supports {{sourceLanguage}}, {{targetLanguage}} and {{text}} for source language, target language and input text.",
+        "systemPromptHelp": "Instructions sent to the model with every conversation and translation.",
+        "chatPromptHelp": "{{currentDateTime}} is replaced with the current time.",
+        "translatePromptHelp": "Placeholders: {{sourceLanguage}}, {{targetLanguage}}, {{text}}."
+      },
+      "title": "Admin Settings",
+      "tabs": {
+        "users": "User Management",
+        "providers": "Provider Management",
+        "notification": "Notifications",
+        "errorAlert": "Error Alerts"
+      },
+      "errorAlert": {
+        "title": "Error Alerts",
+        "description": "Notify the administrator via Bark when chat, translation, or title generation fails. Canceled requests do not trigger alerts.",
+        "urlLabel": "Bark Push URL",
+        "placeholder": "https://api.day.app/your-device-key",
+        "help": "Enter the full Bark push URL including the device key, such as https://api.day.app/your-device-key. Official and self-hosted services are supported. Changes take effect immediately after saving. Clear and save to disable alerts. Notifications include the provider, model, and error details. User feedback also uses this address; clearing it disables feedback delivery.",
+        "saveError": "Failed to save error alert settings"
+      },
+      "users": {
+        "title": "Users",
+        "description": "Manage system users and their permissions.",
+        "create": "Create User",
+        "createTitle": "Create New User",
+        "editTitle": "Edit User",
+        "deleteTitle": "Delete User",
+        "deleteDescription": "Are you sure you want to delete this user? This action cannot be undone.",
+        "fillAll": "Please fill in all required fields",
+        "roleUser": "User",
+        "roleAdmin": "Admin",
+        "table": {
+          "username": "Username",
+          "email": "Email",
+          "role": "Role",
+          "status": "Status",
+          "createdAt": "Created At",
+          "actions": "Actions"
+        },
+        "form": {
+          "email": "Email",
+          "emailPlaceholder": "user@example.com",
+          "username": "Username",
+          "usernamePlaceholder": "Enter username",
+          "password": "Password",
+          "passwordPlaceholder": "Enter password",
+          "passwordPlaceholderOptional": "Leave empty to keep current",
+          "role": "Role",
+          "isActive": "Active",
+          "passwordKeep": "Leave empty to keep the current password"
+        },
+        "conversations": "View conversations",
+        "conversationsOf": "Conversations of {{name}}"
+      },
+      "providers": {
+        "title": "Providers",
+        "description": "Manage AI model providers and API configurations.",
+        "create": "Create Provider",
+        "createTitle": "Create New Provider",
+        "editTitle": "Edit Provider",
+        "deleteTitle": "Delete Provider",
+        "deleteDescription": "Are you sure you want to delete this provider? This action cannot be undone.",
+        "nameRequired": "Provider name is required",
+        "table": {
+          "name": "Name",
+          "models": "Models",
+          "providerType": "Type",
+          "apiKey": "API Key",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "form": {
+          "name": "Name",
+          "namePlaceholder": "Provider name",
+          "apiKey": "API Key",
+          "apiKeyPlaceholder": "Enter API key",
+          "apiKeyPlaceholderOptional": "Leave empty to keep current",
+          "providerType": "Provider Type",
+          "providerTypePlaceholder": "Select type",
+          "baseUrl": "Base URL",
+          "baseUrlPlaceholder": "https://api.example.com",
+          "models": "Models",
+          "modelsPlaceholder": "[{\"id\": \"gpt-4\", \"name\": \"GPT-4\", ...}]",
+          "importJson": "Import JSON",
+          "importJsonTitle": "Import Models JSON",
+          "importJsonDescription": "Paste a model object, an array of models, or a provider object with models.",
+          "importJsonPlaceholder": "[{\"id\": \"gpt-4o\", \"name\": \"GPT-4o\"}]",
+          "importJsonApply": "Apply",
+          "importJsonInvalid": "Invalid JSON content",
+          "importJsonNoModels": "No valid models found",
+          "importJsonSuccess": "Imported {{count}} models",
+          "logo": "Logo SVG",
+          "logoPlaceholder": "https://example.com/logo.svg",
+          "isActive": "Active",
+          "importJsonHint": "Accepts an array of models, { \"models\": [...] }, or a models.dev provider entry. snake_case and camelCase fields both work."
+        },
+        "modelsCount": "models",
+        "model": {
+          "thinkingLevels": "Available thinking levels",
+          "thinkingLevelsHelp": "Enable only levels supported by this model. Leave empty to hide the selector and omit the effort parameter. The default level is used until another level is selected.",
+          "defaultThinkingLevel": "Default thinking level",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "model": "Model",
+          "addModel": "Add Model",
+          "noModels": "No models yet. Click to add one.",
+          "id": "Model ID",
+          "name": "Display Name",
+          "badge": "Badge Text",
+          "badgePlaceholder": "Recommended",
+          "family": "Model Family",
+          "status": "Status",
+          "knowledge": "Knowledge Cutoff",
+          "features": "Features",
+          "attachment": "Attachment",
+          "reasoning": "Reasoning",
+          "toolCall": "Tool Call",
+          "structuredOutput": "Structured Output",
+          "temperature": "Temperature",
+          "openWeights": "Open Weights",
+          "modalities": "Modalities",
+          "inputModalities": "Input Modalities",
+          "outputModalities": "Output Modalities",
+          "limits": "Limits (tokens)",
+          "contextLimit": "Context",
+          "inputLimit": "Input",
+          "outputLimit": "Output",
+          "cost": "Cost",
+          "costInput": "Input",
+          "costOutput": "Output",
+          "costCacheRead": "Cache Read",
+          "costCacheWrite": "Cache Write",
+          "internalSearch": "Internal Search",
+          "imageGeneration": "Image Generation",
+          "urlContext": "URL Context",
+          "idRequired": "Every model needs an ID",
+          "generativeUi": "Generative UI (OpenUI)",
+          "generativeUiHelp": "Adds the OpenUI component guide to the system prompt so replies can include tables, charts and forms."
+        }
+      },
+      "notification": {
+        "title": "Notifications",
+        "description": "Manage site-wide notification banners displayed to all users.",
+        "add": "Add Notification",
+        "addTitle": "Add Notification",
+        "editTitle": "Edit Notification",
+        "dialogDescription": "Create a notification banner that will be displayed at the top of the main page.",
+        "titleLabel": "Title",
+        "titlePlaceholder": "Notification title",
+        "contentLabel": "Content",
+        "contentPlaceholder": "Notification message content",
+        "levelLabel": "Type",
+        "levelDefault": "Info",
+        "levelWarning": "Warning",
+        "saveError": "Failed to save notification",
+        "fillRequired": "Please fill in title and content",
+        "deleteTitle": "Delete this notification?"
+      }
+    }
+  },
+  "components": {
+    "feedback": {
+      "title": "Feedback",
+      "content": "Feedback content",
+      "placeholder": "Share your feedback (up to 2,000 characters)…",
+      "sending": "Sending…",
+      "success": "Feedback sent. Thank you!",
+      "error": "Could not send feedback. Please try again later or ask the administrator to check the Bark settings.",
+      "description": "Tell us about a problem or an idea. Administrators will receive it directly.",
+      "submit": "Send feedback"
+    },
+    "sidebar": {
+      "newChat": "New Chat",
+      "searchChat": "Search Chat",
+      "translate": "Translate",
+      "chats": "Chats",
+      "favourites": "Favorites",
+      "adminSettings": "Admin Settings",
+      "dateGroups": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "previous7Days": "Previous 7 Days",
+        "previous30Days": "Previous 30 Days",
+        "older": "Older"
+      },
+      "loadMore": "Load More",
+      "settings": "Settings",
+      "theme": {
+        "title": "Theme",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "logout": "Logout",
+      "addFavourite": "Add to Favorites",
+      "removeFavourite": "Remove from Favorites",
+      "regenerateTitle": "Regenerate Title",
+      "delete": "Delete",
+      "dialog": {
+        "deleteTitle": "Are you absolutely sure?",
+        "deleteDescription": "This action cannot be undone. This will permanently delete your conversation and remove it from our servers.",
+        "adminConstructionTitle": "Settings Under Construction",
+        "adminConstructionDesc": "We are working hard to bring you the best settings experience. Please check back later."
+      },
+      "command": {
+        "searchPlaceholder": "Press Enter to search...",
+        "empty": "No results found."
+      },
+      "deleteConfirm": {
+        "title": "Delete this conversation?",
+        "description": "The conversation and all its messages will be removed."
+      },
+      "more": "More actions",
+      "toggle": "Toggle sidebar",
+      "untitled": "New conversation"
+    },
+    "modelSelector": {
+      "select": "Select Model",
+      "modelDeletedSwitch": "The selected model was removed. Switched to {{model}} automatically.",
+      "modelDeletedNoReplacement": "The selected model was removed. Please select another model.",
+      "trainingUntil": "Training until",
+      "contextWindow": "Context Window",
+      "maxOutput": "Max Output",
+      "pricing": "Pricing (per 1M tokens)",
+      "provider": "Provider",
+      "name": "Model",
+      "input": "Input",
+      "output": "Output",
+      "cached": "Cached",
+      "toolUse": "Tool Use",
+      "inputModalities": "Input Modalities",
+      "outputModalities": "Output Modalities",
+      "badge": {
+        "attachment": "Attachment",
+        "reasoning": "Reasoning",
+        "toolCall": "Tool Call",
+        "structuredOutput": "Structured Output",
+        "info": "Metadata",
+        "info_desc": "Execution details for this message",
+        "generativeUi": "Generative UI"
+      },
+      "empty": "No models available. Ask an administrator to add a provider."
+    },
+    "share": {
+      "title": "Share Conversation",
+      "description": "Create a shareable link for this conversation. Anyone with the link can view it. Only messages in the current branch will be shared, future messages will not be shared.",
+      "updateDescription": "This conversation is already shared. You can update session content and expiration time, or copy the link.",
+      "expirationLabel": "Link Expiration",
+      "expiration": {
+        "1hour": "1 Hour",
+        "1day": "1 Day",
+        "7days": "7 Days",
+        "30days": "30 Days",
+        "never": "Never"
+      },
+      "createButton": "Create Share Link",
+      "updateButton": "Update Expiration",
+      "linkLabel": "Share Link",
+      "success": "Share link created successfully",
+      "updateSuccess": "Share link updated successfully",
+      "error": "Failed to create share link",
+      "updateError": "Failed to update share link",
+      "copied": "Link copied to clipboard",
+      "copy": "Copy link"
+    },
+    "chatInput": {
+      "mcpTools": "MCP Tools",
+      "thinkingIntensity": "Thinking",
+      "default": "Default",
+      "thinking": {
+        "max": "Maximum",
+        "none": "None",
+        "minimal": "Minimal",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "xhigh": "Extra High"
+      },
+      "web_search_tooltip": "Search web for information when needed.",
+      "url_context_tooltip": "Extract information from URLs when needed."
+    },
+    "toolCall": {
+      "callingTool": "Calling tool:",
+      "completed": "completed",
+      "failed": "failed"
+    }
+  }
+}

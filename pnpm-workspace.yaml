@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+allowBuilds:
+  esbuild: true
+  # postinstall only sends telemetry
+  '@openuidev/lang-core': false
+
+minimumReleaseAgeExclude:
+  - '@openuidev/lang-core@1.0.1'
+  - '@openuidev/react-lang@1.0.1'

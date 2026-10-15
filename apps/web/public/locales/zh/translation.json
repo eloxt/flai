@@ -1,0 +1,582 @@
+{
+  "common": {
+    "send": "发送",
+    "loading": "加载中...",
+    "generating": "生成中...",
+    "search": "搜索",
+    "attachment": "附件",
+    "urlContext": "URL 上下文",
+    "uploading": "上传中...",
+    "fileUploaded": "文件已上传",
+    "uploadFailed": "上传文件失败",
+    "fileTypeNotAllowed": "只允许上传文本、PDF和图片文件",
+    "dropFilesHere": "拖放文件到这里",
+    "allowedFileTypes": "仅支持文本、PDF和图片",
+    "shareConversation": "分享对话",
+    "actions": {
+      "save": "保存",
+      "cancel": "取消",
+      "confirm": "确认",
+      "delete": "删除",
+      "update": "更新",
+      "back": "返回"
+    },
+    "crud": {
+      "createSuccess": "创建成功",
+      "updateSuccess": "更新成功",
+      "deleteSuccess": "删除成功",
+      "fetchError": "获取数据失败",
+      "createError": "创建失败",
+      "updateError": "更新失败",
+      "deleteError": "删除失败"
+    },
+    "status": {
+      "active": "启用",
+      "inactive": "禁用"
+    },
+    "empty": {
+      "noItems": "暂无数据",
+      "noResults": "未找到结果"
+    },
+    "table": {
+      "actions": "操作",
+      "status": "状态",
+      "createdAt": "创建时间",
+      "name": "名称",
+      "email": "邮箱"
+    },
+    "dialog": {
+      "confirmDelete": "确定要删除此项吗？",
+      "confirmAction": "确定要继续吗？"
+    },
+    "error": {
+      "network": "网络异常，请稍后重试。",
+      "fetchMessages": "获取消息失败",
+      "sendMessage": "发送消息失败",
+      "modelProviderNotFound": "未找到模型提供商。请先选择一个模型。",
+      "retry": "出错了，请重试。",
+      "generic": "发生了一些错误"
+    },
+    "success": {
+      "saved": "保存成功",
+      "deleted": "删除成功",
+      "updated": "更新成功"
+    },
+    "edit": "编辑"
+  },
+  "pages": {
+    "login": {
+      "welcome": "欢迎使用 FlaiChat",
+      "email": "邮箱",
+      "password": "密码",
+      "submit": "登录",
+      "submitting": "登录中...",
+      "noAccount": "还没账号？",
+      "register": "注册",
+      "expired": "登录状态已过期，请重新登录",
+      "placeholder": {
+        "email": "you@example.com",
+        "password": "至少 8 位密码"
+      }
+    },
+    "register": {
+      "title": "创建账户",
+      "username": "昵称",
+      "email": "邮箱",
+      "password": "密码",
+      "submit": "注册",
+      "submitting": "创建中...",
+      "hasAccount": "已经拥有账号？",
+      "login": "直接登录",
+      "success": "注册成功，正在跳转...",
+      "placeholder": {
+        "username": "username",
+        "email": "you@example.com",
+        "password": "至少 8 位密码"
+      },
+      "usernameHint": "5–20 个字符"
+    },
+    "activationPending": {
+      "title": "等待管理员激活",
+      "description": "您的账号已经注册成功。请等待管理员激活您的账号以继续使用。",
+      "backToLogin": "返回登录"
+    },
+    "chat": {
+      "pending": "思考中...",
+      "greeting": "有什么可以帮忙的?",
+      "placeholder": "问点什么...",
+      "reasoning": {
+        "process": "思考中",
+        "done": "思考过程"
+      },
+      "newChat": "新聊天",
+      "notification": {
+        "complete": "回复完成",
+        "messageReady": "AI 回复已就绪"
+      },
+      "actions": {
+        "copy": "复制",
+        "edit": "编辑",
+        "info": "详情",
+        "next": "下一个版本",
+        "previous": "上一个版本",
+        "regenerate": "重新生成",
+        "stop": "停止生成"
+      },
+      "deleteMessage": {
+        "title": "删除这条消息？",
+        "description": "这条消息将被删除，其下方的回复仍会保留在对话中。"
+      },
+      "stopped": "生成已中途停止",
+      "streamInterrupted": "回复中断，请重试。",
+      "navLabel": "会话导航",
+      "navAttachmentOnly": "附件消息",
+      "navAttachments_other": "{{count}} 个附件"
+    },
+    "search": {
+      "title": "搜索功能建设中",
+      "description": "我们正在努力为您提供最佳的搜索体验。请稍后再来检查。",
+      "placeholder": "搜索对话，按回车确认"
+    },
+    "translate": {
+      "title": "翻译",
+      "sourceLanguage": "源语言",
+      "targetLanguage": "目标语言",
+      "sourcePlaceholder": "输入要翻译的原文...",
+      "targetPlaceholder": "译文会显示在这里",
+      "streamingPlaceholder": "正在生成译文...",
+      "translate": "翻译",
+      "translating": "翻译中...",
+      "stop": "停止",
+      "swap": "交换语言和文本",
+      "defaults": {
+        "source": "中文",
+        "target": "英语"
+      },
+      "languages": [
+        "中文",
+        "英语",
+        "日语",
+        "韩语",
+        "法语",
+        "德语",
+        "西班牙语",
+        "葡萄牙语",
+        "俄语",
+        "阿拉伯语"
+      ],
+      "customInstructionLabel": "翻译风格要求",
+      "customInstructionPlaceholder": "可选：输入想要的翻译风格（如：正式、口语化、保留专业术语）",
+      "addImage": "添加图片",
+      "removeImage": "移除图片",
+      "errors": {
+        "emptyInput": "请输入文本或添加图片",
+        "maxImages": "最多添加 5 张图片",
+        "failed": "翻译失败",
+        "noStream": "翻译响应为空"
+      }
+    },
+    "share": {
+      "error": "加载分享对话失败",
+      "notFound": "未找到分享的对话",
+      "notFoundDescription": "此分享链接可能已过期或已被删除。",
+      "untitled": "无标题对话",
+      "sharedOn": "分享于",
+      "expiresOn": "过期于",
+      "footer": "通过 <0>FlaiChat</0> 分享"
+    },
+    "settings": {
+      "title": "设置",
+      "tabs": {
+        "account": "账户与安全",
+        "mcp": "MCP 服务器",
+        "preference": "偏好",
+        "share": "分享链接"
+      },
+      "account": {
+        "title": "个人资料",
+        "description": "更新您的公开个人资料信息。",
+        "username": "用户名",
+        "usernamePlaceholder": "您的用户名",
+        "avatar": "头像链接",
+        "avatarPlaceholder": "https://example.com/avatar.png",
+        "save": "保存更改",
+        "saving": "保存中...",
+        "success": "个人资料更新成功",
+        "error": "更新个人资料失败",
+        "usernameRequired": "用户名为必填项",
+        "changeAvatar": "上传新头像"
+      },
+      "security": {
+        "title": "安全",
+        "description": "管理您的密码和账户安全。",
+        "currentPassword": "当前密码",
+        "currentPasswordPlaceholder": "输入当前密码",
+        "newPassword": "新密码",
+        "newPasswordPlaceholder": "输入新密码",
+        "update": "更新密码",
+        "updating": "更新中...",
+        "success": "密码更新成功",
+        "error": "更新密码失败",
+        "fillAll": "请填写所有密码字段",
+        "hint": "至少 8 个字符。其他设备将会退出登录。"
+      },
+      "preference": {
+        "title": "偏好",
+        "description": "个性化应用的显示与行为。",
+        "sidebarEmoji": "侧边栏显示 Emoji",
+        "sidebarEmojiDescription": "在侧边栏列表中显示对话 Emoji。",
+        "updateSuccess": "偏好已更新",
+        "updateError": "更新偏好失败"
+      },
+      "mcp": {
+        "title": "MCP 服务器",
+        "description": "配置模型上下文协议 (MCP) 服务器以扩展 AI 能力。",
+        "add": "添加服务器",
+        "addTitle": "添加 MCP 服务器",
+        "editTitle": "编辑 MCP 服务器",
+        "dialogDescription": "配置 MCP 服务器端点以启用工具调用。",
+        "name": "服务器名称",
+        "namePlaceholder": "我的 MCP 服务器",
+        "connectionType": "连接类型",
+        "endpoint": "端点地址",
+        "endpointPlaceholder": "https://mcp.example.com/sse",
+        "headers": "自定义请求头",
+        "headersPlaceholder": "{\n  \"Authorization\": \"Bearer xxx\"\n}",
+        "activate": "启用",
+        "deactivate": "禁用",
+        "refreshTools": "刷新工具",
+        "saveError": "保存 MCP 服务器失败",
+        "refreshSuccess": "已刷新 {{count}} 个工具",
+        "refreshError": "刷新工具失败",
+        "toggleError": "切换服务器状态失败",
+        "invalidHeaders": "请求头 JSON 格式无效",
+        "confirmDelete": "删除这个 MCP 服务？",
+        "emptyHint": "连接一个 Streamable HTTP MCP 服务，为模型提供额外的工具。",
+        "httpOnly": "仅支持 Streamable HTTP 端点，地址必须可从公网访问。",
+        "noTools": "尚未加载工具，点击刷新获取。"
+      },
+      "share": {
+        "title": "分享链接",
+        "description": "管理您分享的对话链接。",
+        "untitled": "无标题对话",
+        "expired": "已过期",
+        "never": "永不过期",
+        "createdAt": "创建时间",
+        "expiresAt": "过期时间",
+        "copyLink": "复制链接",
+        "openLink": "打开链接",
+        "copied": "链接已复制到剪贴板",
+        "editTitle": "更新分享链接",
+        "editDescription": "更新过期时间并刷新对话内容。",
+        "conversation": "对话",
+        "newExpiration": "新的有效期"
+      }
+    },
+    "admin": {
+      "systemConfig": {
+        "systemPrompt": "系统提示词",
+        "titleGeneration": "标题生成",
+        "promptDescription": "设置聊天与翻译使用的系统提示词，保存后对后续请求生效。",
+        "titleDescription": "选择自动生成会话标题的服务商、模型与提示词。",
+        "saved": "配置已保存并更新缓存",
+        "reload": "重新加载",
+        "provider": "服务商",
+        "model": "模型",
+        "selectProvider": "选择服务商",
+        "selectModel": "选择模型",
+        "unavailable": "不可用",
+        "modelHelp": "仅显示已启用服务商的模型。切换服务商后请重新选择模型。",
+        "titlePrompt": "标题生成提示词",
+        "chatPrompt": "聊天系统提示词",
+        "translatePrompt": "翻译提示词",
+        "titleHelp": "描述标题生成的要求。会话内容会单独传入，返回结构由系统设置。",
+        "chatHelp": "可留空。支持变量：{{currentDateTime}}（当前日期时间）。",
+        "translateHelp": "支持变量：{{sourceLanguage}}（源语言）、{{targetLanguage}}（目标语言）、{{text}}（待翻译内容）。",
+        "systemPromptHelp": "每次对话和翻译时发送给模型的指令。",
+        "chatPromptHelp": "{{currentDateTime}} 会被替换为当前时间。",
+        "translatePromptHelp": "占位符：{{sourceLanguage}}、{{targetLanguage}}、{{text}}。"
+      },
+      "title": "管理员设置",
+      "tabs": {
+        "users": "用户管理",
+        "providers": "服务商管理",
+        "notification": "站内通知",
+        "errorAlert": "报错告警"
+      },
+      "errorAlert": {
+        "title": "报错告警",
+        "description": "聊天、翻译或标题生成请求报错时，通过 Bark 通知管理员。主动取消请求不会触发告警。",
+        "urlLabel": "Bark 推送地址",
+        "placeholder": "https://api.day.app/你的设备Key",
+        "help": "填写包含设备 Key 的完整 Bark 推送地址，支持官方或自建服务，例如 https://api.day.app/你的设备Key。保存后立即生效，清空并保存即可关闭告警。通知包含服务商、模型和错误信息。用户反馈也使用此地址；清空后将无法接收反馈。",
+        "saveError": "保存告警设置失败"
+      },
+      "users": {
+        "title": "用户",
+        "description": "管理系统用户及其权限。",
+        "create": "创建用户",
+        "createTitle": "创建新用户",
+        "editTitle": "编辑用户",
+        "deleteTitle": "删除用户",
+        "deleteDescription": "确定要删除此用户吗？此操作无法撤销。",
+        "fillAll": "请填写所有必填字段",
+        "roleUser": "用户",
+        "roleAdmin": "管理员",
+        "table": {
+          "username": "用户名",
+          "email": "邮箱",
+          "role": "角色",
+          "status": "状态",
+          "createdAt": "创建时间",
+          "actions": "操作"
+        },
+        "form": {
+          "email": "邮箱",
+          "emailPlaceholder": "user@example.com",
+          "username": "用户名",
+          "usernamePlaceholder": "输入用户名",
+          "password": "密码",
+          "passwordPlaceholder": "输入密码",
+          "passwordPlaceholderOptional": "留空保持原密码",
+          "role": "角色",
+          "isActive": "激活",
+          "passwordKeep": "留空则保留当前密码"
+        },
+        "conversations": "查看对话",
+        "conversationsOf": "{{name}} 的对话"
+      },
+      "providers": {
+        "title": "服务商",
+        "description": "管理 AI 模型服务商和 API 配置。",
+        "create": "创建服务商",
+        "createTitle": "创建新服务商",
+        "editTitle": "编辑服务商",
+        "deleteTitle": "删除服务商",
+        "deleteDescription": "确定要删除此服务商吗？此操作无法撤销。",
+        "nameRequired": "服务商名称为必填项",
+        "table": {
+          "name": "名称",
+          "models": "模型",
+          "providerType": "类型",
+          "apiKey": "API 密钥",
+          "status": "状态",
+          "actions": "操作"
+        },
+        "form": {
+          "name": "名称",
+          "namePlaceholder": "服务商名称",
+          "apiKey": "API 密钥",
+          "apiKeyPlaceholder": "输入 API 密钥",
+          "apiKeyPlaceholderOptional": "留空保持原密钥",
+          "providerType": "服务商类型",
+          "providerTypePlaceholder": "选择类型",
+          "baseUrl": "接口地址",
+          "baseUrlPlaceholder": "https://api.example.com",
+          "models": "模型",
+          "modelsPlaceholder": "[{\"id\": \"gpt-4\", \"name\": \"GPT-4\", ...}]",
+          "importJson": "导入 JSON",
+          "importJsonTitle": "导入模型 JSON",
+          "importJsonDescription": "粘贴模型对象、模型数组，或包含 models 的服务商对象。",
+          "importJsonPlaceholder": "[{\"id\": \"gpt-4o\", \"name\": \"GPT-4o\"}]",
+          "importJsonApply": "应用",
+          "importJsonInvalid": "JSON 内容无效",
+          "importJsonNoModels": "未找到有效模型",
+          "importJsonSuccess": "已导入 {{count}} 个模型",
+          "logo": "Logo SVG",
+          "logoPlaceholder": "https://example.com/logo.svg",
+          "isActive": "激活",
+          "importJsonHint": "支持模型数组、{ \"models\": [...] } 或 models.dev 的提供商条目，字段可用 snake_case 或 camelCase。"
+        },
+        "modelsCount": "个模型",
+        "model": {
+          "thinkingLevels": "可选思考强度",
+          "thinkingLevelsHelp": "仅启用该模型支持的强度。未配置则隐藏选择器且不发送强度参数；未主动选择时使用默认强度。",
+          "defaultThinkingLevel": "默认思考强度",
+          "moveUp": "上移",
+          "moveDown": "下移",
+          "model": "模型",
+          "addModel": "添加模型",
+          "noModels": "暂无模型，点击添加模型",
+          "id": "模型 ID",
+          "name": "显示名称",
+          "badge": "备注标签",
+          "badgePlaceholder": "推荐",
+          "family": "模型家族",
+          "status": "状态",
+          "knowledge": "知识截止",
+          "features": "模型特性",
+          "attachment": "附件",
+          "reasoning": "推理",
+          "toolCall": "工具调用",
+          "structuredOutput": "结构化输出",
+          "temperature": "温度",
+          "openWeights": "开放权重",
+          "modalities": "模态",
+          "inputModalities": "输入模态",
+          "outputModalities": "输出模态",
+          "limits": "限制 (tokens)",
+          "contextLimit": "上下文",
+          "inputLimit": "输入",
+          "outputLimit": "输出",
+          "cost": "费用",
+          "costInput": "输入",
+          "costOutput": "输出",
+          "costCacheRead": "缓存读取",
+          "costCacheWrite": "缓存写入",
+          "internalSearch": "联网搜索",
+          "imageGeneration": "图片生成",
+          "urlContext": "URL 上下文",
+          "idRequired": "每个模型都需要填写 ID",
+          "generativeUi": "生成式 UI（OpenUI）",
+          "generativeUiHelp": "在系统提示词中加入 OpenUI 组件说明，使回复可以包含表格、图表和表单。"
+        }
+      },
+      "notification": {
+        "title": "站内通知",
+        "description": "管理显示给所有用户的站内通知横幅。",
+        "add": "添加通知",
+        "addTitle": "添加通知",
+        "editTitle": "编辑通知",
+        "dialogDescription": "创建将显示在主页顶部的通知横幅。",
+        "titleLabel": "标题",
+        "titlePlaceholder": "通知标题",
+        "contentLabel": "内容",
+        "contentPlaceholder": "通知消息内容",
+        "levelLabel": "类型",
+        "levelDefault": "信息",
+        "levelWarning": "警告",
+        "saveError": "保存通知失败",
+        "fillRequired": "请填写标题和内容",
+        "deleteTitle": "删除这条通知？"
+      }
+    }
+  },
+  "components": {
+    "feedback": {
+      "title": "反馈",
+      "content": "反馈内容",
+      "placeholder": "请填写反馈，例如：“XX 模型不能使用了”、“缺少 XX 功能”…",
+      "sending": "发送中…",
+      "success": "反馈已发送，感谢你的建议！",
+      "error": "反馈发送失败，请稍后重试或联系管理员确认 Bark 配置。",
+      "description": "告诉我们遇到的问题或想法，管理员会直接收到。",
+      "submit": "发送反馈"
+    },
+    "sidebar": {
+      "newChat": "新聊天",
+      "searchChat": "搜索聊天",
+      "translate": "翻译",
+      "chats": "聊天",
+      "favourites": "收藏",
+      "dateGroups": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "previous7Days": "过去7天",
+        "previous30Days": "过去30天",
+        "older": "更早"
+      },
+      "loadMore": "加载更多",
+      "adminSettings": "管理员设置",
+      "settings": "设置",
+      "theme": {
+        "title": "主题",
+        "system": "跟随系统",
+        "light": "浅色",
+        "dark": "深色"
+      },
+      "logout": "注销",
+      "addFavourite": "添加收藏",
+      "removeFavourite": "取消收藏",
+      "regenerateTitle": "重新生成标题",
+      "delete": "删除",
+      "dialog": {
+        "deleteTitle": "您确定吗？",
+        "deleteDescription": "此操作无法撤销。这将永久删除您的对话并从我们的服务器中删除。",
+        "adminConstructionTitle": "设置正在建设中",
+        "adminConstructionDesc": "我们正在努力为您提供最佳的设置体验。请稍后再来检查。"
+      },
+      "command": {
+        "searchPlaceholder": "按回车搜索...",
+        "empty": "未查询到结果"
+      },
+      "deleteConfirm": {
+        "title": "删除这个对话？",
+        "description": "对话及其所有消息都将被删除。"
+      },
+      "more": "更多操作",
+      "toggle": "切换侧边栏",
+      "untitled": "新对话"
+    },
+    "modelSelector": {
+      "select": "选择模型",
+      "modelDeletedSwitch": "当前所选模型已不再提供，已自动切换到 {{model}}。",
+      "modelDeletedNoReplacement": "当前所选模型已不再提供，请重新选择模型。",
+      "trainingUntil": "训练截至",
+      "contextWindow": "上下文窗口",
+      "maxOutput": "最大输出",
+      "pricing": "价格 (每1M tokens)",
+      "provider": "提供商",
+      "name": "模型",
+      "input": "输入",
+      "output": "输出",
+      "toolUse": "工具使用",
+      "cached": "缓存",
+      "inputModalities": "输入模态",
+      "outputModalities": "输出模态",
+      "badge": {
+        "attachment": "附件",
+        "reasoning": "推理",
+        "toolCall": "工具调用",
+        "structuredOutput": "结构化输出",
+        "info": "元数据",
+        "info_desc": "此消息的执行详情",
+        "generativeUi": "生成式 UI"
+      },
+      "empty": "暂无可用模型，请联系管理员添加提供商。"
+    },
+    "share": {
+      "title": "分享对话",
+      "description": "创建此对话的分享链接。任何拥有链接的人都可以查看。只分享当前页面展示的消息，不包含其他分支，后续添加的消息不会被分享。",
+      "updateDescription": "此对话已分享。您可以更新会话内容和过期时间或复制链接。",
+      "expirationLabel": "链接有效期",
+      "expiration": {
+        "1hour": "1 小时",
+        "1day": "1 天",
+        "7days": "7 天",
+        "30days": "30 天",
+        "never": "永不过期"
+      },
+      "createButton": "创建分享链接",
+      "updateButton": "更新过期时间",
+      "linkLabel": "分享链接",
+      "success": "分享链接创建成功",
+      "updateSuccess": "分享链接更新成功",
+      "error": "创建分享链接失败",
+      "updateError": "更新分享链接失败",
+      "copied": "链接已复制到剪贴板",
+      "copy": "复制链接"
+    },
+    "chatInput": {
+      "mcpTools": "MCP 工具",
+      "thinkingIntensity": "思考强度",
+      "default": "默认",
+      "thinking": {
+        "max": "最高",
+        "none": "无",
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "极高"
+      },
+      "web_search_tooltip": "需要时搜索网络信息。",
+      "url_context_tooltip": "需要时访问 URL 提取信息。"
+    },
+    "toolCall": {
+      "callingTool": "正在调用工具：",
+      "completed": "已完成",
+      "failed": "失败"
+    }
+  }
+}

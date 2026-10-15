@@ -1,0 +1,12 @@
+{
+  "name": "flai-next",
+  "private": true,
+  "packageManager": "pnpm@12.5.1",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @flai/server --filter @flai/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "migrate:legacy": "pnpm --filter @flai/server migrate:legacy"
+  }
+}

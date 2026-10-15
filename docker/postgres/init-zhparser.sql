@@ -1,0 +1,8 @@
+CREATE EXTENSION IF NOT EXISTS zhparser;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgname = 'zhcfg') THEN
+    CREATE TEXT SEARCH CONFIGURATION zhcfg (PARSER = zhparser);
+    ALTER TEXT SEARCH CONFIGURATION zhcfg ADD MAPPING FOR n,v,a,i,e,l,j WITH simple;
+  END IF;
+END $$;
