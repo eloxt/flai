@@ -3,7 +3,7 @@ import { FileJsonIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection } from "~/components/panel-dialog"
+import { PanelSection, PanelTable } from "~/components/panel-dialog"
 import { ProviderLogo } from "~/components/provider-logo"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -54,7 +54,7 @@ export function ProviderManagement() {
       {providers === null ? (
         <Skeleton className="h-40 w-full" />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <PanelTable>
           <Table>
             <TableHeader>
               <TableRow>
@@ -95,7 +95,7 @@ export function ProviderManagement() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </PanelTable>
       )}
       <ProviderDialog
         provider={editing}
@@ -184,13 +184,13 @@ function ProviderDialog({
   return (
     <Dialog open={provider !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-3xl">
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-6">
           <DialogHeader>
             <DialogTitle>{existing ? t("pages.admin.providers.editTitle") : t("pages.admin.providers.createTitle")}</DialogTitle>
           </DialogHeader>
           <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6">
             <FieldGroup>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
                 <Field>
                   <FieldLabel htmlFor="p-name">{t(`${f}.name`)}</FieldLabel>
                   <Input id="p-name" required value={form.name} placeholder={t(`${f}.namePlaceholder`)} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -230,7 +230,7 @@ function ProviderDialog({
               </div>
               <Field>
                 <FieldLabel htmlFor="p-logo">{t(`${f}.logo`)}</FieldLabel>
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                   <Textarea id="p-logo" rows={2} className="font-mono text-xs" value={form.logo ?? ""} placeholder={t(`${f}.logoPlaceholder`)} onChange={(e) => setForm({ ...form, logo: e.target.value })} />
                   <ProviderLogo logo={form.logo || null} name={form.name} className="mt-2 size-8" />
                 </div>
@@ -241,8 +241,8 @@ function ProviderDialog({
                 </FieldContent>
                 <Switch id="p-active" checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
               </Field>
-              <Field>
-                <div className="flex items-center justify-between">
+              <Field className="border-t pt-6">
+                <div className="flex items-center justify-between gap-4">
                   <FieldLabel>{t(`${f}.models`)}</FieldLabel>
                   <Button type="button" variant="outline" size="sm" onClick={() => setImportOpen(true)}>
                     <FileJsonIcon data-icon="inline-start" />

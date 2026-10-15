@@ -1,5 +1,4 @@
 import type { AuthResult } from "@flai/shared"
-import { TentIcon } from "lucide-react"
 import { type FormEvent, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
@@ -37,12 +36,9 @@ export default function Login() {
   }
 
   return (
-    <form className="p-6 md:p-8" onSubmit={submit}>
+    <form onSubmit={submit}>
       <FieldGroup>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <TentIcon className="size-6" />
-          <h1 className="text-xl font-bold">{t("pages.login.welcome")}</h1>
-        </div>
+        <h1 className="text-3xl leading-tight font-light tracking-tight text-balance md:text-4xl">{t("pages.login.welcome")}</h1>
         <Field>
           <FieldLabel htmlFor="email">{t("pages.login.email")}</FieldLabel>
           <Input

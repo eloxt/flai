@@ -1,5 +1,5 @@
 import type { FileRecord, TranslateInput } from "@flai/shared"
-import { ArrowLeftRightIcon, ImagePlusIcon, LanguagesIcon, SquareIcon, XIcon } from "lucide-react"
+import { ArrowLeftRightIcon, ImagePlusIcon, SquareIcon, XIcon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui/button"
@@ -127,11 +127,8 @@ export default function TranslatePage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 md:p-8">
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <LanguagesIcon className="size-5" />
-          {t("pages.translate.title")}
-        </h1>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 md:py-16">
+        <h1 className="text-4xl leading-none font-light tracking-tight md:text-5xl">{t("pages.translate.title")}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <LanguageSelect value={source} onChange={(v) => prefs.set({ source: v })} label={t("pages.translate.sourceLanguage")} />
           <Button variant="ghost" size="icon" aria-label={t("pages.translate.swap")} disabled={running} onClick={swap}>
@@ -161,7 +158,7 @@ export default function TranslatePage() {
             onChange={(e) => prefs.set({ instruction: e.target.value })}
           />
         </Field>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8">
           <div className="flex flex-col gap-2">
             <Textarea
               className="min-h-72 flex-1 resize-y text-[15px]"
@@ -182,11 +179,11 @@ export default function TranslatePage() {
             <div className="flex flex-wrap items-center gap-2">
               {images.map((image) => (
                 <div key={image.id} className="relative">
-                  <img src={image.url} alt={image.name} className="size-16 rounded-md border object-cover" />
+                  <img src={image.url} alt={image.name} className="size-16 rounded-sm border object-cover" />
                   <Button
                     variant="secondary"
                     size="icon-xs"
-                    className="absolute -top-2 -right-2 rounded-full"
+                    className="absolute -top-2 -right-2 rounded-sm"
                     aria-label={t("pages.translate.removeImage")}
                     onClick={() => setImages((list) => list.filter((i) => i.id !== image.id))}
                   >
@@ -208,7 +205,7 @@ export default function TranslatePage() {
             </div>
           </div>
           <Textarea
-            className="min-h-72 resize-y bg-muted/40 text-[15px]"
+            className="min-h-72 resize-y bg-muted text-[15px]"
             value={output}
             placeholder={running ? t("pages.translate.streamingPlaceholder") : t("pages.translate.targetPlaceholder")}
             onChange={(e) => setOutput(e.target.value)}

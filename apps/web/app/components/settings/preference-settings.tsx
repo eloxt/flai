@@ -25,7 +25,7 @@ export function PreferenceSettings() {
 
   return (
     <PanelSection title={t("pages.settings.preference.title")} description={t("pages.settings.preference.description")}>
-      <Field orientation="horizontal">
+      <Field orientation="horizontal" className="max-w-xl items-center border-y py-4">
         <FieldContent>
           <FieldLabel htmlFor="pref-emoji">{t("pages.settings.preference.sidebarEmoji")}</FieldLabel>
         </FieldContent>

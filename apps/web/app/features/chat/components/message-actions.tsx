@@ -1,5 +1,6 @@
 import type { MessageRecord } from "@flai/shared"
 import { textOf } from "@flai/shared"
+import { cn } from "cn"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, InfoIcon, PencilIcon, RefreshCcwIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -19,6 +20,9 @@ interface MessageActionsProps {
   onSwitch: (direction: -1 | 1) => void
   onEdit?: () => void
 }
+
+/** Both icons stay mounted and cross-fade, so the copy confirmation reads as a change, not a flicker. */
+const ICON_SWAP = "transition-[opacity,scale] duration-150 ease-out motion-reduce:transition-[opacity]"
 
 function IconAction({ label, onClick, children }: { label: string; onClick?: () => void; children: React.ReactNode }) {
   return (
@@ -58,7 +62,10 @@ export function MessageActions({ message, isLast, onRegenerate, onDelete, onSwit
         </div>
       )}
       <IconAction label={t("pages.chat.actions.copy")} onClick={copy}>
-        {copied ? <CheckIcon /> : <CopyIcon />}
+        <span className="grid *:col-start-1 *:row-start-1">
+          <CopyIcon className={cn(ICON_SWAP, copied && "scale-60 opacity-0")} />
+          <CheckIcon className={cn(ICON_SWAP, !copied && "scale-60 opacity-0")} />
+        </span>
       </IconAction>
       {onEdit && (
         <IconAction label={t("pages.chat.actions.edit")} onClick={onEdit}>
@@ -109,13 +116,13 @@ function UsagePopover({ message }: { message: MessageRecord }) {
         <InfoIcon />
       </PopoverTrigger>
       <PopoverContent className="w-64">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm tabular-nums">
           {rows
             .filter(([, value]) => value !== undefined && value !== "")
             .map(([label, value]) => (
               <div key={label} className="contents">
-                <dt className="font-medium">{label}</dt>
-                <dd className="truncate text-right text-muted-foreground">{value}</dd>
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="truncate text-right">{value}</dd>
               </div>
             ))}
           {metadata.aborted && <dd className="col-span-2 text-xs text-muted-foreground">{t("pages.chat.stopped")}</dd>}

@@ -34,16 +34,16 @@ export default function SharePage() {
 
   return (
     <div className="flex h-dvh flex-col overflow-y-auto">
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-4xl items-center gap-3 px-4">
+      <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-4xl items-center gap-4 px-4 md:px-8">
           <span className="text-xl">{share?.icon}</span>
-          <h1 className="min-w-0 flex-1 truncate text-base font-semibold">{share ? share.title || t("pages.share.untitled") : "FlaiChat"}</h1>
+          <h1 className="min-w-0 flex-1 truncate text-base font-normal tracking-tight">{share ? share.title || t("pages.share.untitled") : "FlaiChat"}</h1>
           <Button variant="ghost" size="icon" aria-label={t("components.sidebar.theme.title")} onClick={() => setTheme(NEXT_THEME[theme])}>
             <ThemeIcon />
           </Button>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-6">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-8 md:px-8 md:py-16">
         {error ? (
           <Empty>
             <EmptyHeader>
@@ -68,7 +68,7 @@ export default function SharePage() {
       </main>
       {share && (
         <footer className="border-t">
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-4 text-xs text-muted-foreground">
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-8 text-xs tracking-wide text-muted-foreground uppercase tabular-nums md:px-8">
             <span>
               {t("pages.share.sharedOn")} {formatDateTime(share.createdAt)}
             </span>
@@ -77,7 +77,7 @@ export default function SharePage() {
                 {t("pages.share.expiresOn")} {formatDateTime(share.expiresAt)}
               </span>
             )}
-            <a className="ml-auto hover:underline" href="https://github.com/eloxt/flai" target="_blank" rel="noopener noreferrer">
+            <a className="ml-auto inline-flex min-h-11 items-center underline-offset-4 hover:underline" href="https://github.com/eloxt/flai" target="_blank" rel="noopener noreferrer">
               FlaiChat
             </a>
           </div>

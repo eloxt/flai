@@ -1,3 +1,4 @@
+import { cn } from "cn"
 import {
   ChevronDownIcon,
   EllipsisVerticalIcon,
@@ -63,6 +64,12 @@ import { SettingsDialog } from "../settings/settings-dialog"
 import { SearchDialog } from "./search-dialog"
 
 const DAY = 24 * 3600 * 1000
+// Collapsing to the icon rail fades the list out (as in the previous UI) and then drops it from the tab order.
+const FADE_ON_COLLAPSE =
+  "transition-[opacity,visibility] duration-200 group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:invisible group-data-[collapsible=icon]:opacity-0 motion-reduce:transition-none"
+const TITLE_FADE = "transition-opacity duration-200 ease-out starting:opacity-0"
+// The rail takes the page background once collapsed.
+const RAIL_BACKGROUND = "transition-colors group-data-[collapsible=icon]:bg-background motion-reduce:transition-none"
 const GROUPS = ["today", "yesterday", "previous7Days", "previous30Days", "older"] as const
 
 function groupByDate(items: ConversationItem[]) {
@@ -115,13 +122,23 @@ export function AppSidebar() {
   return (
     <>
       <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <div className="flex h-8 items-center gap-2">
-            <Button variant="ghost" size="icon" className="group/brand shrink-0" aria-label={t("components.sidebar.toggle")} onClick={toggleSidebar}>
+        <SidebarHeader className={RAIL_BACKGROUND}>
+          <div className="flex h-8 items-center gap-2 overflow-hidden">
+            {/* Expanded: the logo is static and the collapse button sits on the right (desktop only).
+                Collapsed: the logo itself is the expand button and shows the panel icon on hover. */}
+            <span className="flex size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:hidden">
+              <TentIcon className="size-4" />
+            </span>
+            <Button variant="ghost" size="icon" className="group/brand hidden shrink-0 group-data-[collapsible=icon]:flex" aria-label={t("components.sidebar.toggle")} onClick={toggleSidebar}>
               <TentIcon className="group-hover/brand:hidden" />
               <PanelLeftIcon className="hidden group-hover/brand:block" />
             </Button>
-            <span className="truncate text-base font-semibold group-data-[collapsible=icon]:hidden">FlaiChat</span>
+            <span className={cn("min-w-0 flex-1 truncate text-base font-normal tracking-tight", FADE_ON_COLLAPSE)}>FlaiChat</span>
+            {!isMobile && (
+              <Button variant="ghost" size="icon" className={cn("shrink-0", FADE_ON_COLLAPSE)} aria-label={t("components.sidebar.toggle")} onClick={toggleSidebar}>
+                <PanelLeftIcon />
+              </Button>
+            )}
           </div>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -145,11 +162,11 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent onScroll={onScroll} className="group-data-[collapsible=icon]:invisible">
+        <SidebarContent onScroll={onScroll} className={RAIL_BACKGROUND}>
           {favourites.length > 0 && (
             <Collapsible defaultOpen>
-              <SidebarGroup>
-                <SidebarGroupLabel render={<CollapsibleTrigger className="group/fav" />}>
+              <SidebarGroup className={FADE_ON_COLLAPSE}>
+                <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0" render={<CollapsibleTrigger className="group/fav" />}>
                   {t("components.sidebar.favourites")}
                   <ChevronDownIcon className="ml-auto transition-transform group-data-[panel-open]/fav:rotate-180" />
                 </SidebarGroupLabel>
@@ -166,7 +183,7 @@ export function AppSidebar() {
             </Collapsible>
           )}
           {loading && !loaded ? (
-            <SidebarGroup>
+            <SidebarGroup className={FADE_ON_COLLAPSE}>
               <SidebarMenu>
                 {Array.from({ length: 6 }, (_, i) => (
                   <SidebarMenuItem key={i}>
@@ -177,8 +194,8 @@ export function AppSidebar() {
             </SidebarGroup>
           ) : (
             grouped.map(({ group, items }) => (
-              <SidebarGroup key={group}>
-                <SidebarGroupLabel>{t(`components.sidebar.dateGroups.${group}`)}</SidebarGroupLabel>
+              <SidebarGroup key={group} className={FADE_ON_COLLAPSE}>
+                <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0">{t(`components.sidebar.dateGroups.${group}`)}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {items.map((c) => (
@@ -190,7 +207,7 @@ export function AppSidebar() {
             ))
           )}
           {nextCursor && (
-            <div className="px-4 py-2 text-center">
+            <div className={cn("px-4 py-2 text-center", FADE_ON_COLLAPSE)}>
               <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" disabled={loadingMore} onClick={() => void loadMore()}>
                 {loadingMore ? t("common.loading") : t("components.sidebar.loadMore")}
               </Button>
@@ -198,7 +215,7 @@ export function AppSidebar() {
           )}
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className={RAIL_BACKGROUND}>
           <UserMenu onSettings={() => setSettingsOpen(true)} onAdmin={() => setAdminOpen(true)} />
         </SidebarFooter>
       </Sidebar>
@@ -234,14 +251,19 @@ function ConversationRow({
   const location = useLocation()
   const { setFavourite, generateTitle } = useConversationStore()
   const title = item.title || t("components.sidebar.untitled")
+  // Titles that replace the loading placeholder fade in; rows that mount with a title don't.
+  const [titleArrives, setTitleArrives] = useState(false)
+  useEffect(() => {
+    if (item.generating) setTitleArrives(true)
+  }, [item.generating])
   return (
     <SidebarMenuItem>
       {item.generating ? (
         <SidebarMenuSkeleton />
       ) : (
         <SidebarMenuButton isActive={location.pathname === `/chat/${item.id}`} render={<NavLink to={`/chat/${item.id}`} title={title} />}>
-          {showEmoji && item.icon && <span className="shrink-0">{item.icon}</span>}
-          <span className="truncate">{title}</span>
+          {showEmoji && item.icon && <span className={cn("shrink-0", titleArrives && TITLE_FADE)}>{item.icon}</span>}
+          <span className={cn("truncate", titleArrives && TITLE_FADE)}>{title}</span>
         </SidebarMenuButton>
       )}
       {!item.generating && (
@@ -278,12 +300,12 @@ function UserMenu({ onSettings, onAdmin }: { onSettings: () => void; onAdmin: ()
   const logout = useAuthStore((s) => s.logout)
   const identity = (
     <>
-      <Avatar className="size-8 rounded-lg">
+      <Avatar className="size-8 rounded-none">
         {user?.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
-        <AvatarFallback className="rounded-lg">{initials(user?.username)}</AvatarFallback>
+        <AvatarFallback className="rounded-none">{initials(user?.username)}</AvatarFallback>
       </Avatar>
       <span className="grid flex-1 text-left text-sm leading-tight">
-        <span className="truncate font-semibold">{user?.username}</span>
+        <span className="truncate font-medium">{user?.username}</span>
         <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
       </span>
     </>

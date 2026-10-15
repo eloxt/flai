@@ -94,9 +94,9 @@ const KeyValue: R<"KeyValue"> = ({ props }) => (
 const Stat: R<"Stat"> = ({ props }) => {
   const TrendIcon = props.trend === "up" ? ArrowUpRightIcon : props.trend === "down" ? ArrowDownRightIcon : MinusIcon
   return (
-    <div className="flex min-w-36 flex-col gap-1 rounded-lg border p-3">
-      <span className="text-xs text-muted-foreground">{props.label}</span>
-      <span className="text-2xl font-semibold tabular-nums">{props.value}</span>
+    <div className="flex min-w-36 flex-col gap-2 rounded-sm border-t-2 border-foreground p-4 pl-0">
+      <span className="text-xs tracking-wide text-muted-foreground uppercase">{props.label}</span>
+      <span className="text-3xl leading-none font-light tracking-tight tabular-nums">{props.value}</span>
       {props.change && (
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <TrendIcon className="size-3.5" />

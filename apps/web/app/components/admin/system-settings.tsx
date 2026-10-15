@@ -84,7 +84,7 @@ export function SystemPromptSettings() {
               <Textarea id="sp-translate" rows={6} value={value.translate} onChange={(e) => setValue({ ...value, translate: e.target.value })} />
               <FieldDescription>{t("pages.admin.systemConfig.translatePromptHelp")}</FieldDescription>
             </Field>
-            <Button type="submit" className="self-start" disabled={saving}>
+            <Button type="submit" className="mt-2 self-start" disabled={saving}>
               {saving && <Spinner data-icon="inline-start" />}
               {t("common.actions.save")}
             </Button>
@@ -116,7 +116,7 @@ export function TitleGenerationSettings() {
           }}
         >
           <FieldGroup>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
               <Field>
                 <FieldLabel>{t("pages.admin.systemConfig.provider")}</FieldLabel>
                 <Select value={value.providerId || null} onValueChange={(v) => setValue({ ...value, providerId: String(v ?? ""), modelId: "" })}>
@@ -159,7 +159,7 @@ export function TitleGenerationSettings() {
               <FieldLabel htmlFor="tg-prompt">{t("pages.admin.systemConfig.titlePrompt")}</FieldLabel>
               <Textarea id="tg-prompt" rows={6} value={value.prompt} onChange={(e) => setValue({ ...value, prompt: e.target.value })} />
             </Field>
-            <Button type="submit" className="self-start" disabled={saving}>
+            <Button type="submit" className="mt-2 self-start" disabled={saving}>
               {saving && <Spinner data-icon="inline-start" />}
               {t("common.actions.save")}
             </Button>
@@ -180,6 +180,7 @@ export function ErrorAlertSettings() {
         <Skeleton className="h-24 w-full" />
       ) : (
         <form
+          className="max-w-xl"
           onSubmit={(e: FormEvent) => {
             e.preventDefault()
             void save(value, t("pages.admin.systemConfig.saved"))
@@ -191,7 +192,7 @@ export function ErrorAlertSettings() {
               <Input id="bark-url" type="url" value={value.barkUrl} placeholder={t("pages.admin.errorAlert.placeholder")} onChange={(e) => setValue({ barkUrl: e.target.value })} />
               <FieldDescription>{t("pages.admin.errorAlert.help")}</FieldDescription>
             </Field>
-            <Button type="submit" className="self-start" disabled={saving}>
+            <Button type="submit" className="mt-2 self-start" disabled={saving}>
               {saving && <Spinner data-icon="inline-start" />}
               {t("common.actions.save")}
             </Button>

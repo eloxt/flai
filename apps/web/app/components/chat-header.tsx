@@ -51,33 +51,38 @@ export function ChatHeader() {
   const [shareOpen, setShareOpen] = useState(false)
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 px-3">
-      {isMobile && (
-        <HeaderButton
-          label={t("components.sidebar.toggle")}
-          onClick={toggleSidebar}
-        >
-          <PanelLeftIcon />
-        </HeaderButton>
-      )}
-      <ModelSelector />
-      {conversationId && (
-        <div className="ml-auto flex items-center gap-1">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-2 md:px-4">
+      {/* Equal-width sides centre the model selector on mobile; on desktop it sits at the left. */}
+      <div className="flex flex-1 justify-start md:flex-none">
+        {isMobile && (
           <HeaderButton
-            label={t("common.shareConversation")}
-            onClick={() => setShareOpen(true)}
+            label={t("components.sidebar.toggle")}
+            onClick={toggleSidebar}
           >
-            <MessageSquareShareIcon />
+            <PanelLeftIcon />
           </HeaderButton>
-          <FeedbackDialog />
-          <ShareDialog
-            open={shareOpen}
-            onOpenChange={setShareOpen}
-            conversationId={conversationId}
-            leafMessageId={leafId}
-          />
-        </div>
-      )}
+        )}
+      </div>
+      <ModelSelector />
+      <div className="flex flex-1 items-center justify-end gap-1">
+        {conversationId && (
+          <>
+            <HeaderButton
+              label={t("common.shareConversation")}
+              onClick={() => setShareOpen(true)}
+            >
+              <MessageSquareShareIcon />
+            </HeaderButton>
+            <FeedbackDialog />
+            <ShareDialog
+              open={shareOpen}
+              onOpenChange={setShareOpen}
+              conversationId={conversationId}
+              leafMessageId={leafId}
+            />
+          </>
+        )}
+      </div>
     </header>
   )
 }

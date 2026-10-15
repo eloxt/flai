@@ -73,7 +73,7 @@ export function McpSettings() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {servers.map((server) => (
             <Card key={server.id} size="sm">
               <CardHeader>
@@ -101,7 +101,7 @@ export function McpSettings() {
                 {server.tools.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t("pages.settings.mcp.noTools")}</p>
                 ) : (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {server.tools.map((tool) => (
                       <Badge key={tool.name} variant="outline" title={tool.description}>
                         {tool.name}
@@ -195,7 +195,7 @@ function McpServerDialog({
   return (
     <Dialog open={server !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
-        <form onSubmit={submit} className="flex flex-col gap-4">
+        <form onSubmit={submit} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>{existing ? t("pages.settings.mcp.editTitle") : t("pages.settings.mcp.addTitle")}</DialogTitle>
             <DialogDescription>{t("pages.settings.mcp.dialogDescription")}</DialogDescription>

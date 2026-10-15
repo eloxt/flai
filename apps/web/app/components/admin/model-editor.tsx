@@ -46,12 +46,12 @@ export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
     onChange(next)
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
       {models.length === 0 && <p className="text-sm text-muted-foreground">{t("pages.admin.providers.model.noModels")}</p>}
       {models.map((model, index) => (
         <Collapsible key={index} defaultOpen={!model.id} className="rounded-lg border">
           <div className="flex items-center gap-1 pr-2">
-            <CollapsibleTrigger className="group/model flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm">
+            <CollapsibleTrigger className="group/model flex min-h-11 min-w-0 flex-1 items-center gap-2 px-4 py-2 text-left text-sm">
               <ChevronRightIcon className="size-4 shrink-0 transition-transform group-data-[panel-open]/model:rotate-90" />
               <span className="truncate font-medium">{model.name || model.id || t("pages.admin.providers.model.model")}</span>
               {model.id && model.name !== model.id && <span className="truncate font-mono text-xs text-muted-foreground">{model.id}</span>}
@@ -68,7 +68,7 @@ export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
             </Button>
           </div>
           <CollapsibleContent>
-            <div className="border-t p-3">
+            <div className="border-t p-4 md:p-6">
               <ModelEditor model={model} onChange={(m) => update(index, m)} />
             </div>
           </CollapsibleContent>
@@ -95,8 +95,8 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
   }
 
   return (
-    <FieldGroup className="gap-5">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <FieldGroup className="gap-8">
+      <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
         <Field>
           <FieldLabel>{t(`${p}.id`)}</FieldLabel>
           <Input required value={model.id} onChange={(e) => set("id", e.target.value)} className="font-mono" />
@@ -172,7 +172,7 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
 
       <FieldSet>
         <FieldLegend variant="label">{t(`${p}.features`)}</FieldLegend>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
           {FEATURES.map((feature) => (
             <Field key={feature} orientation="horizontal">
               <Switch checked={model[feature]} onCheckedChange={(v) => set(feature, v)} />
@@ -195,7 +195,7 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
       <FieldSet>
         <FieldLegend variant="label">{t(`${p}.modalities`)}</FieldLegend>
         {(["input", "output"] as const).map((dir) => (
-          <div key={dir} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div key={dir} className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <span className="w-24 text-sm text-muted-foreground">{t(`${p}.${dir}Modalities`)}</span>
             {MODALITIES.map((m) => (
               <Field key={m} orientation="horizontal" className="w-auto">
@@ -212,7 +212,7 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
         ))}
       </FieldSet>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
         <FieldSet>
           <FieldLegend variant="label">{t(`${p}.limits`)}</FieldLegend>
           <Field>
@@ -226,7 +226,7 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
         </FieldSet>
         <FieldSet>
           <FieldLegend variant="label">{t(`${p}.cost`)}</FieldLegend>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {(
               [
                 ["input", "costInput"],

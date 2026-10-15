@@ -3,7 +3,7 @@ import { CopyIcon, ExternalLinkIcon, PencilIcon, Trash2Icon } from "lucide-react
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection } from "~/components/panel-dialog"
+import { PanelSection, PanelTable } from "~/components/panel-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
@@ -52,7 +52,7 @@ export function ShareSettings() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <PanelTable>
           <Table>
             <TableHeader>
               <TableRow>
@@ -114,7 +114,7 @@ export function ShareSettings() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </PanelTable>
       )}
 
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>

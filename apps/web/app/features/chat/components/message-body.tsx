@@ -98,8 +98,8 @@ function UserBody({ parts }: { parts: FlaiPart[] }) {
       {files.length > 0 && <Attachments files={files} align="end" />}
       {text && (
         <Bubble align="end" variant="muted" className="max-w-full">
-          {/* The user-message tint is part of FlaiChat's identity, kept from the previous UI. */}
-          <BubbleContent className="bg-user-msg! text-[15px] whitespace-pre-wrap">{text}</BubbleContent>
+          {/* User turns sit on a stone surface; hierarchy comes from tone, not a second hue. */}
+          <BubbleContent className="rounded-sm bg-user-msg! text-[15px] whitespace-pre-wrap">{text}</BubbleContent>
         </Bubble>
       )}
     </div>
@@ -123,9 +123,10 @@ function AssistantText({ text, streaming, onSend }: { text: string; streaming: b
   )
 }
 
+/** In-progress status text: muted, sized to its text, with the shared constant-speed shimmer. */
 function Shimmer({ children }: { children?: React.ReactNode }) {
   const { t } = useTranslation()
-  return <span className="shimmer text-sm">{children ?? t("pages.chat.pending")}</span>
+  return <span className="w-fit text-sm text-muted-foreground text-shimmer">{children ?? t("pages.chat.pending")}</span>
 }
 
 function Reasoning({ text, active }: { text: string; active: boolean }) {
@@ -139,7 +140,7 @@ function Reasoning({ text, active }: { text: string; active: boolean }) {
         <ChevronRightIcon className="size-3.5 transition-transform group-data-[panel-open]/reasoning:rotate-90" />
         {active ? <Shimmer>{t("pages.chat.reasoning.process")}</Shimmer> : t("pages.chat.reasoning.done")}
       </CollapsibleTrigger>
-      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
+      <CollapsibleContent>
         <div className="border-l pl-4 text-muted-foreground">
           <Markdown light streaming={active}>
             {text}
@@ -164,12 +165,14 @@ function ToolCard({ part }: { part: ToolPart }) {
         ) : done ? (
           <CheckIcon className="size-4 text-muted-foreground" />
         ) : (
-          <WrenchIcon className="size-4 animate-pulse text-muted-foreground" />
+          <WrenchIcon className="size-4 text-muted-foreground" />
         )}
-        <span className="text-muted-foreground">
-          {running ? t("components.toolCall.callingTool") : failed ? t("components.toolCall.failed") : t("components.toolCall.completed")}
-        </span>
-        <code className="truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold">{part.title ?? part.toolName}</code>
+        {running ? (
+          <Shimmer>{t("components.toolCall.callingTool")}</Shimmer>
+        ) : (
+          <span className="text-muted-foreground">{failed ? t("components.toolCall.failed") : t("components.toolCall.completed")}</span>
+        )}
+        <code className="truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-medium">{part.title ?? part.toolName}</code>
         <ChevronRightIcon className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]/tool:rotate-90" />
       </CollapsibleTrigger>
       <CollapsibleContent>

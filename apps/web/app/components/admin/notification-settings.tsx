@@ -3,7 +3,7 @@ import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection } from "~/components/panel-dialog"
+import { PanelSection, PanelTable } from "~/components/panel-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
@@ -52,7 +52,7 @@ export function NotificationSettings() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <PanelTable>
           <Table>
             <TableHeader>
               <TableRow>
@@ -84,7 +84,7 @@ export function NotificationSettings() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </PanelTable>
       )}
       <NotificationDialog
         item={editing}
@@ -155,7 +155,7 @@ function NotificationDialog({
   return (
     <Dialog open={item !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} className="flex flex-col gap-4">
+        <form onSubmit={submit} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>{existing ? t("pages.admin.notification.editTitle") : t("pages.admin.notification.addTitle")}</DialogTitle>
           </DialogHeader>

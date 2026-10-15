@@ -56,6 +56,11 @@ interface Pending {
 }
 
 const EMPTY: FileRecord[] = []
+/** Toolbar menus read like the toggles beside them: quiet (45%) when unset, full-strength when set. */
+const TOOL_TRIGGER = "text-foreground/45 hover:bg-foreground/5 hover:text-foreground/45 aria-expanded:bg-foreground/5 aria-expanded:text-foreground/45"
+const TOOL_TRIGGER_ON = "text-foreground hover:text-foreground aria-expanded:text-foreground"
+/** Send and stop swap on every message, so the incoming icon settles in fast and nothing animates out. */
+const ICON_ENTER = "transition-[opacity,scale] duration-120 ease-out starting:scale-85 starting:opacity-0 motion-reduce:transition-[opacity]"
 
 export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = false, onStop, contextUsage, autoFocus }: ChatInputProps) {
   const { t } = useTranslation()
@@ -120,7 +125,7 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
 
   return (
     <div
-      className="relative flex w-full min-w-0 flex-col rounded-2xl border bg-muted/60"
+      className="relative flex w-full min-w-0 flex-col rounded-sm border bg-muted transition-colors focus-within:border-foreground/30 motion-reduce:transition-none"
       onDragEnter={(e) => {
         e.preventDefault()
         if (!canAttach) return
@@ -135,13 +140,13 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
       onDrop={onDrop}
     >
       {dragging && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-primary bg-background/80 text-sm backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed border-brand bg-background/90 text-sm transition-opacity duration-150 ease-out starting:opacity-0">
           <PaperclipIcon className="size-5" />
-          <span className="font-medium">{t("common.dropFilesHere")}</span>
+          <span className="text-base font-normal">{t("common.dropFilesHere")}</span>
           <span className="text-xs text-muted-foreground">{t("common.allowedFileTypes")}</span>
         </div>
       )}
-      <InputGroup className="h-auto flex-col rounded-2xl border-0 bg-background shadow-xs dark:bg-background">
+      <InputGroup className="h-auto flex-col rounded-none border-0 border-b bg-background shadow-none dark:bg-background has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
         {(files.length > 0 || pending.length > 0) && (
           <AttachmentGroup className="w-full px-3 pt-3">
             {files.map((file) => (
@@ -218,19 +223,19 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
           <div className="ml-auto flex items-center gap-2">
             {contextUsage !== undefined && <ContextUsageRing percentage={contextUsage} />}
             {streaming ? (
-              <InputGroupButton variant="destructive" size="icon-sm" className="rounded-xl" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
-                <SquareIcon />
+              <InputGroupButton variant="destructive" size="icon-sm" className="rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+                <SquareIcon className={ICON_ENTER} />
               </InputGroupButton>
             ) : (
               <InputGroupButton
                 variant="default"
                 size="icon-sm"
-                className="rounded-xl"
+                className="rounded-sm"
                 aria-label={t("common.send")}
                 disabled={pending.length > 0 || (!text.trim() && files.length === 0)}
                 onClick={() => void submit()}
               >
-                <ArrowUpIcon />
+                <ArrowUpIcon className={ICON_ENTER} />
               </InputGroupButton>
             )}
           </div>
@@ -294,7 +299,7 @@ function ToolBar() {
     <div className="flex min-w-0 items-center gap-1 overflow-x-auto px-2 py-1 text-muted-foreground">
       {hasMcp && (
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(mcpTools.length > 0 && "bg-foreground/10 text-foreground")} />}>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(TOOL_TRIGGER, mcpTools.length > 0 && TOOL_TRIGGER_ON)} />}>
             <WrenchIcon data-icon="inline-start" />
             {t("components.chatInput.mcpTools")}
             {mcpTools.length > 0 && <span className="tabular-nums">({mcpTools.length})</span>}
@@ -325,7 +330,7 @@ function ToolBar() {
       )}
       {levels.length > 0 && (
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(thinking && "bg-foreground/10 text-foreground")} />}>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(TOOL_TRIGGER, thinking && TOOL_TRIGGER_ON)} />}>
             <BrainIcon data-icon="inline-start" />
             {t(`components.chatInput.thinking.${effectiveThinking}`)}
             <ChevronDownIcon data-icon="inline-end" />
@@ -371,14 +376,14 @@ function ContextUsageRing({ percentage }: { percentage: number }) {
   const stroke = 3
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  const color = percentage >= 90 ? "var(--destructive)" : percentage >= 70 ? "var(--chart-4)" : "var(--chart-1)"
+  const color = percentage >= 90 ? "var(--destructive)" : percentage >= 70 ? "var(--brand)" : "var(--foreground)"
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums" />}>
         {Math.round(percentage)}%
         <svg width={size} height={size} className="-rotate-90" aria-hidden>
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="opacity-20" />
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c - (Math.min(100, percentage) / 100) * c} />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={c} strokeDashoffset={c - (Math.min(100, percentage) / 100) * c} />
         </svg>
       </TooltipTrigger>
       <TooltipContent>{`${Math.round(percentage)}%`}</TooltipContent>

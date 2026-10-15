@@ -1,12 +1,12 @@
 {
   "common": {
     "send": "发送",
-    "loading": "加载中...",
-    "generating": "生成中...",
+    "loading": "加载中…",
+    "generating": "生成中…",
     "search": "搜索",
     "attachment": "附件",
     "urlContext": "URL 上下文",
-    "uploading": "上传中...",
+    "uploading": "上传中…",
     "fileUploaded": "文件已上传",
     "uploadFailed": "上传文件失败",
     "fileTypeNotAllowed": "只允许上传文本、PDF和图片文件",
@@ -70,7 +70,7 @@
       "email": "邮箱",
       "password": "密码",
       "submit": "登录",
-      "submitting": "登录中...",
+      "submitting": "登录中…",
       "noAccount": "还没账号？",
       "register": "注册",
       "expired": "登录状态已过期，请重新登录",
@@ -85,10 +85,10 @@
       "email": "邮箱",
       "password": "密码",
       "submit": "注册",
-      "submitting": "创建中...",
+      "submitting": "创建中…",
       "hasAccount": "已经拥有账号？",
       "login": "直接登录",
-      "success": "注册成功，正在跳转...",
+      "success": "注册成功，正在跳转…",
       "placeholder": {
         "username": "username",
         "email": "you@example.com",
@@ -102,9 +102,9 @@
       "backToLogin": "返回登录"
     },
     "chat": {
-      "pending": "思考中...",
-      "greeting": "有什么可以帮忙的?",
-      "placeholder": "问点什么...",
+      "pending": "思考中…",
+      "greeting": "有什么可以帮忙的？",
+      "placeholder": "问点什么…",
       "reasoning": {
         "process": "思考中",
         "done": "思考过程"
@@ -142,11 +142,11 @@
       "title": "翻译",
       "sourceLanguage": "源语言",
       "targetLanguage": "目标语言",
-      "sourcePlaceholder": "输入要翻译的原文...",
+      "sourcePlaceholder": "输入要翻译的原文…",
       "targetPlaceholder": "译文会显示在这里",
-      "streamingPlaceholder": "正在生成译文...",
+      "streamingPlaceholder": "正在生成译文…",
       "translate": "翻译",
-      "translating": "翻译中...",
+      "translating": "翻译中…",
       "stop": "停止",
       "swap": "交换语言和文本",
       "defaults": {
@@ -201,7 +201,7 @@
         "avatar": "头像链接",
         "avatarPlaceholder": "https://example.com/avatar.png",
         "save": "保存更改",
-        "saving": "保存中...",
+        "saving": "保存中…",
         "success": "个人资料更新成功",
         "error": "更新个人资料失败",
         "usernameRequired": "用户名为必填项",
@@ -215,7 +215,7 @@
         "newPassword": "新密码",
         "newPasswordPlaceholder": "输入新密码",
         "update": "更新密码",
-        "updating": "更新中...",
+        "updating": "更新中…",
         "success": "密码更新成功",
         "error": "更新密码失败",
         "fillAll": "请填写所有密码字段",
@@ -497,7 +497,7 @@
         "adminConstructionDesc": "我们正在努力为您提供最佳的设置体验。请稍后再来检查。"
       },
       "command": {
-        "searchPlaceholder": "按回车搜索...",
+        "searchPlaceholder": "按回车搜索…",
         "empty": "未查询到结果"
       },
       "deleteConfirm": {

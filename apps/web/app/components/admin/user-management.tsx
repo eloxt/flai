@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection } from "~/components/panel-dialog"
+import { PanelSection, PanelTable } from "~/components/panel-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
@@ -58,7 +58,7 @@ export function UserManagement() {
       {users === null ? (
         <Skeleton className="h-40 w-full" />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <PanelTable>
           <Table>
             <TableHeader>
               <TableRow>
@@ -106,7 +106,7 @@ export function UserManagement() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </PanelTable>
       )}
       <UserDialog user={editing} onClose={() => setEditing(null)} onSaved={upsert} />
       <UserConversations user={viewing} onClose={() => setViewing(null)} />
@@ -165,7 +165,7 @@ function UserDialog({ user, onClose, onSaved }: { user: User | "new" | null; onC
   return (
     <Dialog open={user !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} className="flex flex-col gap-4">
+        <form onSubmit={submit} className="flex flex-col gap-6">
           <DialogHeader>
             <DialogTitle>{existing ? t("pages.admin.users.editTitle") : t("pages.admin.users.createTitle")}</DialogTitle>
           </DialogHeader>
@@ -256,12 +256,12 @@ function UserConversations({ user, onClose }: { user: User | null; onClose: () =
         <SheetHeader>
           <SheetTitle>{t("pages.admin.users.conversationsOf", { name: user?.username })}</SheetTitle>
         </SheetHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pb-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pb-6">
           {items.map((c) => (
             <button
               key={c.id}
               type="button"
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted"
+              className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
               onClick={() => {
                 onClose()
                 navigate(`/chat/${c.id}`)

@@ -16,7 +16,7 @@ function Highlight({ text }: { text: string }) {
     <>
       {text.split(/(<em>.*?<\/em>)/g).map((chunk, i) =>
         chunk.startsWith("<em>") ? (
-          <mark key={i} className="rounded-sm bg-yellow-200/70 px-0.5 text-foreground dark:bg-yellow-500/30">
+          <mark key={i} className="rounded-none bg-brand/20 px-0.5 text-foreground">
             {chunk.slice(4, -5)}
           </mark>
         ) : (

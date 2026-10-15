@@ -18,6 +18,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="manifest" href="/manifest.json" />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafaf9" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0a09" />
         <title>FlaiChat</title>
         {/* Apply the stored theme before first paint to avoid a flash. */}
         <script
@@ -65,10 +68,10 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     details = error.message
   }
   return (
-    <main className="mx-auto flex h-dvh max-w-md flex-col items-center justify-center gap-2 p-4 text-center">
-      <h1 className="text-2xl font-semibold">{message}</h1>
-      <p className="text-muted-foreground">{details}</p>
-      <a className="text-sm underline" href="/">
+    <main className="mx-auto flex h-dvh w-full max-w-3xl flex-col justify-center gap-8 px-4 md:px-8">
+      <h1 className="text-5xl leading-none font-light tracking-tight md:text-7xl">{message}</h1>
+      <p className="max-w-[60ch] text-muted-foreground">{details}</p>
+      <a className="inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4" href="/">
         Home
       </a>
     </main>

@@ -1,12 +1,12 @@
 {
   "common": {
     "send": "Send",
-    "loading": "Loading...",
-    "generating": "Generating...",
+    "loading": "Loading…",
+    "generating": "Generating…",
     "search": "Search",
     "attachment": "Attachment",
     "urlContext": "URL Context",
-    "uploading": "Uploading...",
+    "uploading": "Uploading…",
     "fileUploaded": "File uploaded",
     "uploadFailed": "Failed to upload file",
     "fileTypeNotAllowed": "Only text, PDF, and image files are allowed",
@@ -70,7 +70,7 @@
       "email": "Email",
       "password": "Password",
       "submit": "Login",
-      "submitting": "Logging in...",
+      "submitting": "Logging in…",
       "noAccount": "No account yet?",
       "register": "Register",
       "expired": "Login expired, please login again",
@@ -85,10 +85,10 @@
       "email": "Email",
       "password": "Password",
       "submit": "Register",
-      "submitting": "Creating...",
+      "submitting": "Creating…",
       "hasAccount": "Already have an account?",
       "login": "Login directly",
-      "success": "Registration successful, redirecting...",
+      "success": "Registration successful, redirecting…",
       "placeholder": {
         "username": "username",
         "email": "you@example.com",
@@ -102,9 +102,9 @@
       "backToLogin": "Back to Login"
     },
     "chat": {
-      "pending": "Thinking...",
+      "pending": "Thinking…",
       "greeting": "How can I help you?",
-      "placeholder": "Ask anything...",
+      "placeholder": "Ask anything…",
       "reasoning": {
         "process": "Reasoning",
         "done": "Reasoned"
@@ -143,11 +143,11 @@
       "title": "Translate",
       "sourceLanguage": "Source language",
       "targetLanguage": "Target language",
-      "sourcePlaceholder": "Enter text to translate...",
+      "sourcePlaceholder": "Enter text to translate…",
       "targetPlaceholder": "Translation appears here",
-      "streamingPlaceholder": "Generating translation...",
+      "streamingPlaceholder": "Generating translation…",
       "translate": "Translate",
-      "translating": "Translating...",
+      "translating": "Translating…",
       "stop": "Stop",
       "swap": "Swap languages and text",
       "defaults": {
@@ -202,7 +202,7 @@
         "avatar": "Avatar URL",
         "avatarPlaceholder": "https://example.com/avatar.png",
         "save": "Save Changes",
-        "saving": "Saving...",
+        "saving": "Saving…",
         "success": "Profile updated successfully",
         "error": "Failed to update profile",
         "usernameRequired": "Username is required",
@@ -216,7 +216,7 @@
         "newPassword": "New Password",
         "newPasswordPlaceholder": "Enter new password",
         "update": "Update Password",
-        "updating": "Updating...",
+        "updating": "Updating…",
         "success": "Password updated successfully",
         "error": "Failed to update password",
         "fillAll": "Please fill in both password fields",
@@ -498,7 +498,7 @@
         "adminConstructionDesc": "We are working hard to bring you the best settings experience. Please check back later."
       },
       "command": {
-        "searchPlaceholder": "Press Enter to search...",
+        "searchPlaceholder": "Press Enter to search…",
         "empty": "No results found."
       },
       "deleteConfirm": {

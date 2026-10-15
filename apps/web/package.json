@@ -12,8 +12,6 @@
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@flai/shared": "workspace:*",
-    "@fontsource/ibm-plex-sans": "^5.3.0",
-    "@fontsource/iosevka": "^5.3.0",
     "@openuidev/react-lang": "1.0.1",
     "@shadcn/react": "^0.3.1",
     "@streamdown/cjk": "^1.0.4",

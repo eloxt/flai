@@ -48,7 +48,7 @@ export const MessageRow = memo(function MessageRow({ message, isLast, busy }: Me
                   submitEdit()
                 }
               }}
-              className="w-full resize-none rounded-xl border bg-background px-3 py-2 text-[15px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="w-full resize-none rounded-sm border border-input bg-background px-3 py-2 text-[15px] outline-none transition-colors duration-150 motion-reduce:transition-none hover:not-focus-visible:border-foreground/40 focus-visible:border-foreground"
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditing(null)}>
