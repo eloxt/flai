@@ -14,6 +14,7 @@ export const ERROR_CODES = [
   'CONFLICT',
   'NOT_CONFIGURED',
   'UPSTREAM',
+  'UNAVAILABLE',
   'INTERNAL',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
@@ -120,8 +121,16 @@ export interface Conversation {
   updatedAt: string
 }
 
+export interface ActiveGeneration {
+  assistantId: string
+  /** The user message being answered. */
+  parentId: string
+}
+
 export interface ConversationDetail extends Conversation {
   messages: MessageRecord[]
+  /** A reply still being generated; resume it with `GET /generations/:assistantId/stream`. */
+  activeGeneration?: ActiveGeneration | null
 }
 
 export const listConversationsQuerySchema = pageQuerySchema.extend({

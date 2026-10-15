@@ -15,7 +15,8 @@ import { create } from "zustand"
 import i18n from "~/i18n"
 import { api, apiFetch, errorText } from "~/lib/api"
 import { notify } from "~/lib/notify"
-import { type Chunk, parseUIMessageStream } from "~/lib/ui-stream"
+import { ReplyStreamInterrupted, replyStream } from "~/lib/reply-stream"
+import type { Chunk } from "~/lib/ui-stream"
 import { onSessionChange, useAuthStore } from "~/store/auth-store"
 import { useInputStore } from "~/store/input-store"
 import { findModel, useModelStore } from "~/store/model-store"
@@ -78,27 +79,36 @@ export async function openConversation(conversationId: string, { empty = false }
   const token = viewToken
   set({ conversationId, loading: !empty })
   if (empty) return
-  await reload(token)
+  const detail = await reload(token)
+  // A reply is still being written (e.g. the page was reloaded mid-reply): follow it again.
+  const active = detail?.activeGeneration
+  const state = get()
+  if (active && token === viewToken && !state.streaming && !state.map[active.assistantId] && state.map[active.parentId]) {
+    set({ path: ancestry(state.tree, active.parentId) })
+    void followReply({ assistantId: active.assistantId, parentId: active.parentId })
+  }
 }
 
 /** Refetch the open conversation, keeping the current branch when it still exists. */
-async function reload(token = viewToken, keepId?: string) {
+async function reload(token = viewToken, keepId?: string): Promise<ConversationDetail | null> {
   const conversationId = get().conversationId
-  if (!conversationId) return
+  if (!conversationId) return null
   loadAbort?.abort()
   const controller = new AbortController()
   loadAbort = controller
   try {
     const detail = await api<ConversationDetail>(`/conversations/${conversationId}`, { signal: controller.signal })
-    if (token !== viewToken) return
+    if (token !== viewToken) return null
     const map = toMap(detail.messages)
     const tree = buildTree(map)
     const anchor = keepId && map[keepId] ? keepId : get().path.findLast((id) => map[id])
     set({ map, tree, path: anchor ? pathThrough(tree, anchor) : latestPath(tree), loading: false })
+    return detail
   } catch (error) {
-    if (controller.signal.aborted || token !== viewToken) return
+    if (controller.signal.aborted || token !== viewToken) return null
     set({ loading: false })
     notify.error(error)
+    return null
   }
 }
 
@@ -182,7 +192,7 @@ export async function sendMessage({ text, files = [], parentId }: SendArgs): Pro
     model: selection.model,
     options: selection.options,
   }
-  return runStream(`/conversations/${conversationId}/messages`, body, userId, assistantId, text)
+  return followReply({ assistantId, parentId: userId, sentText: text, open: postStream(`/conversations/${conversationId}/messages`, body) })
 }
 
 /** Generate a new reply to `messageId` (a user message, or the user message above an assistant one). */
@@ -204,7 +214,7 @@ export async function regenerate(messageId: string): Promise<boolean> {
   set({ path: ancestry(state.tree, userId) })
   const assistantId = crypto.randomUUID()
   const body: RegenerateInput = { assistantId, model: selection.model, options: selection.options }
-  return runStream(`/conversations/${conversationId}/messages/${userId}/regenerate`, body, userId, assistantId)
+  return followReply({ assistantId, parentId: userId, open: postStream(`/conversations/${conversationId}/messages/${userId}/regenerate`, body) })
 }
 
 /** Edit a user message: the new text becomes a sibling branch under the same parent. */
@@ -225,8 +235,8 @@ export async function stopGeneration() {
   if (!streaming || streaming.stopping) return
   set({ streaming: { ...streaming, stopping: true } })
   try {
-    // The server stops the model and still persists what was generated; we keep reading
-    // the stream until it reports the saved message.
+    // The server stops the model (on whichever instance runs it) and still persists what was
+    // generated; we keep reading the stream until it reports the saved message.
     await api(`/generations/${streaming.assistantId}/cancel`, { method: "POST" })
   } catch (error) {
     notify.error(error)
@@ -266,8 +276,23 @@ function notifyIfHidden() {
   else if (Notification.permission !== "denied") void Notification.requestPermission().then((p) => p === "granted" && show())
 }
 
-/** `sentText` is restored to the draft if the user message turns out not to have been saved. */
-async function runStream(url: string, body: unknown, userId: string, assistantId: string, sentText?: string): Promise<boolean> {
+const postStream = (url: string, body: unknown) => (signal: AbortSignal) => apiFetch(url, { method: "POST", body, signal })
+
+interface FollowArgs {
+  assistantId: string
+  /** The user message being answered. */
+  parentId: string
+  /** Starts the reply; without it, joins one already in progress. */
+  open?: (signal: AbortSignal) => Promise<Response>
+  /** Restored to the draft if the user message turns out not to have been saved. */
+  sentText?: string
+}
+
+/**
+ * Show a reply as it streams in. Dropped connections are resumed transparently; if the reply
+ * can't be followed to its end, reload from the server, which has it if it was saved.
+ */
+async function followReply({ assistantId, parentId, open, sentText }: FollowArgs): Promise<boolean> {
   const token = viewToken
   const session = useAuthStore.getState().sessionVersion
   const live = () => token === viewToken && session === useAuthStore.getState().sessionVersion
@@ -275,7 +300,7 @@ async function runStream(url: string, body: unknown, userId: string, assistantId
   streamAbort = controller
 
   let message: FlaiUIMessage = { id: assistantId, role: "assistant", parts: [] }
-  set({ streaming: { assistantId, parentId: userId, message, stopping: false } })
+  set({ streaming: { assistantId, parentId, message, stopping: false } })
 
   // Batch UI updates to one per animation frame.
   let frame: number | null = null
@@ -291,9 +316,7 @@ async function runStream(url: string, body: unknown, userId: string, assistantId
   let finished = false
   let failure: string | undefined
   try {
-    const res = await apiFetch(url, { method: "POST", body, signal: controller.signal })
-    if (!res.body) throw new Error("Missing response stream")
-    const chunks = parseUIMessageStream(res.body).pipeThrough(
+    const chunks = replyStream(assistantId, controller.signal, open).pipeThrough(
       new TransformStream<Chunk, Chunk>({
         transform(chunk, ctrl) {
           if (chunk.type === "finish") finished = true
@@ -315,7 +338,7 @@ async function runStream(url: string, body: unknown, userId: string, assistantId
     }
   } catch (error) {
     if (controller.signal.aborted || !live()) return false
-    failure = errorText(error)
+    failure = error instanceof ReplyStreamInterrupted ? undefined : errorText(error)
   } finally {
     if (frame !== null) cancelAnimationFrame(frame)
     if (streamAbort === controller) streamAbort = null
@@ -324,13 +347,13 @@ async function runStream(url: string, body: unknown, userId: string, assistantId
 
   if (finished && !failure && message.parts.length === 0) {
     // Stopped before any output: nothing was saved.
-    set({ streaming: null, path: ancestry(get().tree, userId) })
+    set({ streaming: null, path: ancestry(get().tree, parentId) })
     return true
   }
   if (finished && !failure) {
     const record: MessageRecord = {
       id: assistantId,
-      parentId: userId,
+      parentId,
       role: "assistant",
       parts: message.parts as FlaiPart[],
       metadata: message.metadata ?? {},
@@ -343,12 +366,15 @@ async function runStream(url: string, body: unknown, userId: string, assistantId
     return true
   }
 
-  // The reply may still have been saved (e.g. connection dropped after persisting): reload.
-  notify.error(failure ?? i18n.t("pages.chat.streamInterrupted"))
+  // The reply may still have been saved (e.g. it finished while we were offline): reload,
+  // and only report a problem if it isn't there.
   set({ streaming: null })
   await reload(token, assistantId)
+  if (!live()) return false
   const { conversationId, map } = get()
-  const lost = sentText !== undefined && live() && conversationId && !map[userId]
+  if (map[assistantId] && !failure) return true
+  notify.error(failure ?? i18n.t("pages.chat.streamInterrupted"))
+  const lost = sentText !== undefined && conversationId && !map[parentId]
   if (lost && !useInputStore.getState().drafts[conversationId]) useInputStore.getState().setDraft(conversationId, sentText)
   return false
 }

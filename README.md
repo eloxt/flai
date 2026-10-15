@@ -20,6 +20,7 @@ docker/         PostgreSQL image with zhparser
 ```bash
 cp .env.example .env              # set JWT_SECRET (≥32 chars) and S3_* for uploads
 docker compose up -d db           # PostgreSQL 17 + zhparser on :55432
+docker compose up -d valkey       # optional: set REDIS_URL=redis://127.0.0.1:56379 for resumable replies
 pnpm install
 pnpm --filter @flai/server db:migrate
 pnpm dev                          # API on :8000, web on :5173 (proxies /api)
@@ -39,6 +40,8 @@ Then add providers and models under **Admin settings → Provider management**, 
 pnpm test                                                        # unit tests (server + web)
 FLAI_TEST_DATABASE_URL=postgres://flai:flai@127.0.0.1:55432/flai \
   pnpm --filter @flai/server test                                # + API integration tests (creates a temp database)
+FLAI_TEST_REDIS_URL=redis://127.0.0.1:56379 \
+  pnpm --filter @flai/server test                                # + generation bus tests on Redis Streams
 pnpm typecheck
 ```
 
@@ -83,13 +86,24 @@ What changes in the data:
 | Auth | `POST /auth/register`, `/auth/login`, `/auth/refresh` |
 | Me | `GET/PATCH /me`, `PATCH /me/preferences`, `PUT /me/password`, `POST /feedback` |
 | Files | `GET/POST /files`, `DELETE /files/:id` |
-| Chat | `GET /models`, `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/:id`, `POST /conversations/:id/title`, `POST /conversations/:id/messages` (stream), `POST /conversations/:id/messages/:id/regenerate` (stream), `DELETE /conversations/:id/messages/:id`, `POST /generations/:id/cancel`, `GET /search?q=` |
+| Chat | `GET /models`, `GET/POST /conversations`, `GET/PATCH/DELETE /conversations/:id`, `POST /conversations/:id/title`, `POST /conversations/:id/messages` (stream), `POST /conversations/:id/messages/:id/regenerate` (stream), `DELETE /conversations/:id/messages/:id`, `GET /generations/:id/stream` (resume), `POST /generations/:id/cancel`, `GET /search?q=` |
 | Translate | `POST /translate` (stream) |
 | Shares | `GET/POST /shares`, `PATCH/DELETE /shares/:id`, `GET /conversations/:id/share`, `GET /public/shares/:id` |
 | MCP | `GET/POST /mcp-servers`, `PATCH/DELETE /mcp-servers/:id`, `POST /mcp-servers/:id/refresh`, `POST /mcp-servers/:id/tools/:name/call` |
 | Admin | `/admin/users`, `/admin/users/:id/conversations`, `/admin/providers`, `/admin/settings/:key`, `/admin/notifications` |
 
 Streams use the AI SDK UI message stream protocol (SSE). A reply is only reported as `finish` after it has been saved; generation continues if the client disconnects, and `cancel` stops it while keeping the partial reply.
+
+### Resumable replies
+
+Every reply event carries an SSE `id`. If the connection drops, `GET /generations/:id/stream` with `Last-Event-ID` (or `?after=<id>`) continues exactly where it stopped; without one it replays from the start. `GET /conversations/:id` reports `activeGeneration` while a reply is still being written, so a reloaded page can join it again. Finished replies stay replayable for 5 minutes.
+
+Where replies live depends on `REDIS_URL`:
+
+- **Unset:** in this process. Resuming works across dropped connections, but not across restarts or between instances.
+- **Set (Redis or Valkey):** chunks go to a Redis Stream per reply. Any instance can serve the stream or stop the reply (stop requests reach the generating instance via pub/sub, with a flag it re-checks every 10 s). The generating instance holds a 30 s lease; if it dies, readers get an error instead of waiting forever.
+
+Stopping works the same either way: `cancel` keeps what was written; deleting the conversation (or the message being answered) discards the reply; on `SIGTERM` the server stops in-flight replies, saves what they have, and only then exits, so clients reconnecting after the restart find them saved.
 
 ## Generative UI
 

@@ -1,17 +1,16 @@
 import { type FlaiPart, regenerateSchema, sendMessageSchema, textOf } from '@flai/shared'
-import { createUIMessageStreamResponse } from 'ai'
 import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body } from '../lib/hono'
+import { replyStreamResponse } from '../lib/reply-stream'
 import { cancelGeneration, startGeneration } from '../llm/generation'
+import { generationBus, isStreamPosition } from '../llm/stream-bus'
 import { resolveThinking } from '../llm/models'
 import { getConversation, loadPath, touchConversation } from '../services/conversations'
 import { resolveModel } from '../services/providers'
 import { ownedFiles } from './files'
-
-const KEEP_ALIVE_MS = 15_000
 
 async function assertNewAssistantId(id: string) {
   if (await db.query.messages.findFirst({ where: eq(schema.messages.id, id), columns: { id: true } })) {
@@ -75,7 +74,7 @@ export const messageRoutes = new Hono<AppEnv>()
     }
 
     const path = await loadPath(conversation.id, message.id)
-    const stream = startGeneration({
+    await startGeneration({
       userId: user.id,
       conversationId: conversation.id,
       assistantId: input.assistantId,
@@ -84,7 +83,7 @@ export const messageRoutes = new Hono<AppEnv>()
       model,
       options: input.options,
     })
-    return createUIMessageStreamResponse({ stream, keepAliveMs: KEEP_ALIVE_MS })
+    return replyStreamResponse(input.assistantId, '0', c.req.raw.signal)
   })
   .post('/conversations/:id/messages/:messageId/regenerate', async (c) => {
     const user = c.get('user')
@@ -99,7 +98,7 @@ export const messageRoutes = new Hono<AppEnv>()
     if (path.some((m) => m.parts.some((p) => p.type === 'file')) && !model.attachment) {
       throw badRequest('This model does not accept attachments')
     }
-    const stream = startGeneration({
+    await startGeneration({
       userId: user.id,
       conversationId: conversation.id,
       assistantId: input.assistantId,
@@ -108,9 +107,19 @@ export const messageRoutes = new Hono<AppEnv>()
       model,
       options: input.options,
     })
-    return createUIMessageStreamResponse({ stream, keepAliveMs: KEEP_ALIVE_MS })
+    return replyStreamResponse(input.assistantId, '0', c.req.raw.signal)
   })
-  .post('/generations/:assistantId/cancel', (c) => {
-    if (!cancelGeneration(c.req.param('assistantId'), c.get('user').id)) throw notFound('Generation')
+  // Resume (or join) a reply's stream, e.g. after a dropped connection or a page reload.
+  .get('/generations/:assistantId/stream', async (c) => {
+    const assistantId = c.req.param('assistantId')
+    const info = await generationBus().info(assistantId)
+    if (!info || info.userId !== c.get('user').id) throw notFound('Generation')
+    const after = c.req.query('after') ?? c.req.header('last-event-id') ?? '0'
+    if (!isStreamPosition(after)) throw badRequest('Invalid stream position')
+    return replyStreamResponse(assistantId, after, c.req.raw.signal)
+  })
+  .post('/generations/:assistantId/cancel', async (c) => {
+    // Stopping a reply that already finished is fine: the client just reads the end of the stream.
+    if ((await cancelGeneration(c.req.param('assistantId'), c.get('user').id)) === 'not-found') throw notFound('Generation')
     return c.body(null, 204)
   })

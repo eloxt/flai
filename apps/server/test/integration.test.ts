@@ -39,6 +39,13 @@ suite('API integration', () => {
       const chunk = (delta: object, finish: string | null = null) =>
         res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`)
       chunk({ role: 'assistant', content: `echo:${last.length}` })
+      // "slow" prompts stream for a while, so tests can stop or join a reply mid-way.
+      if (last.includes('slow')) {
+        for (let i = 0; i < 40 && !res.destroyed; i++) {
+          chunk({ content: ' more' })
+          await new Promise((r) => setTimeout(r, 25))
+        }
+      }
       chunk({}, 'stop')
       res.end('data: [DONE]\n\n')
     })
@@ -58,6 +65,7 @@ suite('API integration', () => {
     app = createApp()
 
     teardown = async () => {
+      await (await import('../src/llm/generation')).shutdownGenerations()
       await pool.end()
       llm.close()
       const cleanup = new pg.Client({ connectionString: ADMIN_URL })
@@ -142,6 +150,42 @@ suite('API integration', () => {
       [u1, null],
       [a1, u1],
     ])
+  })
+
+  it('replays a finished reply from any position and treats a late stop as done', async () => {
+    const full = await call(`/generations/${a1}/stream`, { token: alice })
+    expect(full.status).toBe(200)
+    const ids = [...full.text.matchAll(/^id: (.+)$/gm)].map((m) => m[1])
+    expect(ids.length).toBeGreaterThan(1)
+    expect(full.text).toContain('"type":"finish"')
+    const rest = await call(`/generations/${a1}/stream?after=${ids[0]}`, { token: alice })
+    expect([...rest.text.matchAll(/^id: (.+)$/gm)].map((m) => m[1])).toEqual(ids.slice(1))
+    expect((await call(`/generations/${a1}/stream`, { token: bob })).status).toBe(404)
+    expect((await call(`/generations/${a1}/stream?after=nope`, { token: alice })).status).toBe(400)
+    expect((await call(`/generations/${a1}/cancel`, { method: 'POST', token: alice })).status).toBe(204)
+    expect((await call(`/generations/${a1}/cancel`, { method: 'POST', token: bob })).status).toBe(404)
+    expect((await call(`/conversations/${conversationId}`, { token: alice })).data.activeGeneration).toBeNull()
+  })
+
+  it('stops a running reply on request and keeps what was written', async () => {
+    const u = crypto.randomUUID()
+    const a = crypto.randomUUID()
+    const pending = call(`/conversations/${conversationId}/messages`, {
+      token: alice,
+      body: { message: { id: u, parentId: a1, text: 'slow please', fileIds: [] }, assistantId: a, model: { providerId, modelId: 'm1' } },
+    })
+    await expect
+      .poll(async () => (await call(`/conversations/${conversationId}`, { token: alice })).data.activeGeneration?.assistantId, { timeout: 5_000 })
+      .toBe(a)
+    await new Promise((r) => setTimeout(r, 200))
+    expect((await call(`/generations/${a}/cancel`, { method: 'POST', token: alice })).status).toBe(204)
+    const res = await pending
+    expect(res.text).toContain('"type":"finish"')
+    const detail = (await call(`/conversations/${conversationId}`, { token: alice })).data
+    expect(detail.activeGeneration).toBeNull()
+    const saved = detail.messages.find((m: any) => m.id === a)
+    expect(saved.metadata.aborted).toBe(true)
+    expect(saved.parts.length).toBeGreaterThan(0)
   })
 
   it('creates a sibling branch on regenerate and re-parents children on delete', async () => {

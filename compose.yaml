@@ -10,5 +10,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Optional: enables Redis Streams for resumable replies and cross-instance stop (REDIS_URL).
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "56379:6379"
+
 volumes:
   pgdata:

@@ -16,6 +16,9 @@ const schema = z.object({
   S3_BUCKET: z.string().default(''),
   S3_PUBLIC_URL: z.string().default(''),
   MAX_UPLOAD_BYTES: z.coerce.number().int().default(50 * 1024 * 1024),
+  /** Redis/Valkey for resumable reply streams across instances; replies are kept in memory when unset. */
+  REDIS_URL: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+  REDIS_PREFIX: z.string().default('flai:'),
   /** Directory with the built web app; served when present. */
   WEB_DIST: z.string().default('../web/build/client'),
 })

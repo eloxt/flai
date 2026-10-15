@@ -15,6 +15,7 @@ import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toConversation, toMessage } from '../lib/serialize'
 import { generateTitle } from '../llm/title'
+import { activeGeneration, cancelConversationGeneration } from '../llm/generation'
 import { deleteMessage, getConversation, listMessages } from '../services/conversations'
 
 const c_ = schema.conversations
@@ -52,8 +53,12 @@ export const conversationRoutes = new Hono<AppEnv>()
   })
   .get('/conversations/:id', async (c) => {
     const conversation = await getConversation(c.get('user'), c.req.param('id'), { allowAdminRead: true })
-    const messages = await listMessages(conversation.id)
-    return c.json({ ...toConversation(conversation), messages: messages.map(toMessage) })
+    const [messages, active] = await Promise.all([
+      listMessages(conversation.id),
+      // Lets the owner's client re-attach to a reply that is still being written.
+      conversation.userId === c.get('user').id ? activeGeneration(conversation.id) : null,
+    ])
+    return c.json({ ...toConversation(conversation), messages: messages.map(toMessage), activeGeneration: active })
   })
   .patch('/conversations/:id', async (c) => {
     const conversation = await getConversation(c.get('user'), c.req.param('id'))
@@ -63,6 +68,7 @@ export const conversationRoutes = new Hono<AppEnv>()
   })
   .delete('/conversations/:id', async (c) => {
     const conversation = await getConversation(c.get('user'), c.req.param('id'))
+    await cancelConversationGeneration(conversation.id)
     const now = new Date()
     await db.transaction(async (tx) => {
       await tx.update(c_).set({ deletedAt: now }).where(eq(c_.id, conversation.id))
@@ -82,6 +88,8 @@ export const conversationRoutes = new Hono<AppEnv>()
   })
   .delete('/conversations/:id/messages/:messageId', async (c) => {
     const conversation = await getConversation(c.get('user'), c.req.param('id'))
+    // A reply still answering the deleted message would be saved under a deleted parent.
+    await cancelConversationGeneration(conversation.id, { parentIds: [c.req.param('messageId')] })
     await deleteMessage(conversation.id, c.req.param('messageId'))
     return c.body(null, 204)
   })

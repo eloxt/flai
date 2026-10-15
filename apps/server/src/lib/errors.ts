@@ -11,6 +11,7 @@ const STATUS: Record<ErrorCode, ContentfulStatusCode> = {
   CONFLICT: 409,
   NOT_CONFIGURED: 412,
   UPSTREAM: 502,
+  UNAVAILABLE: 503,
   INTERNAL: 500,
 }
 

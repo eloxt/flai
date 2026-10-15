@@ -33,6 +33,9 @@ const sse = (chunks: object[], { finish = true } = {}) =>
     .map((c) => `data: ${JSON.stringify(c)}\n\n`)
     .join("")
 
+/** SSE with event ids, as the server sends replies. */
+const sseWithIds = (chunks: Array<[id: string, chunk: object]>) => chunks.map(([id, c]) => `id: ${id}\ndata: ${JSON.stringify(c)}\n\n`).join("")
+
 function streamResponse(body: string, delayMs = 0) {
   const encoder = new TextEncoder()
   return new Response(
@@ -98,11 +101,13 @@ describe("chat store", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it("reloads from the server when the stream ends without finishing, keeping a saved reply", async () => {
+  it("reloads from the server when the reply can't be resumed, keeping a saved reply", async () => {
     await openConversation("c1", { empty: true })
     let userId = ""
     let assistantId = ""
     fetchMock.mockImplementation(async (url, init) => {
+      // The server no longer knows the reply (e.g. it finished long ago).
+      if (String(url).includes("/generations/")) return json({ error: { code: "NOT_FOUND", message: "Generation not found" } }, 404)
       if (String(url).includes("/messages")) {
         const body = JSON.parse(String(init?.body))
         userId = body.message.id
@@ -115,10 +120,58 @@ describe("chat store", () => {
       ]
       return json({ ...detail, messages: saved })
     })
-    expect(await sendMessage({ text: "Hi" })).toBe(false)
+    // Nothing was lost, so this counts as delivered.
+    expect(await sendMessage({ text: "Hi" })).toBe(true)
     const { path, map } = useChatStore.getState()
     expect(path).toEqual([userId, assistantId])
     expect(map[assistantId]!.parts).toEqual([{ type: "text", text: "Saved" }])
+  })
+
+  it("resumes a dropped stream from the last event id without repeating chunks", async () => {
+    await openConversation("c1", { empty: true })
+    let assistantId = ""
+    const resumedFrom: string[] = []
+    fetchMock.mockImplementation(async (url, init) => {
+      const target = new URL(String(url), "http://x")
+      if (target.pathname.endsWith("/messages")) {
+        assistantId = JSON.parse(String(init?.body)).assistantId
+        // The connection drops halfway through the reply.
+        return streamResponse(
+          sseWithIds([
+            ["1", { type: "start", messageId: assistantId }],
+            ["2", { type: "text-start", id: "t" }],
+            ["3", { type: "text-delta", id: "t", delta: "Hel" }],
+          ])
+        )
+      }
+      resumedFrom.push(target.searchParams.get("after") ?? "")
+      return streamResponse(
+        sseWithIds([
+          ["4", { type: "text-delta", id: "t", delta: "lo" }],
+          ["5", { type: "text-end", id: "t" }],
+          ["6", { type: "finish", finishReason: "stop" }],
+        ])
+      )
+    })
+    expect(await sendMessage({ text: "Hi" })).toBe(true)
+    expect(resumedFrom).toEqual(["3"])
+    const { map, streaming } = useChatStore.getState()
+    expect(streaming).toBeNull()
+    expect(map[assistantId]!.parts).toEqual([{ type: "text", text: "Hello", state: "done" }])
+  })
+
+  it("re-attaches to a reply still being written when the conversation opens", async () => {
+    const user: MessageRecord = { id: "u1", parentId: null, role: "user", parts: [{ type: "text", text: "Hi" }], metadata: {}, createdAt: "2026-01-01T00:00:00Z" }
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).includes("/generations/a1/stream")) return streamResponse(sseWithIds(reply("a1").map((c, i) => [String(i + 1), c])).concat(sse([])))
+      return json({ ...detail, messages: [user], activeGeneration: { assistantId: "a1", parentId: "u1" } })
+    })
+    await openConversation("c1")
+    await vi.waitFor(() => expect(useChatStore.getState().map.a1).toBeDefined())
+    const { path, map, streaming } = useChatStore.getState()
+    expect(streaming).toBeNull()
+    expect(path).toEqual(["u1", "a1"])
+    expect(map.a1!.parentId).toBe("u1")
   })
 
   it("drops results that arrive after switching conversations", async () => {

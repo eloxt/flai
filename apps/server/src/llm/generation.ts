@@ -1,7 +1,7 @@
 import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, ModelConfig } from '@flai/shared'
 import { textOf } from '@flai/shared'
 import { toAISdkStream } from '@mastra/ai-sdk'
-import { readUIMessageStream, type UIMessageChunk } from 'ai'
+import { readUIMessageStream } from 'ai'
 import { db, schema } from '../db'
 import { AppError, errorMessage } from '../lib/errors'
 import type { MessageRow } from '../services/conversations'
@@ -12,70 +12,91 @@ import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
 import { buildMcpToolset } from './mcp'
 import { buildModel } from './models'
-
-type Chunk = UIMessageChunk<MessageMetadata>
-type Listener = (chunk: Chunk | null) => void
+import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './stream-bus'
 
 const GENERATION_TIMEOUT_MS = 20 * 60 * 1000
 const MAX_STEPS = 10
+/** How long shutdown waits for in-flight replies to save what they have. */
+const SHUTDOWN_GRACE_MS = 15_000
 
 /**
- * One in-flight assistant reply. Generation runs independently of any HTTP connection:
- * chunks are fanned out to whoever is listening, and the message is persisted when the
- * model finishes (or is stopped) even if every client has gone away.
+ * Why a reply ended early: the user pressed stop (keep what was written), its conversation
+ * was deleted (discard), the server is shutting down (keep it), or it ran too long.
  */
-class Generation {
-  readonly controller = new AbortController()
-  private readonly backlog: Chunk[] = []
-  private readonly listeners = new Set<Listener>()
-  private closed = false
-  stoppedByUser = false
+type StopReason = CancelReason | 'shutdown' | 'timeout'
 
-  constructor(
-    readonly assistantId: string,
-    readonly userId: string,
-    readonly conversationId: string,
-  ) {}
-
-  emit(chunk: Chunk): void {
-    if (this.closed) return
-    this.backlog.push(chunk)
-    for (const listener of this.listeners) listener(chunk)
-  }
-
-  close(): void {
-    if (this.closed) return
-    this.closed = true
-    for (const listener of this.listeners) listener(null)
-    this.listeners.clear()
-  }
-
-  /** A UI message stream replaying everything so far, then following live chunks. */
-  subscribe(): ReadableStream<Chunk> {
-    let listener: Listener | undefined
-    return new ReadableStream<Chunk>({
-      start: (controller) => {
-        for (const chunk of this.backlog) controller.enqueue(chunk)
-        if (this.closed) return controller.close()
-        listener = (chunk) => (chunk ? controller.enqueue(chunk) : controller.close())
-        this.listeners.add(listener)
-      },
-      cancel: () => {
-        // The client went away; generation carries on.
-        if (listener) this.listeners.delete(listener)
-      },
-    })
-  }
+/**
+ * A reply this process is generating. Generation runs independently of any HTTP connection:
+ * chunks go to the generation bus, where any client (on any instance) can replay and follow
+ * them, and the message is persisted when the model finishes or is stopped.
+ */
+interface Generation {
+  readonly assistantId: string
+  readonly controller: AbortController
+  done: Promise<void>
 }
 
-const registry = new Map<string, Generation>()
+const running = new Map<string, Generation>()
+let shuttingDown = false
 
-export function cancelGeneration(assistantId: string, userId: string): boolean {
-  const generation = registry.get(assistantId)
-  if (!generation || generation.userId !== userId) return false
-  generation.stoppedByUser = true
-  generation.controller.abort()
-  return true
+function stopReason(generation: Generation): StopReason | null {
+  return generation.controller.signal.aborted ? (generation.controller.signal.reason as StopReason) : null
+}
+
+function abortLocal(assistantId: string, reason: StopReason) {
+  const generation = running.get(assistantId)
+  if (generation && !generation.controller.signal.aborted) generation.controller.abort(reason)
+}
+
+let listening: Promise<void> | undefined
+function listenForCancels(): Promise<void> {
+  listening ??= generationBus()
+    .onCancel((assistantId, reason) => abortLocal(assistantId, reason))
+    .catch((error: Error) => {
+      // Cancels still arrive through the heartbeat's flag check, just a little later.
+      console.warn('failed to listen for cancel requests', error.message)
+    })
+  return listening
+}
+
+export type CancelResult = 'requested' | 'finished' | 'not-found'
+
+/** Ask the reply to stop, wherever it is running. Stopping a finished reply is a no-op. */
+export async function cancelGeneration(assistantId: string, userId: string, reason: CancelReason = 'user'): Promise<CancelResult> {
+  const bus = generationBus()
+  const info = await bus.info(assistantId)
+  if (!info || info.userId !== userId) return 'not-found'
+  if (info.done) return 'finished'
+  // Fast path when we own it; otherwise the owner hears about it through the bus.
+  abortLocal(assistantId, reason)
+  if (!running.has(assistantId)) await bus.requestCancel(assistantId, reason)
+  return 'requested'
+}
+
+/** Stop the conversation's in-flight reply, e.g. because the conversation or its branch is deleted. */
+export async function cancelConversationGeneration(conversationId: string, options: { parentIds?: string[] } = {}): Promise<void> {
+  const bus = generationBus()
+  const info = await bus.active(conversationId)
+  if (!info || (options.parentIds && !options.parentIds.includes(info.parentId))) return
+  abortLocal(info.assistantId, 'discard')
+  if (!running.has(info.assistantId)) await bus.requestCancel(info.assistantId, 'discard')
+}
+
+export async function activeGeneration(conversationId: string): Promise<{ assistantId: string; parentId: string } | null> {
+  const info = await generationBus().active(conversationId)
+  return info ? { assistantId: info.assistantId, parentId: info.parentId } : null
+}
+
+/**
+ * Stop accepting replies, end in-flight ones (saving what they have, so clients that
+ * reconnect after the restart find them), then release the bus.
+ */
+export async function shutdownGenerations(): Promise<void> {
+  shuttingDown = true
+  for (const id of running.keys()) abortLocal(id, 'shutdown')
+  const all = Promise.allSettled([...running.values()].map((g) => g.done))
+  await Promise.race([all, new Promise((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_MS).unref())])
+  await generationBus().shutdown()
 }
 
 export interface StartGenerationInput {
@@ -89,18 +110,44 @@ export interface StartGenerationInput {
   options: ChatOptions
 }
 
-export function startGeneration(input: StartGenerationInput): ReadableStream<Chunk> {
-  if (registry.has(input.assistantId)) throw new AppError('CONFLICT', 'A reply with this id is already being generated')
-  const generation = new Generation(input.assistantId, input.userId, input.conversationId)
-  registry.set(input.assistantId, generation)
-  generation.emit({ type: 'start', messageId: input.assistantId })
-  void run(generation, input).finally(() => registry.delete(input.assistantId))
-  return generation.subscribe()
+/** Start generating a reply in the background. Read it with `generationBus().read(assistantId, "0", …)`. */
+export async function startGeneration(input: StartGenerationInput): Promise<void> {
+  if (shuttingDown) throw new AppError('UNAVAILABLE', 'The server is restarting, please retry in a moment')
+  const bus = generationBus()
+  if (running.has(input.assistantId) || (await bus.info(input.assistantId))) {
+    throw new AppError('CONFLICT', 'A reply with this id is already being generated')
+  }
+  await listenForCancels()
+  await bus.open({
+    assistantId: input.assistantId,
+    userId: input.userId,
+    conversationId: input.conversationId,
+    parentId: input.path.at(-1)!.id,
+  })
+  const generation: Generation = { assistantId: input.assistantId, controller: new AbortController(), done: Promise.resolve() }
+  running.set(input.assistantId, generation)
+  bus.append(input.assistantId, { type: 'start', messageId: input.assistantId })
+
+  // Keep the lease alive and pick up cancel requests that missed the pub/sub message.
+  const heartbeat = setInterval(() => {
+    bus
+      .heartbeat(input.assistantId)
+      .then((reason) => reason && abortLocal(input.assistantId, reason))
+      .catch((error: Error) => console.warn('generation heartbeat failed', error.message))
+  }, HEARTBEAT_MS)
+  heartbeat.unref()
+
+  generation.done = run(generation, input).finally(() => {
+    clearInterval(heartbeat)
+    running.delete(input.assistantId)
+  })
 }
 
 async function run(generation: Generation, input: StartGenerationInput): Promise<void> {
+  const bus = generationBus()
+  const emit = (chunk: Chunk) => bus.append(input.assistantId, chunk)
   const { provider, model, options } = input
-  const timeout = setTimeout(() => generation.controller.abort(), GENERATION_TIMEOUT_MS)
+  const timeout = setTimeout(() => generation.controller.abort('timeout' satisfies StopReason), GENERATION_TIMEOUT_MS)
   const userMessage = input.path.at(-1)!
   const baseMetadata: MessageMetadata = { providerId: provider.id, providerName: provider.name, modelId: model.id }
 
@@ -113,7 +160,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     return last
   })()
   const forward = (chunk: Chunk) => {
-    generation.emit(chunk)
+    emit(chunk)
     void writer.write(chunk)
   }
   void writer.write({ type: 'start', messageId: input.assistantId })
@@ -165,19 +212,28 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     await mcp.close()
   }
 
-  const aborted = generation.controller.signal.aborted
-  if (aborted) metadata.aborted = true
-  if (aborted && !generation.stoppedByUser && !failure) failure = new Error('Generation timed out')
+  const reason = stopReason(generation)
+  if (reason) {
+    metadata.aborted = true
+    // A stop the user asked for (or a restart) isn't a failure; running out of time is.
+    if (reason === 'user' || reason === 'shutdown' || reason === 'discard') failure = undefined
+    else failure ??= new Error('Generation timed out')
+  }
 
   const message = await finalMessage.catch(() => undefined)
   const parts = (message?.parts ?? []).filter((p) => p.type !== 'step-start') as FlaiPart[]
 
   try {
+    if (reason === 'discard') {
+      emit({ type: 'finish', finishReason: 'stop', messageMetadata: metadata })
+      return
+    }
     if (parts.length === 0) {
-      if (generation.stoppedByUser) {
-        generation.emit({ type: 'finish', finishReason: 'stop', messageMetadata: metadata })
+      if (reason === 'user') {
+        emit({ type: 'finish', finishReason: 'stop', messageMetadata: metadata })
         return
       }
+      if (reason === 'shutdown') throw new AppError('UNAVAILABLE', 'The server restarted before the reply began. Please retry.')
       throw failure ?? new Error('The model returned an empty response')
     }
     await db.transaction(async (tx) => {
@@ -192,16 +248,18 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       })
       await touchConversation(input.conversationId, tx)
     })
-    if (failure && !generation.stoppedByUser) throw failure
-    generation.emit({ type: 'message-metadata', messageMetadata: metadata })
-    generation.emit({ type: 'finish', finishReason: 'stop', messageMetadata: metadata })
+    if (failure) throw failure
+    emit({ type: 'message-metadata', messageMetadata: metadata })
+    emit({ type: 'finish', finishReason: 'stop', messageMetadata: metadata })
   } catch (error) {
-    console.error('generation failed', error)
-    alertLlmError({ operation: 'chat', providerName: provider.name, modelId: model.id, apiKey: provider.apiKey }, error)
+    if (reason !== 'shutdown') {
+      console.error('generation failed', error)
+      alertLlmError({ operation: 'chat', providerName: provider.name, modelId: model.id, apiKey: provider.apiKey }, error)
+    }
     // No `finish` chunk: clients treat a stream without one as failed and reload from the server.
-    generation.emit({ type: 'error', errorText: userFacingError(error, provider.apiKey) })
+    emit({ type: 'error', errorText: userFacingError(error, provider.apiKey) })
   } finally {
-    generation.close()
+    await bus.close(input.assistantId).catch((error: Error) => console.warn('failed to close reply stream', error.message))
   }
 }
 
