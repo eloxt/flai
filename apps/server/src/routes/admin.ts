@@ -12,6 +12,7 @@ import {
 } from '@flai/shared'
 import { and, desc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { db, schema } from '../db'
 import { hashPassword } from '../lib/auth'
 import { decodeCursor, paginate } from '../lib/cursor'
@@ -173,11 +174,28 @@ const settingRoutes = new Hono<AppEnv>()
   .get('/:key', (c) => {
     const key = c.req.param('key')
     if (!isSettingKey(key)) throw notFound('Setting')
+    if (key === 'web_search') {
+      const value = getSetting(key)
+      return c.json({ ...value, exaApiKey: value.exaApiKey ? maskKey(value.exaApiKey) : '' })
+    }
     return c.json(getSetting(key))
   })
   .put('/:key', async (c) => {
     const key = c.req.param('key')
     if (!isSettingKey(key)) throw notFound('Setting')
+    if (key === 'web_search') {
+      // Remove defaults so a partial update cannot clear the key or reset the provider.
+      const patch = await body(c, z.object({
+        provider: settingSchemas.web_search.shape.provider.removeDefault().optional(),
+        exaApiKey: settingSchemas.web_search.shape.exaApiKey.removeDefault().optional(),
+      }))
+      const current = getSetting(key)
+      if (current.exaApiKey && patch.exaApiKey === maskKey(current.exaApiKey)) delete patch.exaApiKey
+      const merged = { ...current, ...patch }
+      if (merged.provider === 'exa' && !merged.exaApiKey) throw badRequest('Exa API key is required when Exa search is selected')
+      const value = await updateSetting(key, patch)
+      return c.json({ ...value, exaApiKey: value.exaApiKey ? maskKey(value.exaApiKey) : '' })
+    }
     const input = await body(c, settingSchemas[key].partial())
     if (key === 'title_generation') {
       const merged = { ...getSetting('title_generation'), ...input } as ReturnType<typeof getSetting<'title_generation'>>

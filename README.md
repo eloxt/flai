@@ -105,6 +105,32 @@ Where replies live depends on `REDIS_URL`:
 
 Stopping works the same either way: `cancel` keeps what was written; deleting the conversation (or the message being answered) discards the reply; on `SIGTERM` the server stops in-flight replies, saves what they have, and only then exits, so clients reconnecting after the restart find them saved.
 
+## Web search
+
+Under **Admin settings → Web search**, choose the global search provider:
+
+- **Provider native** (default): keeps OpenAI Responses search, Gemini Google Search, and OpenRouter's `:online` variant. Enable native web search on each supported model in Provider management.
+- **Exa**: enter an [Exa API key](https://dashboard.exa.ai/api-keys). Every chat model with **Tool calling** enabled automatically receives `web_search` and `web_fetch`, including OpenAI-compatible providers. The input bar hides search and URL Context options for all models in this mode, and saved toggle preferences are ignored. Models without tool calling receive neither tool. This mode uses Exa exclusively; missing credentials or upstream failures are reported without falling back to native search or Gemini URL context.
+
+In native mode, the chat search and URL Context switches control their respective tools. Switching back from Exa restores the model's native options and the user's saved toggle preferences. Saved admin settings apply to new replies; reload other open clients to refresh their available model capabilities. Settings use the existing `setting` table, so no database migration or environment variable is required. API keys stay on the server and are masked in admin API responses; submitting the unchanged mask preserves the stored key.
+
+The built-in `web_search` tool exposes these [Exa Search API](https://exa.ai/docs/reference/search) capabilities:
+
+- `instant`, `fast`, `auto`, `deep-lite`, `deep`, and `deep-reasoning`, with up to 100 results and extra queries for deep research.
+- Category hints, including publications, news, companies and people.
+- Fixed content extraction: highlights enabled, plus up to 3 links and 3 images per result. `contents` is set by the server and is not exposed as a tool parameter. Images use `extras.imageLinks`, which returns image URLs.
+- Result metadata including entities, notices, timings and cost. Diagnostic warnings stay in server logs.
+
+Ordinary lookups default to `auto` and 10 results. The model can request deeper research when needed, which can increase Exa charges and latency. Invalid option combinations are rejected locally. Requests stop when generation is cancelled and time out after 180 seconds. Search results and any returned subpages or synthesis citations appear in the chat's existing source list and are saved with the reply. Retrieved text is treated as untrusted evidence in the tool instructions.
+
+Requests use Exa's JSON response; Flai's normal chat stream carries tool execution, results and sources.
+
+The `web_fetch` tool instructs the model to embed 1–3 relevant images across an answer when they help explain it, using Markdown image syntax and a nearby source-page link. Image URLs must come from tool results; captions should use page context without inventing visual details or claiming to have viewed images from URLs alone. Images with unclear relevance are omitted rather than being added to every answer.
+
+The built-in `web_fetch` tool reads known pages through [Exa Get Contents](https://exa.ai/docs/reference/get-contents), using the same admin key. It accepts only `urls` (1–100 HTTP(S) URLs, up to 2048 characters each). The server requests `highlights: true` plus 3 links and 3 image URLs per page through `extras.imageLinks`; content options are fixed and not exposed to the model. Exa uses cached content with live crawling as fallback. Per-URL `statuses` are preserved alongside successful results, so a failed page does not discard other pages or appear to have been read successfully. Retrieved pages are added to the existing source list, with duplicates from search removed. Cancellation and the 180-second timeout apply to fetching too.
+
+Remote Markdown images use a backend proxy that omits browser credentials and Referer when contacting the image host. The server does not cache images or set `Cache-Control`; browser caching follows normal HTTP rules. Requests require authentication, or a valid public share containing the requested URL. The proxy accepts raster image formats, limits each image to 10 MiB and each request to 30 seconds, and validates addresses on every redirect. Outbound image and MCP requests allow public IP addresses plus `198.18.0.0/16` for local Fake-IP proxies; `198.19.0.0/16` and other blocked ranges remain restricted.
+
 ## Generative UI
 
 When a model has **Generative UI** enabled, the OpenUI component reference is appended to the system prompt and the model may embed ` ```openui-lang ` blocks in its reply. The web app renders them with the official `openuiLibrary` from `@openuidev/react-ui` (cards, tables, charts, forms, tabs, images…). The backend generates its prompt from `packages/shared/src/genui/openui.spec.json`, exported from the same library without importing React. Run `pnpm --filter @flai/web genui:spec` after upgrading OpenUI; the web build also regenerates the specification. OpenUI follows the app's light/dark theme. Buttons and form submissions send a follow-up message in the same branch.

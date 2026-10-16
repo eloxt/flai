@@ -3,10 +3,11 @@ import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { notFound } from '../lib/errors'
-import { type AppEnv, body } from '../lib/hono'
+import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toMessage } from '../lib/serialize'
 import { getConversation, loadPath } from '../services/conversations'
+import { imageProxyQuerySchema, proxyImage } from '../services/image-proxy'
 
 type ShareRow = typeof schema.shares.$inferSelect
 
@@ -96,7 +97,18 @@ export const shareRoutes = new Hono<AppEnv>()
     return c.json(row ? toShare(row) : null)
   })
 
-export const publicShareRoutes = new Hono().get('/shares/:id', async (c) => {
+export const publicShareRoutes = new Hono().get('/shares/:id/images', async (c) => {
+  const { url } = query(c, imageProxyQuerySchema)
+  const row = await db.query.shares.findFirst({
+    where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),
+  })
+  if (!row || isExpired(row)) throw notFound('Share')
+  const inSnapshot = (row.messages as MessageRecord[]).some((message) =>
+    message.parts.some((part) => part.type === 'text' && part.text.includes(url)),
+  )
+  if (!inSnapshot) throw notFound('Image')
+  return proxyImage(url, c.req.raw.signal)
+}).get('/shares/:id', async (c) => {
   const row = await db.query.shares.findFirst({
     where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),
   })

@@ -5,10 +5,12 @@ import { mermaid } from "@streamdown/mermaid"
 import { cn } from "cn"
 import { memo } from "react"
 import { Streamdown } from "streamdown"
+import { ProxiedImage } from "~/components/proxied-image"
 import "streamdown/styles.css"
 
 const fullPlugins = { cjk, code, math, mermaid }
 const lightPlugins = { cjk, math }
+const components = { img: ProxiedImage }
 
 interface MarkdownProps {
   children: string
@@ -27,6 +29,7 @@ export const Markdown = memo(function Markdown({ children, streaming = false, li
         isAnimating={streaming}
         plugins={light ? lightPlugins : fullPlugins}
         linkSafety={{ enabled: false }}
+        components={components}
       >
         {children}
       </Streamdown>

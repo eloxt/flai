@@ -1,8 +1,12 @@
-import { modelConfigSchema } from '@flai/shared'
+import { modelConfigSchema, settingSchemas } from '@flai/shared'
 import { Agent } from '@mastra/core/agent'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildModel, geminiBaseUrl } from '../src/llm/models'
 import type { ProviderRow } from '../src/services/providers'
+
+const settings = vi.hoisted(() => ({ provider: 'native' as 'native' | 'exa', exaApiKey: '' }))
+vi.mock('../src/services/settings', () => ({ getSetting: () => settings }))
+beforeEach(() => Object.assign(settings, settingSchemas.web_search.parse({})))
 
 const provider: ProviderRow = {
   id: 'test', name: 'Test', type: 'openai', apiKey: 'test-key', baseUrl: 'https://llm.example.com/v1',
@@ -97,5 +101,38 @@ describe('geminiBaseUrl', () => {
     expect(geminiBaseUrl('https://generativelanguage.googleapis.com/v1beta')).toBe('https://generativelanguage.googleapis.com/v1beta')
     expect(geminiBaseUrl('http://gw/genai/v1beta/')).toBe('http://gw/genai/v1beta')
     expect(geminiBaseUrl('http://gw/genai/v1')).toBe('http://gw/genai/v1')
+  })
+})
+
+describe('global Exa search', () => {
+  it.each(['openai', 'openai_completion', 'gemini'] as const)('uses an executable Exa tool with %s and preserves the model id', (type) => {
+    Object.assign(settings, { provider: 'exa', exaApiKey: 'exa-test-key' })
+    const resolved = buildModel({
+      provider: { ...provider, type, name: 'OpenRouter' },
+      model: modelConfigSchema.parse({ id: 'test-model', toolCall: true }),
+      options: { webSearch: false, urlContext: false },
+    })
+    expect(resolved.model.modelId).toBe('test-model')
+    expect(Object.keys(resolved.tools)).toEqual(['web_search', 'web_fetch'])
+    expect(resolved.tools.web_search).toMatchObject({ id: 'web_search', execute: expect.any(Function) })
+    expect(resolved.tools.web_fetch).toMatchObject({ id: 'web_fetch', execute: expect.any(Function) })
+  })
+
+  it.each([undefined, { webSearch: false, urlContext: false }, { webSearch: true, urlContext: true }])('always supplies both tools and disables native URL context regardless of saved options: %j', (options) => {
+    Object.assign(settings, { provider: 'exa', exaApiKey: 'exa-test-key' })
+    const model = modelConfigSchema.parse({ id: 'test', toolCall: true, internalTools: ['web_search', 'url_context'] })
+    for (const type of ['openai', 'openai_completion', 'gemini'] as const) {
+      expect(Object.keys(buildModel({ provider: { ...provider, type }, model, options }).tools)).toEqual(['web_search', 'web_fetch'])
+    }
+  })
+
+  it('fails clearly instead of falling back to native search', () => {
+    settings.provider = 'exa'
+    const model = modelConfigSchema.parse({ id: 'test', toolCall: true, internalTools: ['web_search'] })
+    expect(() => buildModel({ provider, model, options: { webSearch: true } })).toThrow('Exa API key is not configured')
+    settings.exaApiKey = 'exa-test-key'
+    for (const type of ['openai', 'openai_completion', 'gemini'] as const) {
+      expect(buildModel({ provider: { ...provider, type }, model: { ...model, toolCall: false, internalTools: ['web_search', 'url_context'] }, options: { webSearch: true, urlContext: true } }).tools).toEqual({})
+    }
   })
 })

@@ -126,7 +126,8 @@ export async function buildMcpToolset(userId: string, refs: McpToolRef[]): Promi
   }
 
   const tools: Record<string, Tool> = {}
-  const taken = new Set<string>()
+  // Keep selected MCP tools from replacing built-in web tools when toolsets are merged.
+  const taken = new Set(['web_search', 'web_fetch'])
   for (const ref of refs) {
     const server = servers.find((s) => s.id === ref.serverId)
     const info = server?.tools.find((t) => t.name === ref.name)

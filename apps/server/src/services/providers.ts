@@ -2,6 +2,7 @@ import type { ModelConfig, PublicProvider } from '@flai/shared'
 import { and, eq, isNull } from 'drizzle-orm'
 import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
+import { getSetting } from './settings'
 
 export type ProviderRow = typeof schema.providers.$inferSelect
 
@@ -17,7 +18,12 @@ export async function reloadProviders(): Promise<void> {
 }
 
 export function listPublicProviders(): PublicProvider[] {
-  return active.map((p) => ({ id: p.id, name: p.name, type: p.type, logo: p.logo, models: p.models }))
+  const exa = getSetting('web_search').provider === 'exa'
+  return active.map((p) => ({
+    id: p.id, name: p.name, type: p.type, logo: p.logo,
+    // Exa tools are automatic; only native mode exposes user-controlled search/URL toggles.
+    models: exa ? p.models.map((model) => ({ ...model, internalTools: [] })) : p.models,
+  }))
 }
 
 export function findProvider(providerId: string): ProviderRow | undefined {

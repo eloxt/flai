@@ -460,7 +460,7 @@
           "costOutput": "Output",
           "costCacheRead": "Cache Read",
           "costCacheWrite": "Cache Write",
-          "internalSearch": "Internal Search",
+          "internalSearch": "Native Web Search",
           "imageGeneration": "Image Generation",
           "urlContext": "URL Context",
           "idRequired": "Every model needs an ID",
@@ -485,6 +485,15 @@
         "saveError": "Failed to save notification",
         "fillRequired": "Please fill in title and content",
         "deleteTitle": "Delete this notification?"
+      },
+      "webSearch": {
+        "title": "Web search",
+        "description": "Choose the search provider for all conversations. In Exa mode, web tools are enabled automatically for models with tool calling.",
+        "provider": "Search provider",
+        "native": "Provider native",
+        "nativeHelp": "Use the model provider’s own search. Each model must have native web search enabled in its configuration.",
+        "exaHelp": "Automatically provide web_search and web_fetch to models with tool calling enabled, including OpenAI-compatible models. Search and URL Context options are hidden in the input bar.",
+        "keyHelp": "Stored on the server and masked when displayed. Leave the masked value unchanged to keep the key. Obtain a key at dashboard.exa.ai. Exa must have a key before it can be selected."
       }
     }
   },

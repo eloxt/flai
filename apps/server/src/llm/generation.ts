@@ -13,6 +13,7 @@ import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
 import { buildMcpToolset } from './mcp'
 import { buildModel } from './models'
+import { exaResponseSchema } from './exa'
 import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './stream-bus'
 
 const GENERATION_TIMEOUT_MS = 20 * 60 * 1000
@@ -195,6 +196,8 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       sendSources: true,
     }) as unknown as ReadableStream<Chunk>
 
+    const webCalls = new Set<string>()
+    const sourceUrls = new Set<string>()
     for await (const chunk of uiStream) {
       // Errors are reported once, after persistence, below.
       if (chunk.type === 'error') {
@@ -203,6 +206,21 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       }
       if (chunk.type === 'start' || chunk.type === 'finish' || chunk.type === 'abort') continue
       forward(chunk)
+      if (chunk.type === 'tool-input-available' && (chunk.toolName === 'web_search' || chunk.toolName === 'web_fetch')) webCalls.add(chunk.toolCallId)
+      if (chunk.type === 'source-url') sourceUrls.add(chunk.url)
+      if (chunk.type === 'tool-output-available' && webCalls.has(chunk.toolCallId)) {
+        const result = exaResponseSchema.safeParse(chunk.output)
+        if (!result.success) continue
+        const sources = [
+          ...result.data.results.flatMap((r) => [r, ...(r.subpages ?? [])]),
+          ...(result.data.output?.grounding ?? []).flatMap((g) => g.citations),
+        ]
+        for (const source of sources) {
+          if (!/^https?:\/\//i.test(source.url) || sourceUrls.has(source.url)) continue
+          sourceUrls.add(source.url)
+          forward({ type: 'source-url', sourceId: source.url, url: source.url, title: source.title ?? undefined })
+        }
+      }
     }
     if (!generation.controller.signal.aborted && !failure) {
       metadata = { ...metadata, ...(await collectMetadata(stream)) }

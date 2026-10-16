@@ -304,6 +304,10 @@ export const notificationInputSchema = z.object({
 const longText = z.string().max(100_000)
 
 export const settingSchemas = {
+  web_search: z.object({
+    provider: z.enum(['native', 'exa']).default('native'),
+    exaApiKey: z.string().trim().max(1000).default(''),
+  }),
   system_prompt: z.object({ chat: longText.default(''), translate: longText.default('') }),
   title_generation: z.object({
     providerId: z.string().default(''),

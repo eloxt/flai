@@ -1,4 +1,4 @@
-import type { AdminProvider, SettingValue } from "@flai/shared"
+import type { AdminProvider, SettingKey, SettingValue } from "@flai/shared"
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { PanelSection } from "~/components/panel-dialog"
@@ -10,11 +10,13 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { Textarea } from "~/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
+import { useModelStore } from "~/store/model-store"
 
 /** Load and save one `/admin/settings/:key` document. */
-function useSetting<K extends "system_prompt" | "title_generation" | "error_alert">(key: K) {
+function useSetting<K extends SettingKey>(key: K) {
   const [value, setValue] = useState<SettingValue<K> | null>(null)
   const [failed, setFailed] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -33,13 +35,78 @@ function useSetting<K extends "system_prompt" | "title_generation" | "error_aler
     try {
       setValue(await api<SettingValue<K>>(`/admin/settings/${key}`, { method: "PUT", body: next }))
       notify.success(success)
+      return true
     } catch (error) {
       notify.error(error)
+      return false
     } finally {
       setSaving(false)
     }
   }
   return { value, setValue, failed, saving, load, save }
+}
+
+export function WebSearchSettings() {
+  const { t } = useTranslation()
+  const { value, setValue, failed, saving, load, save } = useSetting("web_search")
+  const p = "pages.admin.webSearch"
+  if (failed) return <LoadFailed onRetry={load} />
+  return (
+    <PanelSection title={t(`${p}.title`)} description={t(`${p}.description`)}>
+      {!value ? (
+        <Skeleton className="h-48 w-full" />
+      ) : (
+        <form
+          className="max-w-xl"
+          onSubmit={async (e: FormEvent) => {
+            e.preventDefault()
+            if (await save(value, t("pages.admin.systemConfig.saved"))) {
+              await useModelStore.getState().load().catch(notify.error)
+            }
+          }}
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel id="search-provider-label">{t(`${p}.provider`)}</FieldLabel>
+              <ToggleGroup
+                aria-labelledby="search-provider-label"
+                variant="outline"
+                value={[value.provider]}
+                disabled={saving}
+                className="flex-wrap"
+                onValueChange={(values) => {
+                  const provider = values[0]
+                  if (provider === "native" || provider === "exa") setValue({ ...value, provider })
+                }}
+              >
+                <ToggleGroupItem value="native">{t(`${p}.native`)}</ToggleGroupItem>
+                <ToggleGroupItem value="exa">Exa</ToggleGroupItem>
+              </ToggleGroup>
+              <FieldDescription>{t(`${p}.${value.provider}Help`)}</FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="exa-api-key">Exa API Key</FieldLabel>
+              <Input
+                id="exa-api-key"
+                type="password"
+                autoComplete="new-password"
+                spellCheck={false}
+                required={value.provider === "exa"}
+                disabled={saving}
+                value={value.exaApiKey}
+                onChange={(e) => setValue({ ...value, exaApiKey: e.target.value })}
+              />
+              <FieldDescription>{t(`${p}.keyHelp`)}</FieldDescription>
+            </Field>
+            <Button type="submit" className="mt-2 self-start" disabled={saving}>
+              {saving && <Spinner data-icon="inline-start" />}
+              {t("common.actions.save")}
+            </Button>
+          </FieldGroup>
+        </form>
+      )}
+    </PanelSection>
+  )
 }
 
 function LoadFailed({ onRetry }: { onRetry: () => void }) {

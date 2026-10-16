@@ -6,11 +6,14 @@ import type { ToolsInput } from '@mastra/core/agent'
 import type { LanguageModel } from 'ai'
 import { AppError } from '../lib/errors'
 import type { ProviderRow } from '../services/providers'
+import { getSetting } from '../services/settings'
+import { createWebSearchTool } from './web-search'
+import { createWebFetchTool } from './web-fetch'
 
 export interface ResolvedModel {
   model: Exclude<LanguageModel, string>
   providerOptions: Record<string, Record<string, unknown>>
-  /** Provider-executed tools (web search, URL context). */
+  /** Built-in tools, including native tools and Exa search/page retrieval. */
   tools: ToolsInput
 }
 
@@ -56,11 +59,18 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
   const wants = (t: 'web_search' | 'url_context') => model.internalTools.includes(t)
   // Mastra 1.77 does not resolve webSearchTool placeholders passed via toolsets.
   const tools: ToolsInput = {}
+  const search = getSetting('web_search')
+  const nativeSearch = options.webSearch && wants('web_search') && search.provider === 'native'
+  if (search.provider === 'exa' && model.toolCall) {
+    if (!search.exaApiKey) throw new AppError('NOT_CONFIGURED', 'Exa API key is not configured')
+    tools.web_search = createWebSearchTool(search.exaApiKey)
+    tools.web_fetch = createWebFetchTool(search.exaApiKey)
+  }
 
   switch (provider.type) {
     case 'openai': {
       const openai = createOpenAI({ apiKey: provider.apiKey, baseURL, headers })
-      if (options.webSearch && wants('web_search')) tools.web_search = openai.tools.webSearch()
+      if (nativeSearch) tools.web_search = openai.tools.webSearch()
       return {
         model: openai.responses(model.id),
         providerOptions: {
@@ -81,7 +91,7 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
         includeUsage: true,
       })
       // OpenRouter exposes web search as a model variant rather than a tool.
-      const id = options.webSearch && wants('web_search') && isOpenRouter(provider) ? `${model.id}:online` : model.id
+      const id = nativeSearch && isOpenRouter(provider) ? `${model.id}:online` : model.id
       return {
         model: compatible.chatModel(id),
         providerOptions: { openaiCompatible: thinking && model.reasoning ? { reasoningEffort: thinking } : {} },
@@ -90,8 +100,8 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
     }
     case 'gemini': {
       const google = createGoogleGenerativeAI({ apiKey: provider.apiKey, baseURL: geminiBaseUrl(provider.baseUrl), headers })
-      if (options.webSearch && wants('web_search')) tools.google_search = google.tools.googleSearch({})
-      if (options.urlContext && wants('url_context')) tools.url_context = google.tools.urlContext({})
+      if (nativeSearch) tools.google_search = google.tools.googleSearch({})
+      if (search.provider === 'native' && options.urlContext && wants('url_context')) tools.url_context = google.tools.urlContext({})
       return {
         model: google(model.id),
         providerOptions: {

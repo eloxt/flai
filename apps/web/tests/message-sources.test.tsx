@@ -17,6 +17,22 @@ vi.mock("~/components/markdown", () => ({
 afterEach(cleanup)
 
 describe("message sources", () => {
+  it("renders persisted Exa sources alongside a completed search call", async () => {
+    render(
+      <MessageBody
+        role="assistant"
+        parts={[
+          { type: "tool-web_search", toolCallId: "search-1", state: "output-available", input: { query: "research" }, output: { results: [{ title: "Paper", url: "https://research.example/paper" }] } },
+          { type: "source-url", sourceId: "https://research.example/paper", title: "Paper", url: "https://research.example/paper" },
+          { type: "text", text: "An answer based on research." },
+        ]}
+      />
+    )
+    await userEvent.click(screen.getByRole("button", { name: "来源 1" }))
+    expect(within(screen.getByRole("list")).getByRole("link")).toHaveAttribute("href", "https://research.example/paper")
+    expect(screen.getByText("web_search")).toBeVisible()
+  })
+
   it("renders OpenAI and Gemini sources with the same list markup", async () => {
     const { rerender } = render(
       <MessageBody
@@ -37,7 +53,7 @@ describe("message sources", () => {
         ]}
       />
     )
-    await userEvent.click(screen.getByRole("button", { name: "来源 · 2" }))
+    await userEvent.click(screen.getByRole("button", { name: "来源 2" }))
     const openai = screen.getByRole("list").outerHTML
     rerender(
       <MessageBody
@@ -102,7 +118,7 @@ describe("message sources", () => {
     expect(
       screen.getByText("Answer.[[2]](<https://b.example>)")
     ).toBeInTheDocument()
-    await userEvent.click(screen.getByRole("button", { name: "来源 · 1" }))
+    await userEvent.click(screen.getByRole("button", { name: "来源 1" }))
     const links = within(screen.getByRole("list")).getAllByRole("link")
     expect(links).toHaveLength(1)
     expect(links[0]).toHaveTextContent("[2]Source B")
@@ -129,7 +145,7 @@ describe("message sources", () => {
     )
     expect(screen.queryByText("Google suggestions")).not.toBeInTheDocument()
     expect(document.querySelector("style")).toBeNull()
-    await userEvent.click(screen.getByRole("button", { name: "来源 · 1" }))
+    await userEvent.click(screen.getByRole("button", { name: "来源 1" }))
     expect(screen.getByRole("link")).toHaveTextContent(
       "https://example.com/no-title"
     )
@@ -147,7 +163,7 @@ describe("message sources", () => {
         }))}
       />
     )
-    const trigger = screen.getByRole("button", { name: "来源 · 6" })
+    const trigger = screen.getByRole("button", { name: "来源 6" })
     expect(trigger).toHaveAttribute("aria-expanded", "false")
     expect(trigger.querySelectorAll('[data-slot="avatar"]')).toHaveLength(5)
     expect(screen.queryByRole("list")).not.toBeInTheDocument()

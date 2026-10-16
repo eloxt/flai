@@ -3,11 +3,12 @@ import { BlockList, isIP } from 'node:net'
 import { Agent, fetch as undiciFetch } from 'undici'
 
 /**
- * Fetch for user-supplied endpoints (MCP servers). Ported from the Go backend:
- * - every resolved address must be public, and the validated address is the one dialled
+ * Fetch for user-supplied endpoints (MCP servers and remote images):
+ * - every resolved address must be public or in the allowed 198.18.0.0/16 Fake-IP range,
+ *   and the validated address is the one dialled
  *   (no DNS rebinding window);
  * - environment proxies are not used;
- * - redirects must stay on the same origin, at most 5 hops;
+ * - redirects stay on the same origin unless explicitly allowed, at most 5 hops;
  * - response headers must arrive within 30s.
  */
 
@@ -22,7 +23,8 @@ for (const [net, prefix] of [
   ['192.0.0.0', 24],
   ['192.0.2.0', 24],
   ['192.168.0.0', 16],
-  ['198.18.0.0', 15],
+  // Allow 198.18.* for local Fake-IP proxies; keep the rest of the benchmark range blocked.
+  ['198.19.0.0', 16],
   ['198.51.100.0', 24],
   ['203.0.113.0', 24],
   ['224.0.0.0', 4],
@@ -78,7 +80,11 @@ function assertAllowedUrl(url: URL): void {
 
 const MAX_REDIRECTS = 5
 
-export async function safeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+export async function safeFetch(
+  input: string | URL | Request,
+  init?: RequestInit,
+  policy: { allowCrossOriginRedirects?: boolean } = {},
+): Promise<Response> {
   const request = input instanceof Request ? input : undefined
   let url = new URL(request ? request.url : input.toString())
   const origin = url.origin
@@ -94,8 +100,14 @@ export async function safeFetch(input: string | URL | Request, init?: RequestIni
     if (res.status < 300 || res.status >= 400 || !res.headers.get('location')) return res
 
     const next = new URL(res.headers.get('location')!, url)
-    if (hop + 1 >= MAX_REDIRECTS || next.origin !== origin) {
+    await res.body?.cancel()
+    if (hop + 1 >= MAX_REDIRECTS || (!policy.allowCrossOriginRedirects && next.origin !== origin)) {
       throw new Error('Cross-origin or excessive redirect rejected')
+    }
+    if (next.origin !== url.origin) {
+      const headers = new Headers(options.headers)
+      for (const name of ['authorization', 'proxy-authorization', 'cookie', 'referer']) headers.delete(name)
+      options = { ...options, headers }
     }
     if (res.status === 303) options = { ...options, method: 'GET', body: undefined }
     url = next

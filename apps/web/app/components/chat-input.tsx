@@ -221,7 +221,6 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
             </InputGroupButton>
           )}
           <div className="ml-auto flex items-center gap-2">
-            {contextUsage !== undefined && <ContextUsageRing percentage={contextUsage} />}
             {streaming ? (
               <InputGroupButton variant="destructive" size="icon-sm" className="rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
                 <SquareIcon className={ICON_ENTER} />
@@ -241,7 +240,14 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
           </div>
         </InputGroupAddon>
       </InputGroup>
-      <ToolBar />
+      <div className="flex min-w-0 items-center gap-2">
+        <ToolBar />
+        {contextUsage !== undefined && (
+          <div className="ml-auto shrink-0 px-3 py-2">
+            <ContextUsageRing percentage={contextUsage} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -296,7 +302,7 @@ function ToolBar() {
   }
 
   return (
-    <div className="flex min-w-0 items-center gap-1 overflow-x-auto px-2 py-1 text-muted-foreground">
+    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2 py-1 text-muted-foreground">
       {hasMcp && (
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(TOOL_TRIGGER, mcpTools.length > 0 && TOOL_TRIGGER_ON)} />}>

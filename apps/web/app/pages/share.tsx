@@ -3,6 +3,7 @@ import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useParams } from "react-router"
+import { ImageProxyContext } from "~/components/proxied-image"
 import { type Theme, useTheme } from "~/components/theme-provider"
 import { Button } from "~/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty"
@@ -57,13 +58,15 @@ export default function SharePage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : (
-          share.messages.map((m) => (
-            <Message key={m.id} align={m.role === "user" ? "end" : "start"}>
-              <MessageContent className={m.role === "user" ? "items-end" : "w-full"}>
-                <MessageBody role={m.role} parts={m.parts} metadata={m.metadata} />
-              </MessageContent>
-            </Message>
-          ))
+          <ImageProxyContext value={`/public/shares/${share.id}/images`}>
+            {share.messages.map((m) => (
+              <Message key={m.id} align={m.role === "user" ? "end" : "start"}>
+                <MessageContent className={m.role === "user" ? "items-end" : "w-full"}>
+                  <MessageBody role={m.role} parts={m.parts} metadata={m.metadata} />
+                </MessageContent>
+              </Message>
+            ))}
+          </ImageProxyContext>
         )}
       </main>
       {share && (

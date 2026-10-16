@@ -12,6 +12,7 @@ import { adminRoutes } from './routes/admin'
 import { authRoutes } from './routes/auth'
 import { conversationRoutes } from './routes/conversations'
 import { fileRoutes } from './routes/files'
+import { imageRoutes } from './routes/images'
 import { mcpRoutes } from './routes/mcp'
 import { meRoutes } from './routes/me'
 import { messageRoutes } from './routes/messages'
@@ -43,6 +44,7 @@ export function createApp() {
   authed.get('/models', (c) => c.json(listPublicProviders()))
   authed.route('/', meRoutes)
   authed.route('/', fileRoutes)
+  authed.route('/', imageRoutes)
   authed.route('/', conversationRoutes)
   authed.route('/', messageRoutes)
   authed.route('/', shareRoutes)

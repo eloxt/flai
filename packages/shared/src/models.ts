@@ -8,7 +8,7 @@ export const PROVIDER_TYPES = ['openai', 'openai_completion', 'gemini'] as const
 export const providerTypeSchema = z.enum(PROVIDER_TYPES)
 export type ProviderType = z.infer<typeof providerTypeSchema>
 
-// Image generation was removed in flai-next; only these provider-executed tools remain.
+// Provider-native tools shown as chat toggles. Exa tools are injected globally for tool-calling models.
 export const INTERNAL_TOOLS = ['web_search', 'url_context'] as const
 export const internalToolSchema = z.enum(INTERNAL_TOOLS)
 export type InternalTool = z.infer<typeof internalToolSchema>
