@@ -1,6 +1,8 @@
-# FlaiChat (flai-next)
+# FlaiChat
 
-A rewrite of [flai](https://github.com/eloxt/flai): a multi-model AI chat app with branching conversations, MCP tools, sharing, translation and generative UI.
+A multi-model AI chat app with branching conversations, MCP tools, sharing, translation and generative UI.
+
+The current Node.js and React implementation lives on `main`. The previous Go implementation is preserved on the [`go` branch](https://github.com/eloxt/flai/tree/go).
 
 | Layer | Stack |
 |---|---|
@@ -48,17 +50,17 @@ pnpm typecheck
 ## Production
 
 ```bash
-docker build -t flai-next .
-docker run -p 8000:8000 --env-file .env flai-next   # runs pending migrations, then serves API + web
+docker build -t flai .
+docker run -p 8000:8000 --env-file .env flai   # runs pending migrations, then serves API + web
 ```
 
 The database must have the `zhparser` extension available (see `docker/postgres/Dockerfile`); the first migration creates the extension and the `zhcfg` text search configuration.
 
-## Migrating from flai (Go)
+## Migrating from the Go version
 
 The import keeps every id, so share links, file URLs and S3 objects continue to work. Users keep their passwords (bcrypt hashes are imported as-is).
 
-1. Create an empty database for flai-next and run migrations against it (`db:migrate`).
+1. Create an empty database for the current version and run migrations against it (`db:migrate`).
 2. Run the import, reading the old database read-only:
 
    ```bash
