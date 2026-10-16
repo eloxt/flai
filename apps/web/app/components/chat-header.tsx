@@ -1,4 +1,4 @@
-import { MessageSquareShareIcon, PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, Share2Icon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useMatch } from "react-router"
@@ -72,7 +72,7 @@ export function ChatHeader() {
               label={t("common.shareConversation")}
               onClick={() => setShareOpen(true)}
             >
-              <MessageSquareShareIcon />
+              <Share2Icon />
             </HeaderButton>
             <FeedbackDialog />
             <ShareDialog

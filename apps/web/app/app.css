@@ -591,6 +591,11 @@ code {
         scroll-behavior: auto;
     }
 
+    /* The trigger border already provides the active underline. */
+    [data-slot="genui"] .openui-tabs-indicator {
+        display: none;
+    }
+
     [data-slot="genui"] .openui-tabs-list .openui-tabs-trigger {
         flex: 0 0 auto;
         width: auto;
