@@ -2,7 +2,7 @@
 
 A multi-model AI chat app with branching conversations, MCP tools, sharing, translation and generative UI.
 
-The current Node.js and React implementation lives on `main`. The previous Go implementation is preserved on the [`go` branch](https://github.com/eloxt/flai/tree/go).
+The previous Go implementation is preserved on the [`go` branch](https://github.com/eloxt/flai/tree/go).
 
 | Layer | Stack |
 |---|---|
