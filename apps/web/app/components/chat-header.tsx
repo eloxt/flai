@@ -52,7 +52,7 @@ export function ChatHeader() {
   const [shareOpen, setShareOpen] = useState(false)
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-2 md:px-4">
+    <header className="flex h-12 shrink-0 items-center gap-2 px-2 md:px-4">
       {/* Equal-width sides centre the model selector on mobile; on desktop it sits at the left. */}
       <div className="flex flex-1 justify-start md:flex-none">
         {isMobile && (
