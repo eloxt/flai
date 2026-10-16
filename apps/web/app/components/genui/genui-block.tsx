@@ -1,7 +1,10 @@
 import type { ActionEvent } from "@openuidev/react-lang"
 import { Renderer } from "@openuidev/react-lang"
-import { openuiLibrary } from "@openuidev/react-ui"
+import { openuiLibrary, ThemeProvider as OpenuiThemeProvider } from "@openuidev/react-ui"
 import { Component, type ReactNode } from "react"
+import { useTheme } from "~/components/theme-provider"
+import { genuiTheme } from "./theme"
+import "./genui.css"
 
 interface GenuiBlockProps {
   code: string
@@ -25,6 +28,7 @@ function describeForm(state: unknown): string {
 
 /** Renders one OpenUI Lang program; malformed programs never break the surrounding message. */
 export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
+  const { resolved } = useTheme()
   const handleAction = (event: ActionEvent) => {
     if (event.type === "open_url") {
       const url = String(event.params.url ?? "")
@@ -45,7 +49,9 @@ export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
   return (
     <GenuiBoundary fallback={<pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{code}</pre>}>
       <div className="my-4 w-full min-w-0" data-slot="genui">
-        <Renderer response={code} library={openuiLibrary} isStreaming={streaming} onAction={handleAction} />
+        <OpenuiThemeProvider mode={resolved} lightTheme={genuiTheme} darkTheme={genuiTheme}>
+          <Renderer response={code} library={openuiLibrary} isStreaming={streaming} onAction={handleAction} />
+        </OpenuiThemeProvider>
       </div>
     </GenuiBoundary>
   )

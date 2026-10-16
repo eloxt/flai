@@ -21,6 +21,11 @@ import { GenuiBlock } from "~/components/genui/genui-block"
 import { ThemeProvider } from "~/components/theme-provider"
 
 beforeAll(() => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }))
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -65,7 +70,8 @@ describe("official OpenUI library", () => {
 card = Card([CardHeader("Usage"), table])
 table = Table([Col("Model", ["GPT"]), Col("Requests", [42])])`}
         streaming={false}
-      />
+      />,
+      { wrapper: ThemeProvider }
     )
     expect(screen.getByText("Usage")).toBeInTheDocument()
     expect(
@@ -82,7 +88,8 @@ table = Table([Col("Model", ["GPT"]), Col("Requests", [42])])`}
         code={`root = Stack([Buttons([Button("Continue", @ToAssistant("Show details", {id: 42}))])])`}
         streaming={false}
         onSend={onSend}
-      />
+      />,
+      { wrapper: ThemeProvider }
     )
     fireEvent.click(screen.getByRole("button", { name: "Continue" }))
     await waitFor(() =>
@@ -97,7 +104,8 @@ table = Table([Col("Model", ["GPT"]), Col("Requests", [42])])`}
         code={`root = Stack([Buttons([Button("Continue")])])`}
         streaming
         onSend={onSend}
-      />
+      />,
+      { wrapper: ThemeProvider }
     )
     const button = screen.getByRole("button", { name: "Continue" })
     expect(button).toBeDisabled()
@@ -113,7 +121,8 @@ table = Table([Col("Model", ["GPT"]), Col("Requests", [42])])`}
 form = Form("contact", Buttons([Button("Send", @ToAssistant("Save contact"))]), [FormControl("Name", Input("name", "Your name"))])`}
         streaming={false}
         onSend={onSend}
-      />
+      />,
+      { wrapper: ThemeProvider }
     )
     fireEvent.change(screen.getByPlaceholderText("Your name"), {
       target: { value: "Alex" },
@@ -133,7 +142,8 @@ form = Form("contact", Buttons([Button("Send", @ToAssistant("Save contact"))]), 
       <GenuiBlock
         code={`root = Stack([Buttons([Button("Docs", @OpenUrl("https://www.openui.com/docs"))])])`}
         streaming={false}
-      />
+      />,
+      { wrapper: ThemeProvider }
     )
     fireEvent.click(screen.getByRole("button", { name: "Docs" }))
     await waitFor(() =>
@@ -146,11 +156,6 @@ form = Form("contact", Buttons([Button("Send", @ToAssistant("Save contact"))]), 
   })
 
   it("applies the app's saved dark theme to OpenUI", () => {
-    vi.stubGlobal("matchMedia", () => ({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }))
     localStorage.setItem("flai-theme", "dark")
     render(
       <ThemeProvider>

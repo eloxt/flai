@@ -21,9 +21,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="color-scheme" content="light dark" />
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafaf9" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0a09" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet" />
         <title>FlaiChat</title>
         {/* Apply the stored theme before first paint to avoid a flash. */}
         <script

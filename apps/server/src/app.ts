@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
+import { compress } from 'hono/compress'
 import { logger } from 'hono/logger'
 import { config } from './config'
 import { AppError } from './lib/errors'
@@ -62,7 +63,17 @@ export function createApp() {
   const webDist = resolve(config().WEB_DIST)
   if (existsSync(resolve(webDist, 'index.html'))) {
     const indexHtml = readFileSync(resolve(webDist, 'index.html'), 'utf8')
+    // Registered after the API routes so compression never buffers chat streams.
+    app.use('*', compress(), async (c, next) => {
+      await next()
+      if (c.res.ok) {
+        c.header('Cache-Control', c.req.path.startsWith('/assets/')
+          ? 'public, max-age=31536000, immutable'
+          : 'no-cache')
+      }
+    })
     app.use('*', serveStatic({ root: webDist }))
+    app.get('/assets/*', (c) => c.text('Not found', 404))
     app.get('*', (c) => c.html(indexHtml))
   }
 

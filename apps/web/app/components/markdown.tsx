@@ -7,6 +7,7 @@ import { memo } from "react"
 import { Streamdown } from "streamdown"
 import { ProxiedImage } from "~/components/proxied-image"
 import "streamdown/styles.css"
+import "katex/dist/katex.min.css"
 
 const fullPlugins = { cjk, code, math, mermaid }
 const lightPlugins = { cjk, math }

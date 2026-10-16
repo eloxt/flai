@@ -1,10 +1,7 @@
 @layer theme, base, openui, components, utilities;
 @import "tailwindcss";
-@import "@openuidev/react-ui/layered/styles/index.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "katex/dist/katex.min.css";
-@import "react-photo-view/dist/react-photo-view.css";
 @source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));

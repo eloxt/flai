@@ -1,6 +1,4 @@
-import { ThemeProvider as OpenuiThemeProvider } from "@openuidev/react-ui"
 import { createContext, useContext, useEffect, useState } from "react"
-import { genuiTheme } from "./genui/theme"
 
 export type Theme = "dark" | "light" | "system"
 
@@ -49,13 +47,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, resolved, setTheme }}>
-      <OpenuiThemeProvider
-        mode={resolved}
-        lightTheme={genuiTheme}
-        darkTheme={genuiTheme}
-      >
-        {children}
-      </OpenuiThemeProvider>
+      {children}
     </ThemeContext.Provider>
   )
 }

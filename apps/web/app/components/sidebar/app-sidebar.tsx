@@ -18,7 +18,7 @@ import {
   Trash2Icon,
   UserCogIcon,
 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, useLocation, useNavigate } from "react-router"
 import { ConfirmDialog } from "~/components/confirm-dialog"
@@ -61,8 +61,9 @@ import { Spinner } from "~/components/ui/spinner"
 import { initials } from "~/lib/format"
 import { useAuthStore } from "~/store/auth-store"
 import { type ConversationItem, useConversationStore } from "~/store/conversation-store"
-import { AdminDialog } from "../admin/admin-dialog"
-import { SettingsDialog } from "../settings/settings-dialog"
+
+const AdminDialog = lazy(() => import("../admin/admin-dialog").then((module) => ({ default: module.AdminDialog })))
+const SettingsDialog = lazy(() => import("../settings/settings-dialog").then((module) => ({ default: module.SettingsDialog })))
 
 const DAY = 24 * 3600 * 1000
 // Collapsing to the icon rail fades the list out (as in the previous UI) and then drops it from the tab order.
@@ -94,8 +95,9 @@ export function AppSidebar() {
   const user = useAuthStore((s) => s.user)
   const showEmoji = user?.preferences.sidebarShowEmoji ?? true
   const { conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove } = useConversationStore()
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [adminOpen, setAdminOpen] = useState(false)
+  // Mount each dialog on first use, then keep it mounted for its closing transition.
+  const [settingsOpen, setSettingsOpen] = useState<boolean>()
+  const [adminOpen, setAdminOpen] = useState<boolean>()
   const [toDelete, setToDelete] = useState<string | null>(null)
   const grouped = useMemo(() => groupByDate(conversations), [conversations])
 
@@ -220,8 +222,10 @@ export function AppSidebar() {
         </SidebarFooter>
       </Sidebar>
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      {user?.role === "admin" && <AdminDialog open={adminOpen} onOpenChange={setAdminOpen} />}
+      <Suspense fallback={null}>
+        {settingsOpen !== undefined && <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />}
+        {user?.role === "admin" && adminOpen !== undefined && <AdminDialog open={adminOpen} onOpenChange={setAdminOpen} />}
+      </Suspense>
       <ConfirmDialog
         open={toDelete !== null}
         onOpenChange={(open) => !open && setToDelete(null)}

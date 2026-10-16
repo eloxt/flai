@@ -1,5 +1,5 @@
 import { PanelLeftIcon, Share2Icon } from "lucide-react"
-import { useState } from "react"
+import { lazy, Suspense, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useMatch } from "react-router"
 import { Button } from "~/components/ui/button"
@@ -9,10 +9,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip"
-import { useChatStore } from "~/features/chat/chat-store"
 import { FeedbackDialog } from "./feedback-dialog"
 import { ModelSelector } from "./model-selector"
-import { ShareDialog } from "./share-dialog"
+
+const ShareDialog = lazy(() => import("./share-dialog").then((module) => ({ default: module.ShareDialog })))
 
 function HeaderButton({
   label,
@@ -48,8 +48,7 @@ export function ChatHeader() {
   const chat = useMatch("/chat/:conversationId")
   const search = useMatch("/search")
   const conversationId = chat?.params.conversationId
-  const leafId = useChatStore((s) => s.path.at(-1))
-  const [shareOpen, setShareOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState<boolean>()
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 px-2 md:px-4">
@@ -75,12 +74,15 @@ export function ChatHeader() {
               <Share2Icon />
             </HeaderButton>
             <FeedbackDialog />
-            <ShareDialog
-              open={shareOpen}
-              onOpenChange={setShareOpen}
-              conversationId={conversationId}
-              leafMessageId={leafId}
-            />
+            <Suspense fallback={null}>
+              {shareOpen !== undefined && (
+                <ShareDialog
+                  open={shareOpen}
+                  onOpenChange={setShareOpen}
+                  conversationId={conversationId}
+                />
+              )}
+            </Suspense>
           </>
         )}
       </div>

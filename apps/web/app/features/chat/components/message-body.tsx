@@ -2,10 +2,9 @@ import type { AskUserAnswer, FlaiPart, MessageMetadata } from "@flai/shared"
 import { askUserQuestionSchema, askUserResultSchema, fileMetaOf, isAskUserPart } from "@flai/shared"
 import { cn } from "cn"
 import { ArrowUpRightIcon, CheckIcon, ChevronRightIcon, FileIcon, GlobeIcon, WrenchIcon, XCircleIcon } from "lucide-react"
-import { memo, useEffect, useMemo, useState } from "react"
+import { lazy, memo, Suspense, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { PhotoProvider, PhotoView } from "react-photo-view"
-import { GenuiBlock } from "~/components/genui/genui-block"
 import {
   Attachment,
   AttachmentContent,
@@ -24,6 +23,9 @@ import { formatBytes } from "~/lib/format"
 import { applyGoogleCitations } from "../grounding"
 import { splitSegments } from "../segments"
 import { QuestionCard } from "./question-card"
+import "react-photo-view/dist/react-photo-view.css"
+
+const GenuiBlock = lazy(() => import("~/components/genui/genui-block").then((module) => ({ default: module.GenuiBlock })))
 
 type FilePart = Extract<FlaiPart, { type: "file" }>
 type ToolPart = Extract<FlaiPart, { type: "dynamic-tool" }>
@@ -136,7 +138,9 @@ function AssistantText({ text, streaming, onSend }: { text: string; streaming: b
             {segment.text}
           </Markdown>
         ) : (
-          <GenuiBlock key={i} code={segment.code} streaming={streaming && !segment.complete} onSend={onSend} />
+          <Suspense key={i} fallback={<pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{segment.code}</pre>}>
+            <GenuiBlock code={segment.code} streaming={streaming && !segment.complete} onSend={onSend} />
+          </Suspense>
         )
       )}
     </>

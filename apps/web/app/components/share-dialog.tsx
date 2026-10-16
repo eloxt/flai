@@ -9,6 +9,7 @@ import { Input } from "~/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
+import { useChatStore } from "~/features/chat/chat-store"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
 import { EXPIRY_LABELS, EXPIRY_OPTIONS, type ExpiryOption, expiryFrom, shareUrl } from "~/lib/share"
@@ -17,12 +18,11 @@ interface ShareDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   conversationId: string
-  /** Last message of the branch being shared. */
-  leafMessageId: string | undefined
 }
 
-export function ShareDialog({ open, onOpenChange, conversationId, leafMessageId }: ShareDialogProps) {
+export function ShareDialog({ open, onOpenChange, conversationId }: ShareDialogProps) {
   const { t } = useTranslation()
+  const leafMessageId = useChatStore((s) => s.path.at(-1))
   const [expiry, setExpiry] = useState<ExpiryOption>("7d")
   const [existing, setExisting] = useState<Share | null>(null)
   const [checking, setChecking] = useState(false)
