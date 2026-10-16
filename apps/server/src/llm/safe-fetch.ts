@@ -4,8 +4,8 @@ import { Agent, fetch as undiciFetch } from 'undici'
 
 /**
  * Fetch for user-supplied endpoints (MCP servers and remote images):
- * - every resolved address must be public or in the allowed 198.18.0.0/16 Fake-IP range,
- *   and the validated address is the one dialled
+ * - only public addresses or the allowed 198.18.0.0/16 Fake-IP range are dialled;
+ *   other DNS answers are discarded, and the validated address is the one dialled
  *   (no DNS rebinding window);
  * - environment proxies are not used;
  * - redirects stay on the same origin unless explicitly allowed, at most 5 hops;
@@ -57,11 +57,12 @@ function safeLookup(hostname: string, options: { all?: boolean }, callback: Look
   dnsLookup(hostname, { all: true, verbatim: true }, (err, addresses) => {
     if (err) return callback(err, [])
     if (addresses.length === 0) return callback(new Error('Endpoint hostname has no addresses'), [])
-    if (!addresses.every((a) => isPublicAddress(a.address))) {
+    const allowed = addresses.filter((a) => isPublicAddress(a.address))
+    if (allowed.length === 0) {
       return callback(new Error('Endpoint must resolve to public addresses only'), [])
     }
-    if (options.all) return callback(null, addresses)
-    callback(null, addresses[0]!.address, addresses[0]!.family)
+    if (options.all) return callback(null, allowed)
+    callback(null, allowed[0]!.address, allowed[0]!.family)
   })
 }
 
