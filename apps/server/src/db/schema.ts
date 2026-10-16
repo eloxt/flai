@@ -92,6 +92,7 @@ export const providers = pgTable('provider', {
   logo: text('logo'),
   models: jsonb('models').$type<ModelConfig[]>().notNull().default([]),
   isActive: boolean('is_active').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   deletedAt: deletedAt(),

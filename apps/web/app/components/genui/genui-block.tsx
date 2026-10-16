@@ -1,7 +1,7 @@
 import type { ActionEvent } from "@openuidev/react-lang"
 import { Renderer } from "@openuidev/react-lang"
+import { openuiLibrary } from "@openuidev/react-ui"
 import { Component, type ReactNode } from "react"
-import { genuiLibrary } from "./library"
 
 interface GenuiBlockProps {
   code: string
@@ -44,8 +44,8 @@ export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
 
   return (
     <GenuiBoundary fallback={<pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{code}</pre>}>
-      <div className="my-2 w-full min-w-0 rounded-xl border bg-card p-3 text-card-foreground" data-slot="genui">
-        <Renderer response={code} library={genuiLibrary} isStreaming={streaming} onAction={handleAction} />
+      <div className="my-4 w-full min-w-0" data-slot="genui">
+        <Renderer response={code} library={openuiLibrary} isStreaming={streaming} onAction={handleAction} />
       </div>
     </GenuiBoundary>
   )

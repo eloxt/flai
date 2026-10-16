@@ -46,6 +46,7 @@ export function ChatHeader() {
   const { t } = useTranslation()
   const { toggleSidebar, isMobile } = useSidebar()
   const chat = useMatch("/chat/:conversationId")
+  const search = useMatch("/search")
   const conversationId = chat?.params.conversationId
   const leafId = useChatStore((s) => s.path.at(-1))
   const [shareOpen, setShareOpen] = useState(false)
@@ -63,7 +64,7 @@ export function ChatHeader() {
           </HeaderButton>
         )}
       </div>
-      <ModelSelector />
+      {search ? <span className="text-sm text-muted-foreground">{t("components.sidebar.searchChat")}</span> : <ModelSelector />}
       <div className="flex flex-1 items-center justify-end gap-1">
         {conversationId && (
           <>

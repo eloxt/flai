@@ -102,6 +102,15 @@
       "backToLogin": "Back to Login"
     },
     "chat": {
+      "question": {
+        "yourAnswer": "Your answer",
+        "otherAnswer": "Or write another answer",
+        "chooseMultiple": "Select any that apply, and add an answer if needed.",
+        "placeholder": "Type your answer…",
+        "submit": "Submit and continue",
+        "submitting": "Submitting…"
+      },
+      "sources": "Sources",
       "pending": "Thinking…",
       "greeting": "How can I help you?",
       "placeholder": "Ask anything…",
@@ -135,16 +144,37 @@
       "navAttachments_other": "{{count}} attachments"
     },
     "search": {
-      "title": "Search Under Construction",
-      "description": "We are working hard to bring you the best search experience. Please check back later.",
-      "placeholder": "Search conversations and press Enter"
+      "title": "Search Conversations",
+      "description": "Find a past conversation by searching the messages you remember.",
+      "placeholder": "Search messages…",
+      "results": "Search results",
+      "ready": "Your conversation history",
+      "searching": "Searching…",
+      "resultCount_one": "{{count, number}} conversation found",
+      "resultCount_other": "{{count, number}} conversations found",
+      "emptyTitle": "Pick up where you left off",
+      "emptyDescription": "Enter a word or phrase from a message, then press Enter or select Search.",
+      "noResultsDescription": "Try a different keyword or a shorter phrase.",
+      "failed": "Search could not be completed",
+      "errorDescription": "Check your connection and try again.",
+      "retry": "Try Again"
     },
     "translate": {
+      "sourceText": "Original",
+      "targetText": "Translation",
+      "characters_one": "{{count, number}} character",
+      "characters_other": "{{count, number}} characters",
+      "imageLimit": "Up to {{count}} images",
+      "editableResult": "You can edit the translation",
+      "awaitingInput": "Ready when you are",
+      "copyResult": "Copy translation",
+      "copied": "Translation copied",
+      "shortcutHint": "⌘ / Ctrl + Enter to translate",
       "title": "Translate",
       "sourceLanguage": "Source language",
       "targetLanguage": "Target language",
       "sourcePlaceholder": "Enter text to translate…",
-      "targetPlaceholder": "Translation appears here",
+      "targetPlaceholder": "Translation appears here…",
       "streamingPlaceholder": "Generating translation…",
       "translate": "Translate",
       "translating": "Translating…",
@@ -171,6 +201,7 @@
       "addImage": "Add image",
       "removeImage": "Remove image",
       "errors": {
+        "copyFailed": "Could not copy. Select the translation and copy it manually.",
         "emptyInput": "Enter text or add an image to translate",
         "maxImages": "You can add up to 5 images",
         "failed": "Translation failed",
@@ -225,6 +256,7 @@
       "preference": {
         "title": "Preferences",
         "description": "Personalize how the app looks and behaves.",
+        "language": "Language",
         "sidebarEmoji": "Show emojis in sidebar",
         "sidebarEmojiDescription": "Display conversation emojis in the sidebar list.",
         "updateSuccess": "Preferences updated",
@@ -349,7 +381,9 @@
       },
       "providers": {
         "title": "Providers",
-        "description": "Manage AI model providers and API configurations.",
+        "description": "Manage AI model providers and API configurations. Use the arrows to reorder; changes save automatically.",
+        "moveUp": "Move {{name}} up",
+        "moveDown": "Move {{name}} down",
         "create": "Create Provider",
         "createTitle": "Create New Provider",
         "editTitle": "Edit Provider",
@@ -357,6 +391,7 @@
         "deleteDescription": "Are you sure you want to delete this provider? This action cannot be undone.",
         "nameRequired": "Provider name is required",
         "table": {
+          "order": "Order",
           "name": "Name",
           "models": "Models",
           "providerType": "Type",

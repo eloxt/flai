@@ -91,6 +91,10 @@ export type ProviderInput = z.infer<typeof providerInputSchema>
 export const providerPatchSchema = providerInputSchema.partial()
 export type ProviderPatch = z.infer<typeof providerPatchSchema>
 
+export const providerOrderSchema = z.object({
+  ids: z.array(z.string().min(1)).refine((ids) => new Set(ids).size === ids.length, 'provider ids must be unique'),
+})
+
 export function defaultThinkingLevel(model: Pick<ModelConfig, 'thinkingLevels'>): ThinkingLevel | undefined {
   return model.thinkingLevels[0]
 }

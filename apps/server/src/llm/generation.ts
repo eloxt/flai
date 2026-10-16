@@ -1,6 +1,7 @@
 import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, ModelConfig } from '@flai/shared'
 import { textOf } from '@flai/shared'
 import { toAISdkStream } from '@mastra/ai-sdk'
+import { askUserTool } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
 import { db, schema } from '../db'
 import { AppError, errorMessage } from '../lib/errors'
@@ -103,7 +104,7 @@ export interface StartGenerationInput {
   userId: string
   conversationId: string
   assistantId: string
-  /** Root→leaf history ending with the user message being answered. */
+  /** Root→leaf history ending with the user turn or answered question being continued. */
   path: MessageRow[]
   provider: ProviderRow
   model: ModelConfig
@@ -148,8 +149,8 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   const emit = (chunk: Chunk) => bus.append(input.assistantId, chunk)
   const { provider, model, options } = input
   const timeout = setTimeout(() => generation.controller.abort('timeout' satisfies StopReason), GENERATION_TIMEOUT_MS)
-  const userMessage = input.path.at(-1)!
-  const baseMetadata: MessageMetadata = { providerId: provider.id, providerName: provider.name, modelId: model.id }
+  const parentMessage = input.path.at(-1)!
+  const baseMetadata: MessageMetadata = { providerId: provider.id, providerName: provider.name, modelId: model.id, chatOptions: options }
 
   // Accumulate the reply exactly as a client would, so what we store matches what was shown.
   const accumulator = new TransformStream<Chunk, Chunk>()
@@ -178,7 +179,9 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     const stream = await getChatAgent().stream(messages as never, {
       requestContext: chatContext({ model: resolved.model, instructions: chatInstructions(model) }),
       providerOptions: resolved.providerOptions as never,
-      toolsets: { builtin: resolved.tools, mcp: model.toolCall ? mcp.tools : {} } as never,
+      toolsets: { builtin: resolved.tools, mcp: model.toolCall ? mcp.tools : {} },
+      // The browser supplies the answer; the existing message store preserves it across restarts.
+      clientTools: model.toolCall ? { ask_user: askUserTool } : {},
       maxSteps: MAX_STEPS,
       abortSignal: generation.controller.signal,
     })
@@ -240,7 +243,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       await tx.insert(schema.messages).values({
         id: input.assistantId,
         conversationId: input.conversationId,
-        parentId: userMessage.id,
+        parentId: parentMessage.id,
         role: 'assistant',
         parts,
         metadata,

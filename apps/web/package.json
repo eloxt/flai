@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "react-router build",
+    "build": "pnpm genui:spec && react-router build",
+    "genui:spec": "node scripts/generate-genui-spec.mjs",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest run",
     "format": "prettier --write \"**/*.{ts,tsx}\""
@@ -13,6 +14,7 @@
     "@base-ui/react": "^1.9.0",
     "@flai/shared": "workspace:*",
     "@openuidev/react-lang": "1.0.1",
+    "@openuidev/react-ui": "0.18.1",
     "@shadcn/react": "^0.3.1",
     "@streamdown/cjk": "^1.0.4",
     "@streamdown/code": "^2.0.0",

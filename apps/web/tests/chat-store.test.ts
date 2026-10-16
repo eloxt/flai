@@ -1,8 +1,11 @@
 import type { ConversationDetail, MessageRecord, PublicProvider } from "@flai/shared"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { closeConversation, openConversation, sendMessage, stopGeneration, useChatStore } from "~/features/chat/chat-store"
+import { answerQuestion, closeConversation, openConversation, regenerate, sendMessage, stopGeneration, useChatStore } from "~/features/chat/chat-store"
 import { useAuthStore } from "~/store/auth-store"
+import { useConversationStore } from "~/store/conversation-store"
 import { useModelStore } from "~/store/model-store"
+
+vi.mock("~/i18n", () => ({ default: { t: (key: string) => key } }))
 
 const provider: PublicProvider = {
   id: "p",
@@ -64,6 +67,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  useAuthStore.getState().logout()
   closeConversation()
   vi.unstubAllGlobals()
 })
@@ -75,6 +79,103 @@ const reply = (assistantId: string) => [
   { type: "text-end", id: "t" },
   { type: "message-metadata", messageMetadata: { modelId: "m" } },
 ]
+
+describe("question answers", () => {
+  let question: MessageRecord
+
+  beforeEach(async () => {
+    question = {
+      id: "q-message", parentId: "u1", role: "assistant", createdAt: "2026-01-01T00:00:01Z", metadata: { providerId: "p", modelId: "m" },
+      parts: [{ type: "tool-ask_user", toolCallId: "q1", state: "input-available", input: { question: "Which language?" } }],
+    }
+    detail.messages = [{ id: "u1", parentId: null, role: "user", parts: [{ type: "text", text: "Help" }], metadata: {}, createdAt: "2026-01-01T00:00:00Z" }, question]
+    fetchMock.mockImplementation(async () => json(detail))
+    await openConversation("c1")
+    fetchMock.mockClear()
+  })
+
+  it("saves the tool answer and follows the continuation without another user bubble", async () => {
+    let nextId = ""
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).endsWith("/answer")) {
+        const body = JSON.parse(String(init?.body))
+        expect(body).toMatchObject({ toolCallId: "q1", answer: "English" })
+        nextId = body.assistantId
+        return json({ message: { ...question, parts: [{ ...question.parts[0], state: "output-available", output: { answer: "English", content: "User answered: English", isError: false } }] }, generation: { assistantId: nextId, parentId: question.id } })
+      }
+      expect(String(url)).toContain(`/generations/${nextId}/stream`)
+      return streamResponse(sse(reply(nextId)))
+    })
+    expect(await answerQuestion(question.id, "q1", "English")).toBe(true)
+    await vi.waitFor(() => expect(useChatStore.getState().map[nextId]).toBeDefined())
+    const { map, path, streaming, answering } = useChatStore.getState()
+    expect(path).toEqual(["u1", question.id, nextId])
+    expect(Object.values(map).filter((m) => m.role === "user")).toHaveLength(1)
+    expect(map[question.id]!.parts[0]).toMatchObject({ state: "output-available", output: { answer: "English" } })
+    expect(streaming).toBeNull()
+    expect(answering).toBe(false)
+  })
+
+  it("routes composer text to the pending question and waits if more questions remain", async () => {
+    fetchMock.mockImplementation(async (url, init) => {
+      expect(String(url)).toContain(`/messages/${question.id}/answer`)
+      expect(JSON.parse(String(init?.body)).answer).toBe("Alex")
+      return json({ message: { ...question, parts: [{ ...question.parts[0], state: "output-available", output: { answer: "Alex", content: "User answered: Alex", isError: false } }] }, generation: null })
+    })
+    expect(await sendMessage({ text: "Alex" })).toBe(true)
+    expect(useChatStore.getState().path).toEqual(["u1", question.id])
+    expect(useChatStore.getState().streaming).toBeNull()
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it("preserves the pending question when saving fails", async () => {
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).endsWith("/answer")) return json({ error: { code: "UNAVAILABLE", message: "Try again" } }, 503)
+      return json(detail)
+    })
+    expect(await answerQuestion(question.id, "q1", "Alex")).toBe(false)
+    expect(useChatStore.getState().map[question.id]!.parts[0]).toMatchObject({ state: "input-available" })
+    expect(useChatStore.getState().answering).toBe(false)
+    expect(useChatStore.getState().streaming).toBeNull()
+  })
+
+  it("keeps saved answers when retrying the continuation", async () => {
+    useChatStore.setState({ map: { ...useChatStore.getState().map, [question.id]: {
+      ...question, parts: [{ type: "tool-ask_user", toolCallId: "q1", input: { question: "Which language?" }, state: "output-available", output: { answer: "English", content: "User answered: English", isError: false } }],
+    } } })
+    let nextId = ""
+    fetchMock.mockImplementation(async (url, init) => {
+      expect(String(url)).toContain(`/messages/${question.id}/regenerate`)
+      nextId = JSON.parse(String(init?.body)).assistantId
+      return streamResponse(sse(reply(nextId)))
+    })
+    expect(await regenerate(question.id)).toBe(true)
+    expect(useChatStore.getState().path).toEqual(["u1", question.id, nextId])
+    expect(useChatStore.getState().map[question.id]!.parts[0]).toMatchObject({ output: { answer: "English" } })
+  })
+
+  it("ignores an answer response after switching conversations", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    fetchMock.mockImplementation(async (url) => {
+      if (String(url).endsWith("/answer")) {
+        await gate
+        return json({ message: question, generation: { assistantId: "next", parentId: question.id } })
+      }
+      if (String(url).includes("/generations/next/stream")) return streamResponse(sse(reply("next")))
+      return json({ ...detail, id: "c2", messages: [] })
+    })
+    const pending = answerQuestion(question.id, "q1", "English")
+    expect(useConversationStore.getState().replying.c1).toBeDefined()
+    expect(await answerQuestion(question.id, "q1", "中文")).toBe(false)
+    await openConversation("c2")
+    expect(useConversationStore.getState().replying.c1).toBeDefined()
+    release()
+    expect(await pending).toBe(false)
+    expect(useChatStore.getState()).toMatchObject({ conversationId: "c2", map: {}, path: [], streaming: null, answering: false })
+    await vi.waitFor(() => expect(useConversationStore.getState().replying).toEqual({}))
+  })
+})
 
 describe("chat store", () => {
   it("sends a message and appends the streamed reply to the visible branch", async () => {
@@ -184,6 +285,92 @@ describe("chat store", () => {
     await openConversation("c2")
     await pending
     expect(useChatStore.getState()).toMatchObject({ conversationId: "c2", path: [], streaming: null })
+  })
+
+  it("tracks multiple replies after navigation and clears each one when it finishes", async () => {
+    const pending = new Map<string, { assistantId: string; signal: AbortSignal; finish: () => void }>()
+    fetchMock.mockImplementation(async (url, init) => {
+      const id = String(url).includes("/conversations/c1/") ? "c1" : "c2"
+      const { assistantId } = JSON.parse(String(init?.body))
+      await new Promise<void>((resolve) => pending.set(id, { assistantId, signal: init!.signal!, finish: resolve }))
+      return streamResponse(sse(reply(assistantId)))
+    })
+    await openConversation("c1", { empty: true })
+    const first = sendMessage({ text: "First" })
+    await openConversation("c2", { empty: true })
+    const second = sendMessage({ text: "Second" })
+    const c1 = pending.get("c1")!
+    const c2 = pending.get("c2")!
+    expect(c1.signal.aborted).toBe(false)
+    expect(useConversationStore.getState().replying).toEqual({ c1: c1.assistantId, c2: c2.assistantId })
+
+    c1.finish()
+    await first
+    expect(useConversationStore.getState().replying).toEqual({ c2: c2.assistantId })
+    expect(useChatStore.getState().map[c1.assistantId]).toBeUndefined()
+    expect(useChatStore.getState().streaming?.assistantId).toBe(c2.assistantId)
+
+    c2.finish()
+    expect(await second).toBe(true)
+    expect(useConversationStore.getState().replying).toEqual({})
+    expect(useChatStore.getState().map[c2.assistantId]).toBeDefined()
+  })
+
+  it("aborts background subscriptions and clears their status on logout", async () => {
+    let signal: AbortSignal | undefined
+    fetchMock.mockImplementation((_url, init) => new Promise<Response>((_resolve, reject) => {
+      signal = init!.signal!
+      signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true })
+    }))
+    await openConversation("c1", { empty: true })
+    const pending = sendMessage({ text: "Hi" })
+    closeConversation()
+    expect(signal?.aborted).toBe(false)
+    expect(useConversationStore.getState().replying.c1).toBeDefined()
+
+    useAuthStore.getState().logout()
+    expect(signal?.aborted).toBe(true)
+    expect(useConversationStore.getState().replying).toEqual({})
+    expect(await pending).toBe(false)
+  })
+
+  it("keeps the status when a visible subscription replaces a background one", async () => {
+    let originalSignal: AbortSignal | undefined
+    let assistantId = ""
+    let userId = ""
+    let finish!: () => void
+    fetchMock.mockImplementation(async (url, init) => {
+      if (String(url).endsWith("/messages")) {
+        const body = JSON.parse(String(init?.body))
+        assistantId = body.assistantId
+        userId = body.message.id
+        originalSignal = init!.signal!
+        return new Promise<Response>((_resolve, reject) => {
+          originalSignal!.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true })
+        })
+      }
+      if (String(url).includes("/generations/")) {
+        await new Promise<void>((resolve) => { finish = resolve })
+        return streamResponse(sse(reply(assistantId)))
+      }
+      return json({
+        ...detail,
+        messages: [{ id: userId, parentId: null, role: "user", parts: [{ type: "text", text: "Hi" }], metadata: {}, createdAt: "" }],
+        activeGeneration: { assistantId, parentId: userId },
+      })
+    })
+    await openConversation("c1", { empty: true })
+    const original = sendMessage({ text: "Hi" })
+    closeConversation()
+    await openConversation("c1")
+    expect(await original).toBe(false)
+    expect(originalSignal?.aborted).toBe(true)
+    expect(useConversationStore.getState().replying).toEqual({ c1: assistantId })
+    expect(useChatStore.getState().streaming?.assistantId).toBe(assistantId)
+
+    finish()
+    await vi.waitFor(() => expect(useChatStore.getState().map[assistantId]).toBeDefined())
+    expect(useConversationStore.getState().replying).toEqual({})
   })
 
   it("stops via the cancel endpoint and keeps nothing when no output was produced", async () => {

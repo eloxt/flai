@@ -1,5 +1,5 @@
 import { type AdminProvider, PROVIDER_TYPES, type ProviderInput, type ProviderType } from "@flai/shared"
-import { FileJsonIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, FileJsonIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
@@ -33,6 +33,7 @@ export function ProviderManagement() {
   const [providers, setProviders] = useState<AdminProvider[] | null>(null)
   const [editing, setEditing] = useState<AdminProvider | "new" | null>(null)
   const [deleting, setDeleting] = useState<AdminProvider | null>(null)
+  const [reordering, setReordering] = useState(false)
 
   useEffect(() => {
     api<AdminProvider[]>("/admin/providers").then(setProviders).catch((e) => notify.error(e))
@@ -40,12 +41,29 @@ export function ProviderManagement() {
 
   const changed = () => void useModelStore.getState().load().catch(() => {})
 
+  const move = async (index: number, delta: -1 | 1) => {
+    if (!providers || reordering || index + delta < 0 || index + delta >= providers.length) return
+    const next = [...providers]
+    const [item] = next.splice(index, 1)
+    next.splice(index + delta, 0, item!)
+    setReordering(true)
+    try {
+      await api("/admin/providers/order", { method: "PUT", body: { ids: next.map((p) => p.id) } })
+      setProviders(next)
+      changed()
+    } catch (error) {
+      notify.error(error)
+    } finally {
+      setReordering(false)
+    }
+  }
+
   return (
     <PanelSection
       title={t("pages.admin.providers.title")}
       description={t("pages.admin.providers.description")}
       action={
-        <Button onClick={() => setEditing("new")}>
+        <Button disabled={reordering} onClick={() => setEditing("new")}>
           <PlusIcon data-icon="inline-start" />
           {t("pages.admin.providers.create")}
         </Button>
@@ -58,17 +76,27 @@ export function ProviderManagement() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>{t("pages.admin.providers.table.order")}</TableHead>
                 <TableHead>{t("pages.admin.providers.table.name")}</TableHead>
                 <TableHead>{t("pages.admin.providers.table.providerType")}</TableHead>
                 <TableHead>{t("pages.admin.providers.table.apiKey")}</TableHead>
-                <TableHead>{t("pages.admin.providers.table.models")}</TableHead>
                 <TableHead>{t("pages.admin.providers.table.status")}</TableHead>
                 <TableHead className="text-right">{t("pages.admin.providers.table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {providers.map((p) => (
+            <TableBody aria-busy={reordering}>
+              {providers.map((p, index) => (
                 <TableRow key={p.id}>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.moveUp", { name: p.name })} disabled={reordering || index === 0} onClick={() => move(index, -1)}>
+                        <ArrowUpIcon />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.moveDown", { name: p.name })} disabled={reordering || index === providers.length - 1} onClick={() => move(index, 1)}>
+                        <ArrowDownIcon />
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-2 font-medium">
                       <ProviderLogo logo={p.logo} name={p.name} />
@@ -77,16 +105,15 @@ export function ProviderManagement() {
                   </TableCell>
                   <TableCell className="whitespace-nowrap">{TYPE_LABELS[p.type] ?? p.type}</TableCell>
                   <TableCell className="font-mono text-xs">{p.apiKey}</TableCell>
-                  <TableCell>{t("pages.admin.providers.modelsCount", { count: p.models.length })}</TableCell>
                   <TableCell>
                     <Badge variant={p.isActive ? "secondary" : "outline"}>{p.isActive ? t("common.status.active") : t("common.status.inactive")}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(p)}>
+                      <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} disabled={reordering} onClick={() => setEditing(p)}>
                         <PencilIcon />
                       </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} onClick={() => setDeleting(p)}>
+                      <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} disabled={reordering} onClick={() => setDeleting(p)}>
                         <Trash2Icon />
                       </Button>
                     </div>
@@ -230,9 +257,9 @@ function ProviderDialog({
               </div>
               <Field>
                 <FieldLabel htmlFor="p-logo">{t(`${f}.logo`)}</FieldLabel>
-                <div className="flex items-start gap-4">
-                  <Textarea id="p-logo" rows={2} className="font-mono text-xs" value={form.logo ?? ""} placeholder={t(`${f}.logoPlaceholder`)} onChange={(e) => setForm({ ...form, logo: e.target.value })} />
-                  <ProviderLogo logo={form.logo || null} name={form.name} className="mt-2 size-8" />
+                <div className="flex items-center gap-4">
+                  <Textarea id="p-logo" rows={1} className="field-sizing-fixed h-8 min-h-8 resize-none overflow-y-auto py-1 font-mono text-xs" value={form.logo ?? ""} placeholder={t(`${f}.logoPlaceholder`)} onChange={(e) => setForm({ ...form, logo: e.target.value })} />
+                  <ProviderLogo logo={form.logo || null} name={form.name} className="size-8" />
                 </div>
               </Field>
               <Field orientation="horizontal">

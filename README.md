@@ -6,12 +6,12 @@ A rewrite of [flai](https://github.com/eloxt/flai): a multi-model AI chat app wi
 |---|---|
 | Backend | Node 22, [Hono](https://hono.dev), [Mastra](https://mastra.ai) agents, AI SDK providers (OpenAI Responses, OpenAI-compatible, Gemini), Drizzle + PostgreSQL (zhparser full-text search), S3-compatible storage |
 | Frontend | React 19, React Router (SPA mode), [Base UI](https://base-ui.com) via shadcn `base-nova`, Tailwind v4, Zustand, Streamdown, React Flow |
-| Generative UI | [OpenUI](https://www.openui.com) (`@openuidev/react-lang`), enabled per model by an administrator |
+| Generative UI | [OpenUI](https://www.openui.com) (`@openuidev/react-lang` + `@openuidev/react-ui`), enabled per model by an administrator |
 
 ```
 apps/server     API (/api/v1), chat generation, MCP, migrations, legacy import script
 apps/web        Single-page app (served by the API server in production)
-packages/shared Zod schemas & API types, model config, OpenUI component catalogue
+packages/shared Zod schemas & API types, model config, exported OpenUI library specification
 docker/         PostgreSQL image with zhparser
 ```
 
@@ -107,4 +107,4 @@ Stopping works the same either way: `cancel` keeps what was written; deleting th
 
 ## Generative UI
 
-When a model has **Generative UI** enabled, the OpenUI component reference is appended to the system prompt and the model may embed ` ```openui-lang ` blocks in its reply. The web app renders them with Base UI components (cards, tables, charts, forms, buttons…). The component catalogue lives in `packages/shared/src/genui`, so the prompt and the renderer always agree. Buttons and form submissions send a follow-up message in the same branch.
+When a model has **Generative UI** enabled, the OpenUI component reference is appended to the system prompt and the model may embed ` ```openui-lang ` blocks in its reply. The web app renders them with the official `openuiLibrary` from `@openuidev/react-ui` (cards, tables, charts, forms, tabs, images…). The backend generates its prompt from `packages/shared/src/genui/openui.spec.json`, exported from the same library without importing React. Run `pnpm --filter @flai/web genui:spec` after upgrading OpenUI; the web build also regenerates the specification. OpenUI follows the app's light/dark theme. Buttons and form submissions send a follow-up message in the same branch.

@@ -1,4 +1,7 @@
 import type {
+  AnswerQuestionInput,
+  AnswerQuestionResult,
+  AskUserAnswer,
   ChatOptions,
   ConversationDetail,
   FileRecord,
@@ -9,7 +12,7 @@ import type {
   RegenerateInput,
   SendMessageInput,
 } from "@flai/shared"
-import { fileMetaOf } from "@flai/shared"
+import { askUserQuestionSchema, fileMetaOf, isAskUserPart } from "@flai/shared"
 import { readUIMessageStream } from "ai"
 import { create } from "zustand"
 import i18n from "~/i18n"
@@ -18,13 +21,14 @@ import { notify } from "~/lib/notify"
 import { ReplyStreamInterrupted, replyStream } from "~/lib/reply-stream"
 import type { Chunk } from "~/lib/ui-stream"
 import { onSessionChange, useAuthStore } from "~/store/auth-store"
+import { useConversationStore } from "~/store/conversation-store"
 import { useInputStore } from "~/store/input-store"
 import { findModel, useModelStore } from "~/store/model-store"
 import { ancestry, buildTree, latestPath, type MessageMap, pathThrough, removeMessage, siblingsOf, toMap, type Tree } from "./tree"
 
 export interface StreamingState {
   assistantId: string
-  /** The user message being answered. */
+  /** The user turn or answered question being continued. */
   parentId: string
   message: FlaiUIMessage
   stopping: boolean
@@ -38,6 +42,7 @@ interface ChatState {
   path: string[]
   loading: boolean
   streaming: StreamingState | null
+  answering: boolean
 }
 
 const emptyTree = buildTree({})
@@ -48,6 +53,7 @@ const initial: ChatState = {
   path: [],
   loading: false,
   streaming: null,
+  answering: false,
 }
 
 export const useChatStore = create<ChatState>(() => initial)
@@ -62,14 +68,18 @@ function setMap(map: MessageMap, path?: string[]) {
 /** Identifies the current conversation view; async work checks it before touching state. */
 let viewToken = 0
 let loadAbort: AbortController | null = null
-let streamAbort: AbortController | null = null
+const replyControllers = new Map<string, AbortController>()
 
-onSessionChange(() => closeConversation())
+onSessionChange(() => {
+  for (const controller of replyControllers.values()) controller.abort()
+  replyControllers.clear()
+  closeConversation()
+})
 
 export function closeConversation() {
   viewToken++
   loadAbort?.abort()
-  streamAbort?.abort()
+  // Background replies keep streaming so the sidebar can track their completion.
   set(initial)
 }
 
@@ -85,7 +95,7 @@ export async function openConversation(conversationId: string, { empty = false }
   const state = get()
   if (active && token === viewToken && !state.streaming && !state.map[active.assistantId] && state.map[active.parentId]) {
     set({ path: ancestry(state.tree, active.parentId) })
-    void followReply({ assistantId: active.assistantId, parentId: active.parentId })
+    void followReply({ conversationId, assistantId: active.assistantId, parentId: active.parentId })
   }
 }
 
@@ -116,7 +126,7 @@ async function reload(token = viewToken, keepId?: string): Promise<ConversationD
 
 export function switchSibling(messageId: string, direction: -1 | 1) {
   const { tree, streaming } = get()
-  if (streaming) return
+  if (streaming || get().answering) return
   const info = siblingsOf(tree, messageId)
   const target = direction < 0 ? info.prev : info.next
   if (target) set({ path: pathThrough(tree, target) })
@@ -165,14 +175,22 @@ interface SendArgs {
 export async function sendMessage({ text, files = [], parentId }: SendArgs): Promise<boolean> {
   const state = get()
   const conversationId = state.conversationId
-  if (!conversationId || state.streaming || (!text.trim() && files.length === 0)) return false
+  if (!conversationId || state.streaming || state.answering || (!text.trim() && files.length === 0)) return false
+  const parent = parentId === undefined ? (state.path.at(-1) ?? null) : parentId
+  const pending = parent ? state.map[parent]?.parts.find((p) => isAskUserPart(p) && p.state === "input-available") : undefined
+  if (parent && pending && isAskUserPart(pending) && files.length === 0) {
+    const question = askUserQuestionSchema.safeParse(pending.input)
+    if (question.success) {
+      const multiple = question.data.selectionMode === "multi_select" && Boolean(question.data.options?.length)
+      return answerQuestion(parent, pending.toolCallId, multiple ? [text] : text)
+    }
+  }
   const selection = currentSelection()
   if (!selection) {
     notify.error(i18n.t("common.error.modelProviderNotFound"))
     return false
   }
 
-  const parent = parentId === undefined ? (state.path.at(-1) ?? null) : parentId
   const userId = crypto.randomUUID()
   const assistantId = crypto.randomUUID()
   const userMessage: MessageRecord = {
@@ -192,17 +210,59 @@ export async function sendMessage({ text, files = [], parentId }: SendArgs): Pro
     model: selection.model,
     options: selection.options,
   }
-  return followReply({ assistantId, parentId: userId, sentText: text, open: postStream(`/conversations/${conversationId}/messages`, body) })
+  return followReply({ conversationId, assistantId, parentId: userId, sentText: text, open: postStream(`/conversations/${conversationId}/messages`, body) })
 }
 
-/** Generate a new reply to `messageId` (a user message, or the user message above an assistant one). */
+/** Save the answer on its question, then follow the agent's continuation. */
+export async function answerQuestion(messageId: string, toolCallId: string, answer: AskUserAnswer): Promise<boolean> {
+  const state = get()
+  const conversationId = state.conversationId
+  if (!conversationId || state.streaming || state.answering || state.path.at(-1) !== messageId) return false
+  const token = viewToken
+  const session = useAuthStore.getState().sessionVersion
+  const body: AnswerQuestionInput = { assistantId: crypto.randomUUID(), toolCallId, answer }
+  set({ answering: true })
+  useConversationStore.setState((s) => ({ replying: { ...s.replying, [conversationId]: body.assistantId } }))
+  try {
+    const result = await api<AnswerQuestionResult>(`/conversations/${conversationId}/messages/${messageId}/answer`, { method: "POST", body })
+    if (session !== useAuthStore.getState().sessionVersion) return false
+    if (result.generation) void followReply({ conversationId, ...result.generation })
+    if (token !== viewToken) return false
+    setMap({ ...get().map, [messageId]: result.message })
+    set({ answering: false })
+    return true
+  } catch (error) {
+    if (token !== viewToken) return false
+    // Another tab may have answered already, or the response may have been lost after saving.
+    const detail = await reload(token, messageId)
+    if (token !== viewToken) return false
+    const active = detail?.activeGeneration
+    if (active && !get().streaming && !get().map[active.assistantId]) void followReply({ conversationId, ...active })
+    notify.error(error)
+    return false
+  } finally {
+    if (token === viewToken) set({ answering: false })
+    if (session === useAuthStore.getState().sessionVersion && !replyControllers.has(body.assistantId) && useConversationStore.getState().replying[conversationId] === body.assistantId) {
+      useConversationStore.setState((s) => {
+        const { [conversationId]: _, ...replying } = s.replying
+        return { replying }
+      })
+    }
+  }
+}
+
+/** Retry a reply, keeping answered questions in its context. */
 export async function regenerate(messageId: string): Promise<boolean> {
   const state = get()
   const conversationId = state.conversationId
-  if (!conversationId || state.streaming) return false
+  if (!conversationId || state.streaming || state.answering) return false
   const target = state.map[messageId]
-  const userId = target?.role === "assistant" ? target.parentId : target?.id
-  if (!userId || state.map[userId]?.role !== "user") {
+  const questions = target?.parts.filter(isAskUserPart) ?? []
+  let parentId = target?.role === "assistant" ? target.parentId : target?.id
+  if (target && questions.length > 0 && questions.every((p) => p.state === "output-available")) parentId = target.id
+  const parent = parentId ? state.map[parentId] : undefined
+  const parentQuestions = parent?.parts.filter(isAskUserPart) ?? []
+  if (!parentId || !parent || (parent.role !== "user" && !(parentQuestions.length > 0 && parentQuestions.every((p) => p.state === "output-available")))) {
     notify.error(i18n.t("common.error.retry"))
     return false
   }
@@ -211,10 +271,10 @@ export async function regenerate(messageId: string): Promise<boolean> {
     notify.error(i18n.t("common.error.modelProviderNotFound"))
     return false
   }
-  set({ path: ancestry(state.tree, userId) })
+  set({ path: ancestry(state.tree, parentId) })
   const assistantId = crypto.randomUUID()
   const body: RegenerateInput = { assistantId, model: selection.model, options: selection.options }
-  return followReply({ assistantId, parentId: userId, open: postStream(`/conversations/${conversationId}/messages/${userId}/regenerate`, body) })
+  return followReply({ conversationId, assistantId, parentId, open: postStream(`/conversations/${conversationId}/messages/${parentId}/regenerate`, body) })
 }
 
 /** Edit a user message: the new text becomes a sibling branch under the same parent. */
@@ -249,7 +309,7 @@ export async function stopGeneration() {
 export async function deleteLastMessage() {
   const { conversationId, path, tree, streaming } = get()
   const last = path.at(-1)
-  if (!conversationId || !last || streaming) return
+  if (!conversationId || !last || streaming || get().answering) return
   try {
     await api(`/conversations/${conversationId}/messages/${last}`, { method: "DELETE" })
   } catch (error) {
@@ -279,8 +339,9 @@ function notifyIfHidden() {
 const postStream = (url: string, body: unknown) => (signal: AbortSignal) => apiFetch(url, { method: "POST", body, signal })
 
 interface FollowArgs {
+  conversationId: string
   assistantId: string
-  /** The user message being answered. */
+  /** The user turn or answered question being continued. */
   parentId: string
   /** Starts the reply; without it, joins one already in progress. */
   open?: (signal: AbortSignal) => Promise<Response>
@@ -292,15 +353,18 @@ interface FollowArgs {
  * Show a reply as it streams in. Dropped connections are resumed transparently; if the reply
  * can't be followed to its end, reload from the server, which has it if it was saved.
  */
-async function followReply({ assistantId, parentId, open, sentText }: FollowArgs): Promise<boolean> {
+async function followReply({ conversationId, assistantId, parentId, open, sentText }: FollowArgs): Promise<boolean> {
   const token = viewToken
   const session = useAuthStore.getState().sessionVersion
-  const live = () => token === viewToken && session === useAuthStore.getState().sessionVersion
+  const live = () => token === viewToken && session === useAuthStore.getState().sessionVersion && get().conversationId === conversationId
   const controller = new AbortController()
-  streamAbort = controller
+  // Reopening a conversation replaces its background subscription with the visible one.
+  replyControllers.get(assistantId)?.abort()
+  replyControllers.set(assistantId, controller)
+  useConversationStore.setState((s) => ({ replying: { ...s.replying, [conversationId]: assistantId } }))
 
   let message: FlaiUIMessage = { id: assistantId, role: "assistant", parts: [] }
-  set({ streaming: { assistantId, parentId, message, stopping: false } })
+  if (live()) set({ streaming: { assistantId, parentId, message, stopping: false } })
 
   // Batch UI updates to one per animation frame.
   let frame: number | null = null
@@ -332,16 +396,23 @@ async function followReply({ assistantId, parentId, open, sentText }: FollowArgs
         failure ??= errorText(error)
       },
     })) {
-      if (!live()) return false
       message = snapshot
-      schedule()
+      if (live()) schedule()
     }
   } catch (error) {
     if (controller.signal.aborted || !live()) return false
     failure = error instanceof ReplyStreamInterrupted ? undefined : errorText(error)
   } finally {
     if (frame !== null) cancelAnimationFrame(frame)
-    if (streamAbort === controller) streamAbort = null
+    if (replyControllers.get(assistantId) === controller) {
+      replyControllers.delete(assistantId)
+      if (session === useAuthStore.getState().sessionVersion && useConversationStore.getState().replying[conversationId] === assistantId) {
+        useConversationStore.setState((s) => {
+          const { [conversationId]: _, ...replying } = s.replying
+          return { replying }
+        })
+      }
+    }
   }
   if (!live()) return false
 
@@ -371,7 +442,7 @@ async function followReply({ assistantId, parentId, open, sentText }: FollowArgs
   set({ streaming: null })
   await reload(token, assistantId)
   if (!live()) return false
-  const { conversationId, map } = get()
+  const { map } = get()
   if (map[assistantId] && !failure) return true
   notify.error(failure ?? i18n.t("pages.chat.streamInterrupted"))
   const lost = sentText !== undefined && conversationId && !map[parentId]

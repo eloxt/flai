@@ -1,8 +1,7 @@
-import type { FlaiPart, MessageMetadata } from "@flai/shared"
-import { fileMetaOf } from "@flai/shared"
+import type { AskUserAnswer, FlaiPart, MessageMetadata } from "@flai/shared"
+import { askUserQuestionSchema, askUserResultSchema, fileMetaOf, isAskUserPart } from "@flai/shared"
 import { cn } from "cn"
-import DOMPurify from "dompurify"
-import { CheckIcon, ChevronRightIcon, FileIcon, WrenchIcon, XCircleIcon } from "lucide-react"
+import { ArrowUpRightIcon, CheckIcon, ChevronRightIcon, FileIcon, GlobeIcon, WrenchIcon, XCircleIcon } from "lucide-react"
 import { memo, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { PhotoProvider, PhotoView } from "react-photo-view"
@@ -17,16 +16,18 @@ import {
   AttachmentTrigger,
 } from "~/components/ui/attachment"
 import { Bubble, BubbleContent } from "~/components/ui/bubble"
+import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "~/components/ui/avatar"
 import { Markdown } from "~/components/markdown"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible"
 import { Separator } from "~/components/ui/separator"
 import { formatBytes } from "~/lib/format"
-import { applyGoogleFootnotes } from "../grounding"
+import { applyGoogleCitations } from "../grounding"
 import { splitSegments } from "../segments"
+import { QuestionCard } from "./question-card"
 
 type FilePart = Extract<FlaiPart, { type: "file" }>
 type ToolPart = Extract<FlaiPart, { type: "dynamic-tool" }>
-type SourcePart = Extract<FlaiPart, { type: "source-url" }>
+type Source = { url: string; title?: string; number: number }
 
 interface MessageBodyProps {
   role: "user" | "assistant"
@@ -36,20 +37,29 @@ interface MessageBodyProps {
   streaming?: boolean
   /** Continue the conversation from a GenUI action; omitted where replies aren't possible. */
   onSend?: (text: string) => void
+  onAnswer?: (toolCallId: string, answer: AskUserAnswer) => Promise<boolean>
 }
 
-export const MessageBody = memo(function MessageBody({ role, parts, metadata, streaming = false, onSend }: MessageBodyProps) {
+export const MessageBody = memo(function MessageBody({ role, parts, metadata, streaming = false, onSend, onAnswer }: MessageBodyProps) {
   const grounding = metadata?.googleGrounding
-  // Footnotes are derived for display only; stored text stays untouched.
+  // Citations are derived for display only; stored text stays untouched.
   const texts = useMemo(() => {
     const raw = parts.filter((p) => p.type === "text").map((p) => (p as { text: string }).text)
-    return role === "assistant" ? applyGoogleFootnotes(raw, grounding) : raw
+    return role === "assistant" ? applyGoogleCitations(raw, grounding) : raw
   }, [parts, grounding, role])
 
   if (role === "user") return <UserBody parts={parts} />
 
   let textIndex = 0
-  const sources = parts.filter((p): p is SourcePart => p.type === "source-url")
+  // Gemini citation numbers follow chunk order, including chunks without a web URL.
+  const sources: Source[] = (grounding?.groundingChunks ?? []).flatMap(({ web }, i) =>
+    web?.uri ? [{ url: web.uri, title: web.title, number: i + 1 }] : []
+  )
+  for (const part of parts) {
+    if (part.type === "source-url" && !sources.some((source) => source.url === part.url)) {
+      sources.push({ url: part.url, title: part.title, number: (sources.at(-1)?.number ?? 0) + 1 })
+    }
+  }
   const visible = parts.filter((p) => p.type !== "source-url" && p.type !== "step-start")
   const pending = streaming && visible.length === 0
 
@@ -58,6 +68,19 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
       {pending && <Shimmer />}
       {visible.map((part, i) => {
         const isLast = i === visible.length - 1
+        if (isAskUserPart(part) && (part.state === "input-available" || part.state === "output-available")) {
+          const question = askUserQuestionSchema.safeParse(part.input)
+          const result = part.state === "output-available" ? askUserResultSchema.safeParse(part.output) : undefined
+          if (question.success) return (
+            <QuestionCard
+              key={part.toolCallId}
+              toolCallId={part.toolCallId}
+              question={question.data}
+              answer={result?.success ? result.data.answer : undefined}
+              onAnswer={part.state === "input-available" ? onAnswer : undefined}
+            />
+          )
+        }
         switch (part.type) {
           case "text": {
             const text = texts[textIndex++] ?? part.text
@@ -75,9 +98,6 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
         }
       })}
       {sources.length > 0 && <Sources sources={sources} />}
-      {grounding?.searchEntryPoint?.renderedContent && !streaming && (
-        <SearchEntryPoint html={grounding.searchEntryPoint.renderedContent} />
-      )}
     </div>
   )
 })
@@ -232,36 +252,91 @@ export function Attachments({ files, align }: { files: FilePart[]; align: "start
   )
 }
 
-function Sources({ sources }: { sources: SourcePart[] }) {
+function Sources({ sources }: { sources: Source[] }) {
+  const { t } = useTranslation()
   return (
-    <div className="flex flex-col gap-2 pt-1">
+    <div className="flex min-w-0 flex-col gap-1 pt-1">
       <Separator />
-      <div className="flex flex-wrap gap-2">
-        {sources.map((s, i) => (
-          <a
-            key={s.sourceId + i}
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={s.title ?? s.url}
-            className="flex max-w-full items-center gap-1 truncate rounded-md bg-secondary/60 px-2 py-1 text-xs transition-colors hover:bg-secondary"
-          >
-            <span className="opacity-70">[{i + 1}]</span>
-            <span className="max-w-40 truncate">{s.title || new URL(s.url).hostname}</span>
-          </a>
-        ))}
-      </div>
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="group/sources flex min-h-8 max-w-full items-center gap-2 rounded-sm px-1 text-xs text-foreground/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          <ChevronRightIcon
+            aria-hidden="true"
+            className="size-3 shrink-0 group-data-[panel-open]/sources:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
+          />
+          <span>
+            {t("pages.chat.sources")}{" "}
+            <span className="tabular-nums">
+              {sources.length.toLocaleString()}
+            </span>
+          </span>
+          <AvatarGroup aria-hidden="true" className="-space-x-1!">
+            {sources.slice(0, 5).map((source) => (
+              <SourceFavicon key={source.number} source={source} />
+            ))}
+          </AvatarGroup>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="transition-none">
+          <ul className="flex min-w-0 flex-col py-1">
+            {sources.map((source) => (
+              <li key={source.number} className="min-w-0">
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={source.title?.trim() || source.url}
+                  className="group/source flex min-h-7 min-w-0 items-center gap-2 rounded-sm px-1 py-1 hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                >
+                  <span aria-hidden="true">
+                    <SourceFavicon source={source} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs leading-5">
+                    <span className="mr-1.5 text-foreground/40 tabular-nums">
+                      [{source.number}]
+                    </span>
+                    {source.title?.trim() || source.url}
+                  </span>
+                  <ArrowUpRightIcon
+                    aria-hidden="true"
+                    className="size-3 shrink-0 text-foreground/40 group-hover/source:text-foreground/70"
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }
 
-/** Google requires showing its search suggestions widget; sanitize the provided HTML. */
-function SearchEntryPoint({ html }: { html: string }) {
-  const clean = useMemo(() => DOMPurify.sanitize(html, { ADD_TAGS: ["style"], FORBID_ATTR: ["onerror", "onclick"] }), [html])
+/** Shared by the collapsed preview and source rows, with a fallback for missing icons. */
+function SourceFavicon({ source }: { source: Source }) {
+  const hostname = URL.canParse(source.url) ? new URL(source.url).hostname : ""
+  // Gemini can return a Google redirect URL with the actual domain as its title.
+  const domain =
+    hostname === "vertexaisearch.cloud.google.com"
+      ? /^[a-z\d.-]+\.[a-z]{2,}$/i.test(source.title?.trim() ?? "")
+        ? source.title!.trim()
+        : ""
+      : hostname
   return (
-    <div className="flex flex-col gap-2 pt-1">
-      <Separator />
-      <div className="max-w-full overflow-x-auto" dangerouslySetInnerHTML={{ __html: clean }} />
-    </div>
+    <Avatar size="sm" className="size-4! bg-stone-50">
+      <AvatarImage
+        src={
+          domain
+            ? `https://a.favicon.im/${encodeURIComponent(domain)}?throw-error-on-404=true`
+            : undefined
+        }
+        alt=""
+        width={16}
+        height={16}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className="p-0.5"
+      />
+      <AvatarFallback>
+        <GlobeIcon aria-hidden="true" className="size-2.5" />
+      </AvatarFallback>
+    </Avatar>
   )
 }

@@ -1,10 +1,21 @@
-import { type FlaiPart, regenerateSchema, sendMessageSchema, textOf } from '@flai/shared'
-import { eq } from 'drizzle-orm'
+import {
+  answerQuestionSchema,
+  askUserQuestionSchema,
+  chatOptionsSchema,
+  type FlaiPart,
+  isAskUserPart,
+  regenerateSchema,
+  sendMessageSchema,
+  textOf,
+} from '@flai/shared'
+import { formatQuestionAnswer } from '@mastra/core/tools'
+import { and, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body } from '../lib/hono'
 import { replyStreamResponse } from '../lib/reply-stream'
+import { toMessage } from '../lib/serialize'
 import { cancelGeneration, startGeneration } from '../llm/generation'
 import { generationBus, isStreamPosition } from '../llm/stream-bus'
 import { resolveThinking } from '../llm/models'
@@ -13,7 +24,10 @@ import { resolveModel } from '../services/providers'
 import { ownedFiles } from './files'
 
 async function assertNewAssistantId(id: string) {
-  if (await db.query.messages.findFirst({ where: eq(schema.messages.id, id), columns: { id: true } })) {
+  if (
+    await db.query.messages.findFirst({ where: eq(schema.messages.id, id), columns: { id: true } }) ||
+    await generationBus().info(id)
+  ) {
     throw new AppError('CONFLICT', 'Assistant message id already exists')
   }
 }
@@ -94,7 +108,11 @@ export const messageRoutes = new Hono<AppEnv>()
     await assertNewAssistantId(input.assistantId)
 
     const path = await loadPath(conversation.id, c.req.param('messageId'))
-    if (path.at(-1)!.role !== 'user') throw badRequest('Only replies to user messages can be regenerated')
+    const parent = path.at(-1)!
+    const questions = parent.parts.filter(isAskUserPart)
+    if (parent.role !== 'user' && !(questions.length > 0 && questions.every((p) => p.state === 'output-available'))) {
+      throw badRequest('Only replies to user messages or answered questions can be regenerated')
+    }
     if (path.some((m) => m.parts.some((p) => p.type === 'file')) && !model.attachment) {
       throw badRequest('This model does not accept attachments')
     }
@@ -108,6 +126,64 @@ export const messageRoutes = new Hono<AppEnv>()
       options: input.options,
     })
     return replyStreamResponse(input.assistantId, '0', c.req.raw.signal)
+  })
+  .post('/conversations/:id/messages/:messageId/answer', async (c) => {
+    const user = c.get('user')
+    const conversation = await getConversation(user, c.req.param('id'))
+    const input = await body(c, answerQuestionSchema)
+    await assertNewAssistantId(input.assistantId)
+
+    const result = await db.transaction(async (tx) => {
+      // Serialize answers and message deletion within this conversation.
+      const [locked] = await tx.select().from(schema.conversations)
+        .where(and(eq(schema.conversations.id, conversation.id), isNull(schema.conversations.deletedAt))).for('update')
+      if (!locked) throw notFound('Conversation')
+      if (await generationBus().active(conversation.id)) throw new AppError('CONFLICT', 'A reply is still being generated')
+      const [message] = await tx.select().from(schema.messages).where(and(
+        eq(schema.messages.id, c.req.param('messageId')),
+        eq(schema.messages.conversationId, conversation.id),
+        isNull(schema.messages.deletedAt),
+      )).for('update')
+      if (!message || message.role !== 'assistant') throw notFound('Question')
+      const child = await tx.query.messages.findFirst({ where: and(
+        eq(schema.messages.parentId, message.id), isNull(schema.messages.deletedAt),
+      ), columns: { id: true } })
+      if (child) throw new AppError('CONFLICT', 'This conversation has already continued past the question')
+      const part = message.parts.find((p) => isAskUserPart(p) && p.toolCallId === input.toolCallId)
+      if (!part || !isAskUserPart(part)) throw notFound('Question')
+      if (part.state !== 'input-available') throw new AppError('CONFLICT', 'This question is no longer awaiting an answer')
+      const question = askUserQuestionSchema.safeParse(part.input)
+      if (!question.success) throw badRequest('Invalid question')
+      const multiple = question.data.selectionMode === 'multi_select' && Boolean(question.data.options?.length)
+      if (Array.isArray(input.answer) !== multiple) throw badRequest('Answer does not match the question selection mode')
+
+      const { providerId, modelId } = message.metadata
+      if (!providerId || !modelId) throw badRequest('Question has no model configuration')
+      const { provider, model } = resolveModel(providerId, modelId)
+      const options = chatOptionsSchema.parse(message.metadata.chatOptions ?? {})
+      resolveThinking(model, options.thinking)
+      const parts = message.parts.map((p): FlaiPart => p === part ? {
+        ...part,
+        state: 'output-available',
+        output: { answer: input.answer, content: `User answered: ${formatQuestionAnswer(input.answer)}`, isError: false },
+      } : p)
+      const [updated] = await tx.update(schema.messages).set({ parts }).where(eq(schema.messages.id, message.id)).returning()
+      await touchConversation(conversation.id, tx)
+      return {
+        message: updated!, provider, model, options,
+        path: await loadPath(conversation.id, message.id, tx),
+        pending: parts.some((p) => isAskUserPart(p) && p.state === 'input-available'),
+      }
+    })
+
+    if (!result.pending) await startGeneration({
+      userId: user.id, conversationId: conversation.id, assistantId: input.assistantId,
+      path: result.path, provider: result.provider, model: result.model, options: result.options,
+    })
+    return c.json({
+      message: toMessage(result.message),
+      generation: result.pending ? null : { assistantId: input.assistantId, parentId: result.message.id },
+    })
   })
   // Resume (or join) a reply's stream, e.g. after a dropped connection or a page reload.
   .get('/generations/:assistantId/stream', async (c) => {

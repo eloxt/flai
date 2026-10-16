@@ -12,6 +12,7 @@ export default [
   layout("./layouts/protected-route.tsx", [
     layout("./layouts/app-layout.tsx", [
       index("./pages/home.tsx"),
+      route("/search", "./pages/search.tsx"),
       route("/chat/:conversationId", "./pages/chat.tsx"),
       route("/translate", "./pages/translate.tsx"),
     ]),

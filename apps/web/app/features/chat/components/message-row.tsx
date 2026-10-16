@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next"
 import TextareaAutosize from "react-textarea-autosize"
 import { Button } from "~/components/ui/button"
 import { Message, MessageContent } from "~/components/ui/message"
-import { deleteLastMessage, editMessage, regenerate, sendMessage, switchSibling } from "../chat-store"
+import { answerQuestion, deleteLastMessage, editMessage, regenerate, sendMessage, switchSibling } from "../chat-store"
 import { MessageActions } from "./message-actions"
 import { MessageBody } from "./message-body"
 
@@ -60,7 +60,13 @@ export const MessageRow = memo(function MessageRow({ message, isLast, busy }: Me
             </div>
           </div>
         ) : (
-          <MessageBody role={message.role} parts={message.parts} metadata={message.metadata} onSend={busy ? undefined : sendFollowUp} />
+          <MessageBody
+            role={message.role}
+            parts={message.parts}
+            metadata={message.metadata}
+            onSend={busy ? undefined : sendFollowUp}
+            onAnswer={isLast && !busy ? (toolCallId, answer) => answerQuestion(message.id, toolCallId, answer) : undefined}
+          />
         )}
         {editing === null && !busy && (
           <div className={cn(isUser && "md:opacity-0 md:transition-opacity md:group-hover/row:opacity-100 md:focus-within:opacity-100")}>

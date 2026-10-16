@@ -14,6 +14,8 @@ export interface ConversationItem extends Conversation {
 interface ConversationState {
   conversations: ConversationItem[]
   favourites: ConversationItem[]
+  /** Conversation id → assistant message id, including replies running in the background. */
+  replying: Record<string, string>
   nextCursor: string | null
   loading: boolean
   loadingMore: boolean
@@ -31,6 +33,7 @@ interface ConversationState {
 const initial = {
   conversations: [],
   favourites: [],
+  replying: {} as Record<string, string>,
   nextCursor: null,
   loading: false,
   loadingMore: false,

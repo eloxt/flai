@@ -132,6 +132,34 @@ suite('API integration', () => {
     expect(JSON.stringify(models.data)).not.toContain('sk-secret')
   })
 
+  it('persists provider order, appends new providers, and rejects invalid orders', async () => {
+    const second = await call('/admin/providers', {
+      token: admin, body: { name: 'Second', type: 'openai', apiKey: 'sk-second-key', models: [] },
+    })
+    const inactive = await call('/admin/providers', {
+      token: admin, body: { name: 'Inactive', type: 'openai', apiKey: 'sk-inactive-key', isActive: false, models: [] },
+    })
+    const ids = [inactive.data.id, second.data.id, providerId]
+    expect((await call('/admin/providers/order', { token: alice, method: 'PUT', body: { ids } })).status).toBe(403)
+    expect((await call('/admin/providers/order', { token: admin, method: 'PUT', body: { ids: [providerId, providerId, second.data.id] } })).status).toBe(422)
+    for (const invalid of [[providerId], [providerId, second.data.id, 'missing']]) {
+      expect((await call('/admin/providers/order', { token: admin, method: 'PUT', body: { ids: invalid } })).status).toBe(400)
+    }
+    expect((await call('/admin/providers/order', { token: admin, method: 'PUT', body: { ids } })).status).toBe(204)
+    await (await import('../src/services/providers')).reloadProviders()
+    expect((await call('/admin/providers', { token: admin })).data.map((p: any) => p.id)).toEqual(ids)
+    expect((await call('/models', { token: alice })).data.map((p: any) => p.id)).toEqual([second.data.id, providerId])
+    const third = await call('/admin/providers', {
+      token: admin, body: { name: 'Third', type: 'openai', apiKey: 'sk-third-key', models: [] },
+    })
+    expect((await call('/admin/providers', { token: admin })).data.map((p: any) => p.id)).toEqual([...ids, third.data.id])
+    await call(`/admin/providers/${second.data.id}`, { token: admin, method: 'DELETE' })
+    await call(`/admin/providers/${inactive.data.id}`, { token: admin, method: 'DELETE' })
+    await call(`/admin/providers/${third.data.id}`, { token: admin, method: 'DELETE' })
+    expect((await call('/admin/providers/order', { token: admin, method: 'PUT', body: { ids } })).status).toBe(400)
+    expect((await call('/models', { token: alice })).data.map((p: any) => p.id)).toEqual([providerId])
+  })
+
   let conversationId = ''
   let u1 = ''
   let a1 = ''

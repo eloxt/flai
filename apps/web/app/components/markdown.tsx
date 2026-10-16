@@ -26,6 +26,7 @@ export const Markdown = memo(function Markdown({ children, streaming = false, li
         animated={!light}
         isAnimating={streaming}
         plugins={light ? lightPlugins : fullPlugins}
+        linkSafety={{ enabled: false }}
       >
         {children}
       </Streamdown>

@@ -18,6 +18,7 @@ const sendFollowUp = (text: string) => void sendMessage({ text })
 export function ChatThread({ footer }: { footer: React.ReactNode }) {
   const loading = useChatStore((s) => s.loading)
   const streaming = useChatStore((s) => s.streaming)
+  const answering = useChatStore((s) => s.answering)
   const messages = useVisibleMessages()
 
   return (
@@ -40,7 +41,7 @@ export function ChatThread({ footer }: { footer: React.ReactNode }) {
                     <MessageRow
                       message={message}
                       isLast={!streaming && index === messages.length - 1}
-                      busy={Boolean(streaming)}
+                      busy={Boolean(streaming) || answering}
                     />
                   </MessageScrollerItem>
                 ))}
@@ -70,8 +71,8 @@ export function ChatThread({ footer }: { footer: React.ReactNode }) {
           </MessageScrollerContent>
         </MessageScrollerViewport>
         <ConversationNav />
+        <MessageScrollerButton size="icon-lg" className="z-10 rounded-full" />
       </div>
-      <MessageScrollerButton className="bottom-36" />
       <div className="mx-auto w-full max-w-4xl shrink-0 px-4 pb-4 md:px-8">
         {footer}
       </div>

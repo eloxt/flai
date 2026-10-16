@@ -2,7 +2,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { ChatOptions, ModelConfig, ThinkingLevel } from '@flai/shared'
-import type { LanguageModel, Tool } from 'ai'
+import type { ToolsInput } from '@mastra/core/agent'
+import type { LanguageModel } from 'ai'
 import { AppError } from '../lib/errors'
 import type { ProviderRow } from '../services/providers'
 
@@ -10,7 +11,7 @@ export interface ResolvedModel {
   model: Exclude<LanguageModel, string>
   providerOptions: Record<string, Record<string, unknown>>
   /** Provider-executed tools (web search, URL context). */
-  tools: Record<string, Tool>
+  tools: ToolsInput
 }
 
 interface BuildOptions {
@@ -53,12 +54,13 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
   const baseURL = provider.baseUrl || undefined
   const thinking = resolveThinking(model, options.thinking)
   const wants = (t: 'web_search' | 'url_context') => model.internalTools.includes(t)
+  // Mastra 1.77 does not resolve webSearchTool placeholders passed via toolsets.
+  const tools: ToolsInput = {}
 
   switch (provider.type) {
     case 'openai': {
       const openai = createOpenAI({ apiKey: provider.apiKey, baseURL, headers })
-      const tools: Record<string, Tool> = {}
-      if (options.webSearch && wants('web_search')) tools.web_search = openai.tools.webSearch() as Tool
+      if (options.webSearch && wants('web_search')) tools.web_search = openai.tools.webSearch()
       return {
         model: openai.responses(model.id),
         providerOptions: {
@@ -83,14 +85,13 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
       return {
         model: compatible.chatModel(id),
         providerOptions: { openaiCompatible: thinking && model.reasoning ? { reasoningEffort: thinking } : {} },
-        tools: {},
+        tools,
       }
     }
     case 'gemini': {
       const google = createGoogleGenerativeAI({ apiKey: provider.apiKey, baseURL: geminiBaseUrl(provider.baseUrl), headers })
-      const tools: Record<string, Tool> = {}
-      if (options.webSearch && wants('web_search')) tools.google_search = google.tools.googleSearch({}) as Tool
-      if (options.urlContext && wants('url_context')) tools.url_context = google.tools.urlContext({}) as Tool
+      if (options.webSearch && wants('web_search')) tools.google_search = google.tools.googleSearch({})
+      if (options.urlContext && wants('url_context')) tools.url_context = google.tools.urlContext({})
       return {
         model: google(model.id),
         providerOptions: {

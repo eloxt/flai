@@ -4,12 +4,13 @@ import {
   adminUpdateUserSchema,
   pageQuerySchema,
   providerInputSchema,
+  providerOrderSchema,
   providerPatchSchema,
   SETTING_KEYS,
   type SettingKey,
   settingSchemas,
 } from '@flai/shared'
-import { and, desc, eq, isNull, lt, ne, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { hashPassword } from '../lib/auth'
@@ -122,14 +123,34 @@ const userRoutes = new Hono<AppEnv>()
 
 const providerRoutes = new Hono<AppEnv>()
   .get('/', async (c) => {
-    const rows = await db.select().from(p).where(isNull(p.deletedAt)).orderBy(p.createdAt)
+    const rows = await db.select().from(p).where(isNull(p.deletedAt)).orderBy(p.sortOrder, p.createdAt, p.id)
     return c.json(rows.map(toAdminProvider))
   })
   .post('/', async (c) => {
     const input = await body(c, providerInputSchema)
-    const [row] = await db.insert(p).values({ id: newId(), ...input }).returning()
+    const [row] = await db.insert(p).values({
+      id: newId(),
+      ...input,
+      sortOrder: sql`(select coalesce(max(${p.sortOrder}), -1) + 1 from ${p} where ${p.deletedAt} is null)`,
+    }).returning()
     await reloadProviders()
     return c.json(toAdminProvider(row!), 201)
+  })
+  .put('/order', async (c) => {
+    const { ids } = await body(c, providerOrderSchema)
+    await db.transaction(async (tx) => {
+      const rows = await tx.select({ id: p.id }).from(p).where(isNull(p.deletedAt)).orderBy(p.id).for('update')
+      const currentIds = new Set(rows.map((row) => row.id))
+      if (ids.length !== rows.length || ids.some((id) => !currentIds.has(id))) {
+        throw badRequest('Provider list has changed; reload it before reordering')
+      }
+      if (ids.length === 0) return
+      await tx.update(p).set({
+        sortOrder: sql`case ${p.id} ${sql.join(ids.map((id, index) => sql`when ${id} then ${index}::integer`), sql` `)} end`,
+      }).where(inArray(p.id, ids))
+    })
+    await reloadProviders()
+    return c.body(null, 204)
   })
   .get('/:id', async (c) => c.json(toAdminProvider(await liveProvider(c.req.param('id')))))
   .patch('/:id', async (c) => {

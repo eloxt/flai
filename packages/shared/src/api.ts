@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { thinkingLevelSchema } from './models'
 import type { MessageRecord } from './messages'
+import { askUserAnswerSchema } from './messages'
 
 // ---------- errors & pagination ----------
 
@@ -123,7 +124,7 @@ export interface Conversation {
 
 export interface ActiveGeneration {
   assistantId: string
-  /** The user message being answered. */
+  /** The message being answered (a user turn or an answered question). */
   parentId: string
 }
 
@@ -195,6 +196,18 @@ export const regenerateSchema = z.object({
   options: chatOptionsSchema.default({ webSearch: false, urlContext: false, mcpTools: [] }),
 })
 export type RegenerateInput = z.input<typeof regenerateSchema>
+
+export const answerQuestionSchema = z.object({
+  assistantId: uuid,
+  toolCallId: z.string().min(1),
+  answer: askUserAnswerSchema,
+})
+export type AnswerQuestionInput = z.input<typeof answerQuestionSchema>
+
+export interface AnswerQuestionResult {
+  message: MessageRecord
+  generation: ActiveGeneration | null
+}
 
 export const translateSchema = z.object({
   model: modelRefSchema,

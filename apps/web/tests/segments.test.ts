@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyGoogleFootnotes } from "~/features/chat/grounding"
+import { applyGoogleCitations } from "~/features/chat/grounding"
 import { splitSegments } from "~/features/chat/segments"
 
 describe("splitSegments", () => {
@@ -21,21 +21,40 @@ describe("splitSegments", () => {
   })
 })
 
-describe("applyGoogleFootnotes", () => {
-  it("inserts footnote markers using UTF-8 byte offsets and appends definitions", () => {
+describe("applyGoogleCitations", () => {
+  it("inserts numbered links using UTF-8 byte offsets without a second source list", () => {
     const text = "东京很棒。Paris too."
     // "东京很棒。" is 15 bytes in UTF-8.
-    const out = applyGoogleFootnotes([text], {
+    const out = applyGoogleCitations([text], {
       groundingChunks: [{ web: { uri: "https://a.example", title: "A" } }, { web: { uri: "https://b.example" } }],
       groundingSupports: [
         { segment: { startIndex: 0, endIndex: 15, text: "东京很棒。" }, groundingChunkIndices: [0] },
         { segment: { startIndex: 15, endIndex: 25, text: "Paris too." }, groundingChunkIndices: [1, 0] },
       ],
     })
-    expect(out[0]).toBe("东京很棒。[^1]Paris too.[^1][^2]\n\n[^1]: [A](https://a.example)\n[^2]: https://b.example")
+    expect(out[0]).toBe("东京很棒。[[1]](<https://a.example>)Paris too.[[1]](<https://a.example>)[[2]](<https://b.example>)")
   })
 
   it("leaves text alone without grounding data", () => {
-    expect(applyGoogleFootnotes(["x"], undefined)).toEqual(["x"])
+    expect(applyGoogleCitations(["x"], undefined)).toEqual(["x"])
+  })
+
+  it("keeps citations with their text block and handles URLs containing parentheses and spaces", () => {
+    expect(
+      applyGoogleCitations(["Intro", "Answer"], {
+        groundingChunks: [
+          { web: { uri: "https://example.com/a_(b)?q=two words" } },
+        ],
+        groundingSupports: [
+          {
+            segment: { text: "Answer", endIndex: 6 },
+            groundingChunkIndices: [0],
+          },
+        ],
+      })
+    ).toEqual([
+      "Intro",
+      "Answer[[1]](<https://example.com/a_(b)?q=two%20words>)",
+    ])
   })
 })

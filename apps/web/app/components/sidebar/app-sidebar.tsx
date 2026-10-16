@@ -56,12 +56,13 @@ import {
   SidebarMenuSkeleton,
   useSidebar,
 } from "~/components/ui/sidebar"
+import { Skeleton } from "~/components/ui/skeleton"
+import { Spinner } from "~/components/ui/spinner"
 import { initials } from "~/lib/format"
 import { useAuthStore } from "~/store/auth-store"
 import { type ConversationItem, useConversationStore } from "~/store/conversation-store"
 import { AdminDialog } from "../admin/admin-dialog"
 import { SettingsDialog } from "../settings/settings-dialog"
-import { SearchDialog } from "./search-dialog"
 
 const DAY = 24 * 3600 * 1000
 // Collapsing to the icon rail fades the list out (as in the previous UI) and then drops it from the tab order.
@@ -93,7 +94,6 @@ export function AppSidebar() {
   const user = useAuthStore((s) => s.user)
   const showEmoji = user?.preferences.sidebarShowEmoji ?? true
   const { conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove } = useConversationStore()
-  const [searchOpen, setSearchOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
   const [toDelete, setToDelete] = useState<string | null>(null)
@@ -148,7 +148,7 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip={t("components.sidebar.searchChat")} onClick={() => setSearchOpen(true)}>
+              <SidebarMenuButton tooltip={t("components.sidebar.searchChat")} isActive={location.pathname === "/search"} render={<NavLink to="/search" />}>
                 <SearchIcon />
                 <span>{t("components.sidebar.searchChat")}</span>
               </SidebarMenuButton>
@@ -220,7 +220,6 @@ export function AppSidebar() {
         </SidebarFooter>
       </Sidebar>
 
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       {user?.role === "admin" && <AdminDialog open={adminOpen} onOpenChange={setAdminOpen} />}
       <ConfirmDialog
@@ -249,7 +248,8 @@ function ConversationRow({
 }) {
   const { t } = useTranslation()
   const location = useLocation()
-  const { setFavourite, generateTitle } = useConversationStore()
+  const { setFavourite, generateTitle, replying } = useConversationStore()
+  const busy = item.generating || Boolean(replying[item.id])
   const title = item.title || t("components.sidebar.untitled")
   // Titles that replace the loading placeholder fade in; rows that mount with a title don't.
   const [titleArrives, setTitleArrives] = useState(false)
@@ -258,14 +258,15 @@ function ConversationRow({
   }, [item.generating])
   return (
     <SidebarMenuItem>
-      {item.generating ? (
-        <SidebarMenuSkeleton />
-      ) : (
-        <SidebarMenuButton isActive={location.pathname === `/chat/${item.id}`} render={<NavLink to={`/chat/${item.id}`} title={title} />}>
-          {showEmoji && item.icon && <span className={cn("shrink-0", titleArrives && TITLE_FADE)}>{item.icon}</span>}
-          <span className={cn("truncate", titleArrives && TITLE_FADE)}>{title}</span>
-        </SidebarMenuButton>
-      )}
+      <SidebarMenuButton isActive={location.pathname === `/chat/${item.id}`} render={<NavLink to={`/chat/${item.id}`} title={title} />}>
+        {showEmoji && item.icon && <span className={cn("shrink-0", titleArrives && TITLE_FADE)}>{item.icon}</span>}
+        {item.generating ? (
+          <Skeleton className="h-4 flex-1" />
+        ) : (
+          <span className={cn("flex-1 truncate", titleArrives && TITLE_FADE)}>{title}</span>
+        )}
+        {busy && <Spinner aria-label={t("common.generating")} className="ml-auto motion-reduce:animate-none" />}
+      </SidebarMenuButton>
       {!item.generating && (
         <DropdownMenu>
           <DropdownMenuTrigger render={<SidebarMenuAction showOnHover aria-label={t("components.sidebar.more")} />}>

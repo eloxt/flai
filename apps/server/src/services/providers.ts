@@ -13,7 +13,7 @@ export async function reloadProviders(): Promise<void> {
     .select()
     .from(schema.providers)
     .where(and(eq(schema.providers.isActive, true), isNull(schema.providers.deletedAt)))
-    .orderBy(schema.providers.createdAt)
+    .orderBy(schema.providers.sortOrder, schema.providers.createdAt, schema.providers.id)
 }
 
 export function listPublicProviders(): PublicProvider[] {

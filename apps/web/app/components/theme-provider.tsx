@@ -1,4 +1,6 @@
+import { ThemeProvider as OpenuiThemeProvider } from "@openuidev/react-ui"
 import { createContext, useContext, useEffect, useState } from "react"
+import { genuiTheme } from "./genui/theme"
 
 export type Theme = "dark" | "light" | "system"
 
@@ -12,14 +14,18 @@ interface ThemeState {
 const STORAGE_KEY = "flai-theme"
 const ThemeContext = createContext<ThemeState | null>(null)
 
-const systemDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches
+const systemDark = () =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = typeof window === "undefined" ? null : localStorage.getItem(STORAGE_KEY)
+    const stored =
+      typeof window === "undefined" ? null : localStorage.getItem(STORAGE_KEY)
     return stored === "dark" || stored === "light" ? stored : "system"
   })
-  const [prefersDark, setPrefersDark] = useState(() => typeof window !== "undefined" && systemDark())
+  const [prefersDark, setPrefersDark] = useState(
+    () => typeof window !== "undefined" && systemDark()
+  )
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-color-scheme: dark)")
@@ -41,7 +47,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(next)
   }
 
-  return <ThemeContext.Provider value={{ theme, resolved, setTheme }}>{children}</ThemeContext.Provider>
+  return (
+    <ThemeContext.Provider value={{ theme, resolved, setTheme }}>
+      <OpenuiThemeProvider
+        mode={resolved}
+        lightTheme={genuiTheme}
+        darkTheme={genuiTheme}
+      >
+        {children}
+      </OpenuiThemeProvider>
+    </ThemeContext.Provider>
+  )
 }
 
 export function useTheme() {

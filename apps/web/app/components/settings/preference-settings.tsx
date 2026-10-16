@@ -1,14 +1,20 @@
 import type { Preferences } from "@flai/shared"
 import { useTranslation } from "react-i18next"
 import { PanelSection } from "~/components/panel-dialog"
-import { Field, FieldContent, FieldLabel } from "~/components/ui/field"
+import { Field, FieldContent, FieldGroup, FieldLabel } from "~/components/ui/field"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Switch } from "~/components/ui/switch"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
 import { useAuthStore } from "~/store/auth-store"
 
+const languages = [
+  { value: "zh", label: "简体中文" },
+  { value: "en", label: "English" },
+]
+
 export function PreferenceSettings() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const updateUser = useAuthStore((s) => s.updateUser)
 
@@ -25,16 +31,43 @@ export function PreferenceSettings() {
 
   return (
     <PanelSection title={t("pages.settings.preference.title")} description={t("pages.settings.preference.description")}>
-      <Field orientation="horizontal" className="max-w-xl items-center border-y py-4">
-        <FieldContent>
-          <FieldLabel htmlFor="pref-emoji">{t("pages.settings.preference.sidebarEmoji")}</FieldLabel>
-        </FieldContent>
-        <Switch
-          id="pref-emoji"
-          checked={user?.preferences.sidebarShowEmoji ?? true}
-          onCheckedChange={(checked) => void update({ sidebarShowEmoji: checked })}
-        />
-      </Field>
+      <FieldGroup className="max-w-xl gap-0 divide-y border-y">
+        <Field orientation="horizontal" className="items-center py-4">
+          <FieldContent>
+            <FieldLabel htmlFor="pref-language">{t("pages.settings.preference.language")}</FieldLabel>
+          </FieldContent>
+          <Select
+            items={languages}
+            value={i18n.resolvedLanguage?.startsWith("zh") ? "zh" : "en"}
+            onValueChange={(value) => {
+              if (value) void i18n.changeLanguage(value).catch((error) => notify.error(error))
+            }}
+          >
+            <SelectTrigger id="pref-language" className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {languages.map((language) => (
+                  <SelectItem key={language.value} value={language.value}>
+                    {language.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field orientation="horizontal" className="items-center py-4">
+          <FieldContent>
+            <FieldLabel htmlFor="pref-emoji">{t("pages.settings.preference.sidebarEmoji")}</FieldLabel>
+          </FieldContent>
+          <Switch
+            id="pref-emoji"
+            checked={user?.preferences.sidebarShowEmoji ?? true}
+            onCheckedChange={(checked) => void update({ sidebarShowEmoji: checked })}
+          />
+        </Field>
+      </FieldGroup>
     </PanelSection>
   )
 }

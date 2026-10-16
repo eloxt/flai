@@ -1,4 +1,22 @@
 import type { UIMessage, UIMessagePart, UITools } from 'ai'
+import { z } from 'zod'
+import type { ChatOptions } from './api'
+
+export const askUserQuestionSchema = z.object({
+  question: z.string().min(1),
+  options: z.array(z.object({ label: z.string().min(1), description: z.string().optional() })).optional(),
+  selectionMode: z.enum(['single_select', 'multi_select']).optional(),
+})
+export type AskUserQuestion = z.infer<typeof askUserQuestionSchema>
+
+export const askUserAnswerSchema = z.union([
+  z.string().trim().min(1).max(20_000),
+  z.array(z.string().trim().min(1).max(2000)).min(1).max(32)
+    .refine((answers) => new Set(answers).size === answers.length, 'Answers must be unique'),
+])
+export type AskUserAnswer = z.infer<typeof askUserAnswerSchema>
+
+export const askUserResultSchema = z.object({ answer: askUserAnswerSchema, content: z.string(), isError: z.literal(false) })
 
 export interface GoogleGrounding {
   webSearchQueries?: string[]
@@ -23,6 +41,8 @@ export interface MessageMetadata {
   providerId?: string
   providerName?: string
   modelId?: string
+  /** Retain the original settings when continuing after a question. */
+  chatOptions?: ChatOptions
   usage?: MessageUsage
   googleGrounding?: GoogleGrounding
   /** Base64 Gemini thought signature carried over from the legacy backend. */
@@ -37,6 +57,10 @@ export type FlaiDataParts = {}
 
 export type FlaiUIMessage = UIMessage<MessageMetadata, FlaiDataParts>
 export type FlaiPart = UIMessagePart<FlaiDataParts, UITools>
+
+export function isAskUserPart(part: FlaiPart): part is Extract<FlaiPart, { toolCallId: string }> {
+  return part.type === 'tool-ask_user' || (part.type === 'dynamic-tool' && part.toolName === 'ask_user')
+}
 
 /** Extra data we attach to user file parts via providerMetadata.flai. */
 export interface FlaiFileMeta {

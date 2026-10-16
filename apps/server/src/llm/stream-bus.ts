@@ -15,7 +15,7 @@ export interface GenerationInfo {
   assistantId: string
   userId: string
   conversationId: string
-  /** The user message being answered. */
+  /** The user turn or answered question being continued. */
   parentId: string
   done: boolean
 }

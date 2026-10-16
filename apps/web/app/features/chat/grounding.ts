@@ -18,10 +18,11 @@ function byteOffsetToCharIndex(text: string, byteOffset: number): number {
 }
 
 /**
- * Insert Gemini grounding citations as markdown footnotes into the message's text blocks.
+ * Insert Gemini grounding citations as numbered links into the message's text blocks.
+ * The source list is rendered separately for all providers.
  * Returns new texts (same order as input); blocks without citations are returned unchanged.
  */
-export function applyGoogleFootnotes(texts: string[], grounding: GoogleGrounding | undefined): string[] {
+export function applyGoogleCitations(texts: string[], grounding: GoogleGrounding | undefined): string[] {
   const chunks = grounding?.groundingChunks ?? []
   const supports = grounding?.groundingSupports ?? []
   if (texts.length === 0 || chunks.length === 0 || supports.length === 0) return texts
@@ -70,25 +71,18 @@ export function applyGoogleFootnotes(texts: string[], grounding: GoogleGrounding
   }
   if (insertions.size === 0) return texts
 
-  const referenced = new Set<number>()
-  const out = texts.map((text, b) => {
+  return texts.map((text, b) => {
     const points = [...(insertions.get(b)?.entries() ?? [])].sort((x, y) => y[0] - x[0])
     let result = text
     for (const [at, indices] of points) {
-      indices.forEach((i) => referenced.add(i))
-      result = result.slice(0, at) + indices.map((i) => `[^${i + 1}]`).join("") + result.slice(at)
+      const citations = indices
+        .map((i) => {
+          const uri = chunks[i]!.web!.uri!.replace(/[\s<>]/g, encodeURIComponent)
+          return `[[${i + 1}]](<${uri}>)`
+        })
+        .join("")
+      result = result.slice(0, at) + citations + result.slice(at)
     }
     return result
   })
-
-  const lines = [...referenced]
-    .sort((a, b) => a - b)
-    .flatMap((i) => {
-      const web = chunks[i]?.web
-      if (!web?.uri) return []
-      const title = web.title?.trim()
-      return [title ? `[^${i + 1}]: [${title}](${web.uri})` : `[^${i + 1}]: ${web.uri}`]
-    })
-  if (lines.length) out[out.length - 1] = `${out.at(-1)}\n\n${lines.join("\n")}`
-  return out
 }
