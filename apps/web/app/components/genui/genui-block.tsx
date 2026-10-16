@@ -1,9 +1,11 @@
 import type { ActionEvent } from "@openuidev/react-lang"
 import { Renderer } from "@openuidev/react-lang"
-import { openuiLibrary, ThemeProvider as OpenuiThemeProvider } from "@openuidev/react-ui"
-import { Component, type ReactNode } from "react"
+import { ThemeProvider as OpenuiThemeProvider } from "@openuidev/react-ui"
+import { Component, type ReactNode, useRef } from "react"
 import { useTheme } from "~/components/theme-provider"
+import { ImageSourceContext } from "~/hooks/use-proxied-images"
 import { genuiTheme } from "./theme"
+import { imageLibrary } from "./image-library"
 import "./genui.css"
 
 interface GenuiBlockProps {
@@ -29,6 +31,7 @@ function describeForm(state: unknown): string {
 /** Renders one OpenUI Lang program; malformed programs never break the surrounding message. */
 export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
   const { resolved } = useTheme()
+  const imageSources = useRef(new Map<string, string>()).current
   const handleAction = (event: ActionEvent) => {
     if (event.type === "open_url") {
       const url = String(event.params.url ?? "")
@@ -38,10 +41,17 @@ export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
     if (event.type !== "continue_conversation" || !onSend) return
     const form = describeForm(event.formState)
     const context = event.params.context
+    const contextText = context !== undefined && context !== null
+      ? JSON.stringify(context, (_key, value) => {
+          if (typeof value !== "string") return value
+          for (const [objectUrl, originalUrl] of imageSources) value = value.replaceAll(objectUrl, originalUrl)
+          return value
+        })
+      : ""
     const parts = [
       event.humanFriendlyMessage,
       form && `\n${form}`,
-      context !== undefined && context !== null ? `\nContext: ${JSON.stringify(context)}` : "",
+      contextText ? `\nContext: ${contextText}` : "",
     ]
     onSend(parts.filter(Boolean).join("\n").trim())
   }
@@ -50,7 +60,9 @@ export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
     <GenuiBoundary fallback={<pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{code}</pre>}>
       <div className="my-4 w-full min-w-0" data-slot="genui">
         <OpenuiThemeProvider mode={resolved} lightTheme={genuiTheme} darkTheme={genuiTheme}>
-          <Renderer response={code} library={openuiLibrary} isStreaming={streaming} onAction={handleAction} />
+          <ImageSourceContext value={imageSources}>
+            <Renderer response={code} library={imageLibrary} isStreaming={streaming} onAction={handleAction} />
+          </ImageSourceContext>
         </OpenuiThemeProvider>
       </div>
     </GenuiBoundary>

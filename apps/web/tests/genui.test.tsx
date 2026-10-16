@@ -1,6 +1,7 @@
 import { buildGenuiPrompt } from "@flai/shared/genui"
 import spec from "../../../packages/shared/src/genui/openui.spec.json"
 import { openuiLibrary, openuiPromptOptions } from "@openuidev/react-ui"
+import { createParser } from "@openuidev/react-lang"
 import {
   cleanup,
   fireEvent,
@@ -46,11 +47,22 @@ afterEach(() => {
 })
 
 describe("official OpenUI library", () => {
-  it("keeps the server specification in sync with the renderer and uses chat instructions", () => {
-    expect(spec).toEqual({
-      library: openuiLibrary.toSpec(),
-      promptOptions: openuiPromptOptions,
+  it("advertises a compact subset with official signatures and keeps the full renderer available", () => {
+    const names = Object.keys(spec.library.components)
+    const curated = openuiLibrary.extend({
+      components: { remove: Object.keys(openuiLibrary.components).filter((name) => !names.includes(name)) },
     })
+    expect(names).toHaveLength(32)
+    expect(spec.library).toEqual({ ...curated.toSpec(), componentGroups: spec.library.componentGroups })
+    expect(spec.promptOptions.examples).toEqual(openuiPromptOptions.examples?.slice(0, 4))
+    const parser = createParser(curated.toJSONSchema(), curated.root)
+    for (const example of spec.promptOptions.examples) {
+      const parsed = parser.parse(example.slice(example.indexOf("root = ")))
+      expect(parsed.root).not.toBeNull()
+      expect(parsed.meta.errors).toEqual([])
+      expect(parsed.meta.unresolved).toEqual([])
+    }
+    expect(openuiLibrary.components).toHaveProperty("VisualCardBlock")
     const prompt = buildGenuiPrompt()
     for (const component of Object.values(spec.library.components)) {
       expect(prompt).toContain(component.signature)
@@ -61,6 +73,10 @@ describe("official OpenUI library", () => {
       "Your ENTIRE response must be valid openui-lang"
     )
     expect(prompt).not.toContain("generate realistic/plausible data")
+    for (const name of ["VisualCardBlock", "CompositeCardBlock", "EditableTable", "RadarChart", "Modal"]) {
+      expect(prompt).not.toContain(name)
+    }
+    expect(prompt.length).toBeLessThan(20_000)
   })
 
   it("renders official card and column-oriented table signatures", () => {
