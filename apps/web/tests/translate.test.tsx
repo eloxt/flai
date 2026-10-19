@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import TranslatePage from "~/pages/translate"
 import { apiFetch } from "~/lib/api"
 import { notify } from "~/lib/notify"
+import { uploadFile } from "~/lib/upload"
 import { useModelStore } from "~/store/model-store"
 import { useTranslateStore } from "~/store/translate-store"
 
@@ -29,6 +30,16 @@ vi.mock("~/i18n", async () => {
 vi.mock("~/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/api")>()),
   apiFetch: vi.fn(),
+}))
+vi.mock("~/lib/upload", () => ({
+  uploadFile: vi.fn(async (file: File) => ({
+    id: file.name,
+    name: file.name,
+    mediaType: file.type,
+    size: file.size,
+    url: `https://cdn/${file.name}`,
+    createdAt: "",
+  })),
 }))
 vi.mock("~/lib/notify", () => ({
   notify: { success: vi.fn(), error: vi.fn() },
@@ -175,5 +186,18 @@ describe("translation workspace", () => {
       stream.close()
     })
     expect(notify.error).not.toHaveBeenCalled()
+  })
+
+  it("uploads no more images than the limit when many are picked at once", async () => {
+    const { container } = render(<TranslatePage />)
+    const input =
+      container.querySelector<HTMLInputElement>('input[type="file"]')!
+    const files = Array.from(
+      { length: 7 },
+      (_, i) => new File(["x"], `${i}.png`, { type: "image/png" })
+    )
+    fireEvent.change(input, { target: { files } })
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(5))
+    expect(notify.error).toHaveBeenCalledWith("You can add up to 5 images")
   })
 })

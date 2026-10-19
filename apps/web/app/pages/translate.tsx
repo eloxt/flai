@@ -73,15 +73,18 @@ export default function TranslatePage() {
   useEffect(() => () => abort.current?.abort(), [])
 
   const addImages = async (files: File[]) => {
+    // State read here doesn't change during the loop, so count the slots this batch takes.
+    let slots = MAX_IMAGES - images.length - uploading
     for (const file of files) {
       if (!file.type.startsWith("image/")) {
         notify.error(t("common.fileTypeNotAllowed"))
         continue
       }
-      if (images.length + uploading >= MAX_IMAGES) {
+      if (slots <= 0) {
         notify.error(t("pages.translate.errors.maxImages"))
         return
       }
+      slots--
       setUploading((n) => n + 1)
       try {
         const record = await uploadFile(file)
