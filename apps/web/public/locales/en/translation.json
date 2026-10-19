@@ -114,9 +114,14 @@
       "pending": "Thinking…",
       "greeting": "How can I help you?",
       "placeholder": "Ask anything…",
-      "reasoning": {
-        "process": "Reasoning",
-        "done": "Reasoned"
+      "activity": {
+        "thinking": "Thinking…",
+        "usingTool": "Using",
+        "thought": "Thought",
+        "usedTools_one": "Used {{count}} tool",
+        "usedTools_other": "Used {{count}} tools",
+        "failed_one": "{{count}} failed",
+        "failed_other": "{{count}} failed"
       },
       "newChat": "New Chat",
       "notification": {
@@ -619,9 +624,12 @@
       "url_context_tooltip": "Extract information from URLs when needed."
     },
     "toolCall": {
-      "callingTool": "Calling tool:",
-      "completed": "completed",
-      "failed": "failed"
+      "running": "Running…",
+      "completed": "Done",
+      "failed": "Failed",
+      "input": "Input",
+      "output": "Output",
+      "error": "Error"
     }
   }
 }

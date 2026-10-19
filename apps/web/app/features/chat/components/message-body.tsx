@@ -1,8 +1,8 @@
 import type { AskUserAnswer, FlaiPart, MessageMetadata } from "@flai/shared"
 import { askUserQuestionSchema, askUserResultSchema, fileMetaOf, isAskUserPart } from "@flai/shared"
 import { cn } from "cn"
-import { ArrowUpRightIcon, CheckIcon, ChevronRightIcon, FileIcon, GlobeIcon, WrenchIcon, XCircleIcon } from "lucide-react"
-import { lazy, memo, Suspense, useEffect, useMemo, useState } from "react"
+import { ArrowUpRightIcon, ChevronRightIcon, FileIcon, GlobeIcon } from "lucide-react"
+import { lazy, memo, Suspense, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { PhotoProvider, PhotoView } from "react-photo-view"
 import {
@@ -69,8 +69,9 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
       {pending && <Shimmer />}
-      {visible.map((part, i) => {
-        const isLast = i === visible.length - 1
+      {groupActivity(visible).map((part, i, items) => {
+        const isLast = i === items.length - 1
+        if (Array.isArray(part)) return <Activity key={i} parts={part} active={streaming && isLast} />
         if (isAskUserPart(part) && (part.state === "input-available" || part.state === "output-available")) {
           const question = askUserQuestionSchema.safeParse(part.input)
           const result = part.state === "output-available" ? askUserResultSchema.safeParse(part.output) : undefined
@@ -89,14 +90,9 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
             const text = texts[textIndex++] ?? part.text
             return <AssistantText key={i} text={text} streaming={streaming && isLast} onSend={onSend} />
           }
-          case "reasoning":
-            return <Reasoning key={i} text={part.text} active={streaming && isLast} />
           case "file":
             return <Attachments key={i} files={[part]} align="start" />
-          case "dynamic-tool":
-            return <ToolCard key={i} part={part} />
           default:
-            if (part.type.startsWith("tool-")) return <ToolCard key={i} part={toDynamic(part)} />
             return null
         }
       })}
@@ -106,7 +102,26 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
   )
 })
 
+function isActivityPart(part: FlaiPart): boolean {
+  // Answerable questions render as cards in the reply, not as tool activity.
+  if (isAskUserPart(part) && (part.state === "input-available" || part.state === "output-available")) return false
+  return part.type === "reasoning" || part.type === "dynamic-tool" || part.type.startsWith("tool-")
+}
+
+/** Collapse each run of reasoning and tool calls into one activity group, keeping reply order. */
+function groupActivity(parts: FlaiPart[]): (FlaiPart | FlaiPart[])[] {
+  const items: (FlaiPart | FlaiPart[])[] = []
+  for (const part of parts) {
+    const last = items.at(-1)
+    if (!isActivityPart(part)) items.push(part)
+    else if (Array.isArray(last)) last.push(part)
+    else items.push([part])
+  }
+  return items
+}
+
 function toDynamic(part: FlaiPart): ToolPart {
+  if (part.type === "dynamic-tool") return part
   const p = part as unknown as ToolPart & { type: string }
   return { ...p, type: "dynamic-tool", toolName: p.toolName ?? p.type.slice(5) } as ToolPart
 }
@@ -157,70 +172,129 @@ function AssistantText({ text, streaming, onSend }: { text: string; streaming: b
 }
 
 /** In-progress status text: muted, sized to its text, with the shared constant-speed shimmer. */
-function Shimmer({ children }: { children?: React.ReactNode }) {
+function Shimmer({ children, className }: { children?: React.ReactNode; className?: string }) {
   const { t } = useTranslation()
-  return <span className="w-fit text-sm text-muted-foreground text-shimmer">{children ?? t("pages.chat.pending")}</span>
+  return <span className={cn("w-fit text-sm text-muted-foreground text-shimmer", className)}>{children ?? t("pages.chat.pending")}</span>
 }
 
-function Reasoning({ text, active }: { text: string; active: boolean }) {
+const statusRow = "flex min-h-8 max-w-full min-w-0 items-center gap-2 rounded-sm px-1 text-xs text-foreground/70"
+const caption = "text-[11px] leading-4 tracking-wide uppercase text-foreground/40"
+
+/** Status for a run of reasoning and tool calls; reasoning text is never shown, tool details expand. */
+function Activity({ parts, active }: { parts: FlaiPart[]; active: boolean }) {
   const { t } = useTranslation()
-  // Open while the model is thinking, collapse once it moves on.
-  const [open, setOpen] = useState(active)
-  useEffect(() => setOpen(active), [active])
+  const tools = parts.filter((part) => part.type !== "reasoning").map(toDynamic)
+  const running = active ? tools.find(isRunning) : undefined
+  const failed = tools.filter((part) => part.state === "output-error").length
+  const names = [...new Set(tools.map(toolLabel))]
+  const status = active ? (
+    <>
+      <Shimmer className="shrink-0 text-xs text-foreground/70">{running ? t("pages.chat.activity.usingTool") : t("pages.chat.activity.thinking")}</Shimmer>
+      {running && <code className="min-w-0 truncate font-mono text-[11px] text-foreground/70">{toolLabel(running)}</code>}
+    </>
+  ) : (
+    <>
+      <span className="shrink-0">
+        {tools.length > 0 ? t("pages.chat.activity.usedTools", { count: tools.length }) : t("pages.chat.activity.thought")}
+        {failed > 0 && <span className="text-destructive"> · {t("pages.chat.activity.failed", { count: failed })}</span>}
+      </span>
+      {names.length > 0 && <code className="min-w-0 truncate font-mono text-[11px] text-foreground/40">{names.join(" · ")}</code>}
+    </>
+  )
+  // Without tool details there is nothing to expand.
+  if (tools.length === 0) return <div className={statusRow}>{status}</div>
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="group/reasoning flex items-center gap-1.5 rounded-md px-1 py-1 text-sm text-muted-foreground hover:text-foreground">
-        <ChevronRightIcon className="size-3.5 transition-transform group-data-[panel-open]/reasoning:rotate-90" />
-        {active ? <Shimmer>{t("pages.chat.reasoning.process")}</Shimmer> : t("pages.chat.reasoning.done")}
+    <Collapsible>
+      <CollapsibleTrigger className={cn(statusRow, "group/activity w-fit hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring")}>
+        {status}
+        <ChevronRightIcon
+          aria-hidden="true"
+          className="size-3 shrink-0 group-data-[panel-open]/activity:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
+        />
       </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="border-l pl-4 text-muted-foreground">
-          <Markdown light streaming={active}>
-            {text}
-          </Markdown>
-        </div>
+      <CollapsibleContent className="transition-none">
+        {/* The rule starts under the status text and binds the calls to their status line. */}
+        <ol className="ml-1 flex min-w-0 flex-col border-l py-1 pl-2">
+          {tools.map((part, index) => <ToolCall key={part.toolCallId} part={part} index={index} />)}
+        </ol>
       </CollapsibleContent>
     </Collapsible>
   )
 }
 
-function ToolCard({ part }: { part: ToolPart }) {
+function isRunning(part: ToolPart): boolean {
+  return part.state !== "output-available" && part.state !== "output-error"
+}
+
+function toolLabel(part: ToolPart): string {
+  return part.title ?? part.toolName
+}
+
+/** The first text argument (a query, a URL) identifies a call at a glance. */
+function inputSummary(input: unknown): string {
+  if (typeof input === "string") return input
+  if (!input || typeof input !== "object") return ""
+  for (const value of Object.values(input)) {
+    if (typeof value === "string" && value.trim()) return value
+    if (Array.isArray(value) && typeof value[0] === "string") return value.length > 1 ? `${value[0]} +${value.length - 1}` : value[0]
+  }
+  return ""
+}
+
+function ToolCall({ part, index }: { part: ToolPart; index: number }) {
   const { t } = useTranslation()
   const failed = part.state === "output-error"
   const done = part.state === "output-available"
-  const running = !failed && !done
   const output = done ? (typeof part.output === "string" ? part.output : JSON.stringify(part.output, null, 2)) : failed ? part.errorText : ""
+  const summary = inputSummary(part.input)
   return (
-    <Collapsible defaultOpen={failed} className="w-full rounded-lg border">
-      <CollapsibleTrigger className="group/tool flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-        {failed ? (
-          <XCircleIcon className="size-4 text-destructive" />
-        ) : done ? (
-          <CheckIcon className="size-4 text-muted-foreground" />
-        ) : (
-          <WrenchIcon className="size-4 text-muted-foreground" />
-        )}
-        {running ? (
-          <Shimmer>{t("components.toolCall.callingTool")}</Shimmer>
-        ) : (
-          <span className="text-muted-foreground">{failed ? t("components.toolCall.failed") : t("components.toolCall.completed")}</span>
-        )}
-        <code className="truncate rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-medium">{part.title ?? part.toolName}</code>
-        <ChevronRightIcon className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]/tool:rotate-90" />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="flex flex-col gap-2 border-t px-3 py-2">
-          {part.input !== undefined && (
-            <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 text-xs whitespace-pre-wrap">{JSON.stringify(part.input, null, 2)}</pre>
+    <li className="min-w-0">
+      <Collapsible defaultOpen={failed}>
+        <CollapsibleTrigger className="group/call flex min-h-8 w-full min-w-0 items-center gap-2 rounded-sm px-1 text-left text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset">
+          <span className="w-5 shrink-0 text-foreground/40 tabular-nums">{String(index + 1).padStart(2, "0")}</span>
+          <code className="shrink-0 font-mono text-[11px] text-foreground/70">{toolLabel(part)}</code>
+          <span className="min-w-0 flex-1 truncate text-foreground/40">{summary}</span>
+          {failed ? (
+            <span className={cn(caption, "text-destructive")}>{t("components.toolCall.failed")}</span>
+          ) : done ? (
+            <span className={caption}>{t("components.toolCall.completed")}</span>
+          ) : (
+            <Shimmer className={caption}>{t("components.toolCall.running")}</Shimmer>
           )}
-          {output && (
-            <pre className={cn("max-h-60 overflow-auto rounded-md p-2 text-xs whitespace-pre-wrap", failed ? "bg-destructive/10 text-destructive" : "bg-muted")}>
-              {output}
-            </pre>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+          <ChevronRightIcon
+            aria-hidden="true"
+            className="size-3 shrink-0 text-foreground/40 group-data-[panel-open]/call:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="transition-none">
+          {/* Indented to the tool name, past the index column. */}
+          <div className="flex min-w-0 flex-col gap-3 pt-1 pr-1 pb-3 pl-8">
+            {part.input !== undefined && <ToolData label={t("components.toolCall.input")}>{JSON.stringify(part.input, null, 2)}</ToolData>}
+            {output && (
+              <ToolData label={failed ? t("components.toolCall.error") : t("components.toolCall.output")} failed={failed}>
+                {output}
+              </ToolData>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </li>
+  )
+}
+
+function ToolData({ label, failed = false, children }: { label: string; failed?: boolean; children: string }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-1">
+      <h4 className={cn(caption, failed && "text-destructive")}>{label}</h4>
+      <pre
+        className={cn(
+          "max-h-60 overflow-auto rounded-sm p-2 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap",
+          failed ? "bg-destructive/5 text-destructive" : "bg-muted/60 text-foreground/70"
+        )}
+      >
+        {children}
+      </pre>
+    </section>
   )
 }
 
