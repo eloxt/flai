@@ -16,18 +16,26 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card"
 import { notify } from "~/lib/notify"
-import { useInputStore } from "~/store/input-store"
+import { type BuiltinTool, useInputStore } from "~/store/input-store"
 import { findModel, useCurrentModel, useModelStore } from "~/store/model-store"
 import { ProviderLogo } from "./provider-logo"
 
 const keyOf = (providerId: string, modelId: string) => `${providerId}\u0000${modelId}`
 const flatten = (providers: PublicProvider[]) => providers.flatMap((p) => p.models.map((m) => ({ provider: p, model: m })))
 
-/** Drop selections the new model can't use. */
+const BUILTIN_TOOLS: Array<[ModelConfig["internalTools"][number], BuiltinTool]> = [
+  ["web_search", "webSearch"],
+  ["url_context", "urlContext"],
+]
+
+/** Drop selections the new model can't use, and turn on its search and URL context by default. */
 function adaptInputs(model: ModelConfig) {
   const input = useInputStore.getState()
   if (!model.attachment) input.setAttachments("new", [])
   if (!model.toolCall && input.mcpTools.length) input.setMcpTools([])
+  const builtins = BUILTIN_TOOLS.filter(([tool]) => model.internalTools.includes(tool)).map(([, value]) => value)
+  // Provider tools can't be combined with MCP tools, so MCP tools the user picked take precedence.
+  if (builtins.length > 0 && useInputStore.getState().mcpTools.length === 0) input.setBuiltinTools(builtins)
 }
 
 /** Re-validate the stored selection against the latest provider list. */
