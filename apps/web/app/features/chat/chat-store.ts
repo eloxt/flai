@@ -24,7 +24,17 @@ import { onSessionChange, useAuthStore } from "~/store/auth-store"
 import { useConversationStore } from "~/store/conversation-store"
 import { useInputStore } from "~/store/input-store"
 import { findModel, useModelStore } from "~/store/model-store"
-import { ancestry, buildTree, latestPath, type MessageMap, pathThrough, removeMessage, siblingsOf, toMap, type Tree } from "./tree"
+import {
+  ancestry,
+  buildTree,
+  latestPath,
+  type MessageMap,
+  pathThrough,
+  removeMessage,
+  siblingsOf,
+  toMap,
+  type Tree,
+} from "./tree"
 
 export interface StreamingState {
   assistantId: string
@@ -84,7 +94,10 @@ export function closeConversation() {
 }
 
 /** Load a conversation (or adopt it empty when it was just created). */
-export async function openConversation(conversationId: string, { empty = false } = {}) {
+export async function openConversation(
+  conversationId: string,
+  { empty = false } = {}
+) {
   closeConversation()
   const token = viewToken
   set({ conversationId, loading: !empty })
@@ -93,26 +106,48 @@ export async function openConversation(conversationId: string, { empty = false }
   // A reply is still being written (e.g. the page was reloaded mid-reply): follow it again.
   const active = detail?.activeGeneration
   const state = get()
-  if (active && token === viewToken && !state.streaming && !state.map[active.assistantId] && state.map[active.parentId]) {
+  if (
+    active &&
+    token === viewToken &&
+    !state.streaming &&
+    !state.map[active.assistantId] &&
+    state.map[active.parentId]
+  ) {
     set({ path: ancestry(state.tree, active.parentId) })
-    void followReply({ conversationId, assistantId: active.assistantId, parentId: active.parentId })
+    void followReply({
+      conversationId,
+      assistantId: active.assistantId,
+      parentId: active.parentId,
+    })
   }
 }
 
 /** Refetch the open conversation, keeping the current branch when it still exists. */
-async function reload(token = viewToken, keepId?: string): Promise<ConversationDetail | null> {
+async function reload(
+  token = viewToken,
+  keepId?: string
+): Promise<ConversationDetail | null> {
   const conversationId = get().conversationId
   if (!conversationId) return null
   loadAbort?.abort()
   const controller = new AbortController()
   loadAbort = controller
   try {
-    const detail = await api<ConversationDetail>(`/conversations/${conversationId}`, { signal: controller.signal })
+    const detail = await api<ConversationDetail>(
+      `/conversations/${conversationId}`,
+      { signal: controller.signal }
+    )
     if (token !== viewToken) return null
     const map = toMap(detail.messages)
     const tree = buildTree(map)
-    const anchor = keepId && map[keepId] ? keepId : get().path.findLast((id) => map[id])
-    set({ map, tree, path: anchor ? pathThrough(tree, anchor) : latestPath(tree), loading: false })
+    const anchor =
+      keepId && map[keepId] ? keepId : get().path.findLast((id) => map[id])
+    set({
+      map,
+      tree,
+      path: anchor ? pathThrough(tree, anchor) : latestPath(tree),
+      loading: false,
+    })
     return detail
   } catch (error) {
     if (controller.signal.aborted || token !== viewToken) return null
@@ -140,13 +175,20 @@ function currentSelection(): { model: ModelRef; options: ChatOptions } | null {
   if (!found || !selected) return null
   const { model } = found
   const input = useInputStore.getState()
-  const thinking = input.thinking && model.thinkingLevels.includes(input.thinking) ? input.thinking : model.thinkingLevels[0]
+  const thinking =
+    input.thinking && model.thinkingLevels.includes(input.thinking)
+      ? input.thinking
+      : model.thinkingLevels[0]
   return {
     model: selected,
     options: {
       thinking,
-      webSearch: input.builtinTools.includes("webSearch") && model.internalTools.includes("web_search"),
-      urlContext: input.builtinTools.includes("urlContext") && model.internalTools.includes("url_context"),
+      webSearch:
+        input.builtinTools.includes("webSearch") &&
+        model.internalTools.includes("web_search"),
+      urlContext:
+        input.builtinTools.includes("urlContext") &&
+        model.internalTools.includes("url_context"),
       mcpTools: model.toolCall ? input.mcpTools : [],
     },
   }
@@ -162,7 +204,9 @@ const fileParts = (files: FileRecord[]): FlaiPart[] =>
   }))
 
 export const fileIdsOf = (parts: FlaiPart[]) =>
-  parts.flatMap((p) => (p.type === "file" ? [fileMetaOf(p)?.fileId] : [])).filter((id): id is string => Boolean(id))
+  parts
+    .flatMap((p) => (p.type === "file" ? [fileMetaOf(p)?.fileId] : []))
+    .filter((id): id is string => Boolean(id))
 
 interface SendArgs {
   text: string
@@ -172,17 +216,37 @@ interface SendArgs {
 }
 
 /** Send a user message and stream the reply. Returns false if nothing was sent. */
-export async function sendMessage({ text, files = [], parentId }: SendArgs): Promise<boolean> {
+export async function sendMessage({
+  text,
+  files = [],
+  parentId,
+}: SendArgs): Promise<boolean> {
   const state = get()
   const conversationId = state.conversationId
-  if (!conversationId || state.streaming || state.answering || (!text.trim() && files.length === 0)) return false
+  if (
+    !conversationId ||
+    state.streaming ||
+    state.answering ||
+    (!text.trim() && files.length === 0)
+  )
+    return false
   const parent = parentId === undefined ? (state.path.at(-1) ?? null) : parentId
-  const pending = parent ? state.map[parent]?.parts.find((p) => isAskUserPart(p) && p.state === "input-available") : undefined
+  const pending = parent
+    ? state.map[parent]?.parts.find(
+        (p) => isAskUserPart(p) && p.state === "input-available"
+      )
+    : undefined
   if (parent && pending && isAskUserPart(pending) && files.length === 0) {
     const question = askUserQuestionSchema.safeParse(pending.input)
     if (question.success) {
-      const multiple = question.data.selectionMode === "multi_select" && Boolean(question.data.options?.length)
-      return answerQuestion(parent, pending.toolCallId, multiple ? [text] : text)
+      const multiple =
+        question.data.selectionMode === "multi_select" &&
+        Boolean(question.data.options?.length)
+      return answerQuestion(
+        parent,
+        pending.toolCallId,
+        multiple ? [text] : text
+      )
     }
   }
   const selection = currentSelection()
@@ -197,7 +261,10 @@ export async function sendMessage({ text, files = [], parentId }: SendArgs): Pro
     id: userId,
     parentId: parent,
     role: "user",
-    parts: [...(text ? [{ type: "text" as const, text }] : []), ...fileParts(files)],
+    parts: [
+      ...(text ? [{ type: "text" as const, text }] : []),
+      ...fileParts(files),
+    ],
     metadata: {},
     createdAt: new Date().toISOString(),
   }
@@ -205,28 +272,59 @@ export async function sendMessage({ text, files = [], parentId }: SendArgs): Pro
   setMap(map, [...(parent ? ancestry(buildTree(map), parent) : []), userId])
 
   const body: SendMessageInput = {
-    message: { id: userId, parentId: parent, text, fileIds: files.map((f) => f.id) },
+    message: {
+      id: userId,
+      parentId: parent,
+      text,
+      fileIds: files.map((f) => f.id),
+    },
     assistantId,
     model: selection.model,
     options: selection.options,
   }
-  return followReply({ conversationId, assistantId, parentId: userId, sentText: text, open: postStream(`/conversations/${conversationId}/messages`, body) })
+  return followReply({
+    conversationId,
+    assistantId,
+    parentId: userId,
+    sentText: text,
+    open: postStream(`/conversations/${conversationId}/messages`, body),
+  })
 }
 
 /** Save the answer on its question, then follow the agent's continuation. */
-export async function answerQuestion(messageId: string, toolCallId: string, answer: AskUserAnswer): Promise<boolean> {
+export async function answerQuestion(
+  messageId: string,
+  toolCallId: string,
+  answer: AskUserAnswer
+): Promise<boolean> {
   const state = get()
   const conversationId = state.conversationId
-  if (!conversationId || state.streaming || state.answering || state.path.at(-1) !== messageId) return false
+  if (
+    !conversationId ||
+    state.streaming ||
+    state.answering ||
+    state.path.at(-1) !== messageId
+  )
+    return false
   const token = viewToken
   const session = useAuthStore.getState().sessionVersion
-  const body: AnswerQuestionInput = { assistantId: crypto.randomUUID(), toolCallId, answer }
+  const body: AnswerQuestionInput = {
+    assistantId: crypto.randomUUID(),
+    toolCallId,
+    answer,
+  }
   set({ answering: true })
-  useConversationStore.setState((s) => ({ replying: { ...s.replying, [conversationId]: body.assistantId } }))
+  useConversationStore.setState((s) => ({
+    replying: { ...s.replying, [conversationId]: body.assistantId },
+  }))
   try {
-    const result = await api<AnswerQuestionResult>(`/conversations/${conversationId}/messages/${messageId}/answer`, { method: "POST", body })
+    const result = await api<AnswerQuestionResult>(
+      `/conversations/${conversationId}/messages/${messageId}/answer`,
+      { method: "POST", body }
+    )
     if (session !== useAuthStore.getState().sessionVersion) return false
-    if (result.generation) void followReply({ conversationId, ...result.generation })
+    if (result.generation)
+      void followReply({ conversationId, ...result.generation })
     if (token !== viewToken) return false
     setMap({ ...get().map, [messageId]: result.message })
     set({ answering: false })
@@ -237,12 +335,18 @@ export async function answerQuestion(messageId: string, toolCallId: string, answ
     const detail = await reload(token, messageId)
     if (token !== viewToken) return false
     const active = detail?.activeGeneration
-    if (active && !get().streaming && !get().map[active.assistantId]) void followReply({ conversationId, ...active })
+    if (active && !get().streaming && !get().map[active.assistantId])
+      void followReply({ conversationId, ...active })
     notify.error(error)
     return false
   } finally {
     if (token === viewToken) set({ answering: false })
-    if (session === useAuthStore.getState().sessionVersion && !replyControllers.has(body.assistantId) && useConversationStore.getState().replying[conversationId] === body.assistantId) {
+    if (
+      session === useAuthStore.getState().sessionVersion &&
+      !replyControllers.has(body.assistantId) &&
+      useConversationStore.getState().replying[conversationId] ===
+        body.assistantId
+    ) {
       useConversationStore.setState((s) => {
         const { [conversationId]: _, ...replying } = s.replying
         return { replying }
@@ -259,10 +363,23 @@ export async function regenerate(messageId: string): Promise<boolean> {
   const target = state.map[messageId]
   const questions = target?.parts.filter(isAskUserPart) ?? []
   let parentId = target?.role === "assistant" ? target.parentId : target?.id
-  if (target && questions.length > 0 && questions.every((p) => p.state === "output-available")) parentId = target.id
+  if (
+    target &&
+    questions.length > 0 &&
+    questions.every((p) => p.state === "output-available")
+  )
+    parentId = target.id
   const parent = parentId ? state.map[parentId] : undefined
   const parentQuestions = parent?.parts.filter(isAskUserPart) ?? []
-  if (!parentId || !parent || (parent.role !== "user" && !(parentQuestions.length > 0 && parentQuestions.every((p) => p.state === "output-available")))) {
+  if (
+    !parentId ||
+    !parent ||
+    (parent.role !== "user" &&
+      !(
+        parentQuestions.length > 0 &&
+        parentQuestions.every((p) => p.state === "output-available")
+      ))
+  ) {
     notify.error(i18n.t("common.error.retry"))
     return false
   }
@@ -273,8 +390,20 @@ export async function regenerate(messageId: string): Promise<boolean> {
   }
   set({ path: ancestry(state.tree, parentId) })
   const assistantId = crypto.randomUUID()
-  const body: RegenerateInput = { assistantId, model: selection.model, options: selection.options }
-  return followReply({ conversationId, assistantId, parentId, open: postStream(`/conversations/${conversationId}/messages/${parentId}/regenerate`, body) })
+  const body: RegenerateInput = {
+    assistantId,
+    model: selection.model,
+    options: selection.options,
+  }
+  return followReply({
+    conversationId,
+    assistantId,
+    parentId,
+    open: postStream(
+      `/conversations/${conversationId}/messages/${parentId}/regenerate`,
+      body
+    ),
+  })
 }
 
 /** Edit a user message: the new text becomes a sibling branch under the same parent. */
@@ -284,7 +413,16 @@ export function editMessage(messageId: string, text: string) {
   const files = original.parts.flatMap((p): FileRecord[] => {
     const meta = p.type === "file" ? fileMetaOf(p) : undefined
     return p.type === "file" && meta
-      ? [{ id: meta.fileId, name: p.filename ?? "", mediaType: p.mediaType, size: meta.size ?? 0, url: p.url, createdAt: "" }]
+      ? [
+          {
+            id: meta.fileId,
+            name: p.filename ?? "",
+            mediaType: p.mediaType,
+            size: meta.size ?? 0,
+            url: p.url,
+            createdAt: "",
+          },
+        ]
       : []
   })
   return sendMessage({ text, files, parentId: original.parentId })
@@ -297,11 +435,14 @@ export async function stopGeneration() {
   try {
     // The server stops the model (on whichever instance runs it) and still persists what was
     // generated; we keep reading the stream until it reports the saved message.
-    await api(`/generations/${streaming.assistantId}/cancel`, { method: "POST" })
+    await api(`/generations/${streaming.assistantId}/cancel`, {
+      method: "POST",
+    })
   } catch (error) {
     notify.error(error)
     const current = get().streaming
-    if (current?.assistantId === streaming.assistantId) set({ streaming: { ...current, stopping: false } })
+    if (current?.assistantId === streaming.assistantId)
+      set({ streaming: { ...current, stopping: false } })
   }
 }
 
@@ -311,7 +452,9 @@ export async function deleteLastMessage() {
   const last = path.at(-1)
   if (!conversationId || !last || streaming || get().answering) return
   try {
-    await api(`/conversations/${conversationId}/messages/${last}`, { method: "DELETE" })
+    await api(`/conversations/${conversationId}/messages/${last}`, {
+      method: "DELETE",
+    })
   } catch (error) {
     notify.error(error)
     return
@@ -320,7 +463,11 @@ export async function deleteLastMessage() {
   const fallback = info.prev ?? info.next
   const map = removeMessage(get().map, last)
   const nextTree = buildTree(map)
-  set({ map, tree: nextTree, path: fallback ? pathThrough(nextTree, fallback) : path.slice(0, -1) })
+  set({
+    map,
+    tree: nextTree,
+    path: fallback ? pathThrough(nextTree, fallback) : path.slice(0, -1),
+  })
 }
 
 // ---------------------------------------------------------------- streaming
@@ -333,10 +480,12 @@ function notifyIfHidden() {
       icon: "/favicon.ico",
     })
   if (Notification.permission === "granted") show()
-  else if (Notification.permission !== "denied") void Notification.requestPermission().then((p) => p === "granted" && show())
+  else if (Notification.permission !== "denied")
+    void Notification.requestPermission().then((p) => p === "granted" && show())
 }
 
-const postStream = (url: string, body: unknown) => (signal: AbortSignal) => apiFetch(url, { method: "POST", body, signal })
+const postStream = (url: string, body: unknown) => (signal: AbortSignal) =>
+  apiFetch(url, { method: "POST", body, signal })
 
 interface FollowArgs {
   conversationId: string
@@ -353,25 +502,38 @@ interface FollowArgs {
  * Show a reply as it streams in. Dropped connections are resumed transparently; if the reply
  * can't be followed to its end, reload from the server, which has it if it was saved.
  */
-async function followReply({ conversationId, assistantId, parentId, open, sentText }: FollowArgs): Promise<boolean> {
+async function followReply({
+  conversationId,
+  assistantId,
+  parentId,
+  open,
+  sentText,
+}: FollowArgs): Promise<boolean> {
   const token = viewToken
   const session = useAuthStore.getState().sessionVersion
-  const live = () => token === viewToken && session === useAuthStore.getState().sessionVersion && get().conversationId === conversationId
+  const live = () =>
+    token === viewToken &&
+    session === useAuthStore.getState().sessionVersion &&
+    get().conversationId === conversationId
   const controller = new AbortController()
   // Reopening a conversation replaces its background subscription with the visible one.
   replyControllers.get(assistantId)?.abort()
   replyControllers.set(assistantId, controller)
-  useConversationStore.setState((s) => ({ replying: { ...s.replying, [conversationId]: assistantId } }))
+  useConversationStore.setState((s) => ({
+    replying: { ...s.replying, [conversationId]: assistantId },
+  }))
 
   let message: FlaiUIMessage = { id: assistantId, role: "assistant", parts: [] }
-  if (live()) set({ streaming: { assistantId, parentId, message, stopping: false } })
+  if (live())
+    set({ streaming: { assistantId, parentId, message, stopping: false } })
 
   // Batch UI updates to one per animation frame.
   let frame: number | null = null
   const flush = () => {
     frame = null
     const current = get().streaming
-    if (live() && current?.assistantId === assistantId) set({ streaming: { ...current, message } })
+    if (live() && current?.assistantId === assistantId)
+      set({ streaming: { ...current, message } })
   }
   const schedule = () => {
     frame ??= requestAnimationFrame(flush)
@@ -380,7 +542,11 @@ async function followReply({ conversationId, assistantId, parentId, open, sentTe
   let finished = false
   let failure: string | undefined
   try {
-    const chunks = replyStream(assistantId, controller.signal, open).pipeThrough(
+    const chunks = replyStream(
+      assistantId,
+      controller.signal,
+      open
+    ).pipeThrough(
       new TransformStream<Chunk, Chunk>({
         transform(chunk, ctrl) {
           if (chunk.type === "finish") finished = true
@@ -401,12 +567,16 @@ async function followReply({ conversationId, assistantId, parentId, open, sentTe
     }
   } catch (error) {
     if (controller.signal.aborted || !live()) return false
-    failure = error instanceof ReplyStreamInterrupted ? undefined : errorText(error)
+    failure =
+      error instanceof ReplyStreamInterrupted ? undefined : errorText(error)
   } finally {
     if (frame !== null) cancelAnimationFrame(frame)
     if (replyControllers.get(assistantId) === controller) {
       replyControllers.delete(assistantId)
-      if (session === useAuthStore.getState().sessionVersion && useConversationStore.getState().replying[conversationId] === assistantId) {
+      if (
+        session === useAuthStore.getState().sessionVersion &&
+        useConversationStore.getState().replying[conversationId] === assistantId
+      ) {
         useConversationStore.setState((s) => {
           const { [conversationId]: _, ...replying } = s.replying
           return { replying }
@@ -446,7 +616,8 @@ async function followReply({ conversationId, assistantId, parentId, open, sentTe
   if (map[assistantId] && !failure) return true
   notify.error(failure ?? i18n.t("pages.chat.streamInterrupted"))
   const lost = sentText !== undefined && conversationId && !map[parentId]
-  if (lost && !useInputStore.getState().drafts[conversationId]) useInputStore.getState().setDraft(conversationId, sentText)
+  if (lost && !useInputStore.getState().drafts[conversationId])
+    useInputStore.getState().setDraft(conversationId, sentText)
   return false
 }
 
