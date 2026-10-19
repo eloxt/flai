@@ -16,6 +16,7 @@ import {
 } from "~/components/ui/attachment"
 import { Bubble, BubbleContent } from "~/components/ui/bubble"
 import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "~/components/ui/avatar"
+import { GenuiBoundary } from "~/components/genui/genui-boundary"
 import { Markdown } from "~/components/markdown"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible"
 import { Separator } from "~/components/ui/separator"
@@ -128,6 +129,10 @@ function UserBody({ parts }: { parts: FlaiPart[] }) {
   )
 }
 
+function GenuiCode({ code }: { code: string }) {
+  return <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{code}</pre>
+}
+
 function AssistantText({ text, streaming, onSend }: { text: string; streaming: boolean; onSend?: (text: string) => void }) {
   const segments = useMemo(() => splitSegments(text), [text])
   return (
@@ -138,9 +143,12 @@ function AssistantText({ text, streaming, onSend }: { text: string; streaming: b
             {segment.text}
           </Markdown>
         ) : (
-          <Suspense key={i} fallback={<pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{segment.code}</pre>}>
-            <GenuiBlock code={segment.code} streaming={streaming && !segment.complete} onSend={onSend} />
-          </Suspense>
+          // The boundary sits outside Suspense so a failed chunk load also falls back to the code.
+          <GenuiBoundary key={i} fallback={<GenuiCode code={segment.code} />}>
+            <Suspense fallback={<GenuiCode code={segment.code} />}>
+              <GenuiBlock code={segment.code} streaming={streaming && !segment.complete} onSend={onSend} />
+            </Suspense>
+          </GenuiBoundary>
         )
       )}
     </>

@@ -1,4 +1,5 @@
 import "./lib/disable-openui-devtools"
+import "./lib/reload-on-stale-chunk"
 import { Suspense } from "react"
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router"
 import type { Route } from "./+types/root"

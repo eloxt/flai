@@ -1,9 +1,10 @@
 import type { ActionEvent } from "@openuidev/react-lang"
 import { Renderer } from "@openuidev/react-lang"
 import { ThemeProvider as OpenuiThemeProvider } from "@openuidev/react-ui"
-import { Component, type ReactNode, useRef } from "react"
+import { useRef } from "react"
 import { useTheme } from "~/components/theme-provider"
 import { ImageSourceContext } from "~/hooks/use-proxied-images"
+import { GenuiBoundary } from "./genui-boundary"
 import { genuiTheme } from "./theme"
 import { imageLibrary } from "./image-library"
 import "./genui.css"
@@ -67,14 +68,4 @@ export function GenuiBlock({ code, streaming, onSend }: GenuiBlockProps) {
       </div>
     </GenuiBoundary>
   )
-}
-
-class GenuiBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() {
-    return { failed: true }
-  }
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children
-  }
 }
