@@ -97,16 +97,45 @@ export const shareRoutes = new Hono<AppEnv>()
     return c.json(row ? toShare(row) : null)
   })
 
+// http(s) or protocol-relative URLs; quotes, backslashes and whitespace end a URL in markdown and openui-lang.
+const URL_IN_TEXT = /(?:https?:\/\/|(?<![\w+.-]:)\/\/)[^\s"'<>`\\]+/gi
+const TRAILING_PUNCTUATION = /[)\]}.,;:!?*_~]$/
+
+function normalizeUrl(raw: string): string | undefined {
+  try {
+    return new URL(raw.startsWith('//') ? `https:${raw}` : raw).href
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Whether a URL appears in the snapshot's text. URLs are compared after normalisation, matching
+ * the client (which resolves protocol-relative sources), and must be whole URLs, not fragments.
+ */
+function snapshotHasUrl(messages: MessageRecord[], url: string): boolean {
+  const target = normalizeUrl(url)
+  if (!target) return false
+  return messages.some((message) => message.parts.some((part) => {
+    if (part.type !== 'text') return false
+    for (const [match] of part.text.matchAll(URL_IN_TEXT)) {
+      // Markdown wraps URLs in brackets and prose follows them with punctuation.
+      for (let candidate = match; candidate; candidate = candidate.slice(0, -1)) {
+        if (normalizeUrl(candidate) === target) return true
+        if (!TRAILING_PUNCTUATION.test(candidate)) break
+      }
+    }
+    return false
+  }))
+}
+
 export const publicShareRoutes = new Hono().get('/shares/:id/images', async (c) => {
   const { url } = query(c, imageProxyQuerySchema)
   const row = await db.query.shares.findFirst({
     where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),
   })
   if (!row || isExpired(row)) throw notFound('Share')
-  const inSnapshot = (row.messages as MessageRecord[]).some((message) =>
-    message.parts.some((part) => part.type === 'text' && part.text.includes(url)),
-  )
-  if (!inSnapshot) throw notFound('Image')
+  if (!snapshotHasUrl(row.messages as MessageRecord[], url)) throw notFound('Image')
   return proxyImage(url, c.req.raw.signal)
 }).get('/shares/:id', async (c) => {
   const row = await db.query.shares.findFirst({

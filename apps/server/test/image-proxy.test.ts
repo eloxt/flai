@@ -123,4 +123,24 @@ describe('image proxy', () => {
     expect((await app.request(path)).status).toBe(200)
     expect(fetchMock).toHaveBeenCalledOnce()
   })
+
+  it('matches whole, normalised URLs from markdown and openui-lang snapshots', async () => {
+    const share = (text: string) => ({
+      expiresAt: null,
+      messages: [{ parts: [{ type: 'text', text }] }],
+    }) as NonNullable<Awaited<ReturnType<typeof db.query.shares.findFirst>>>
+    const status = async (text: string, url = imageUrl) => {
+      findShare.mockResolvedValueOnce(share(text))
+      return (await app.request(`/public/shares/share-id/images?url=${encodeURIComponent(url)}`)).status
+    }
+    // The client resolves protocol-relative sources to https before proxying them.
+    expect(await status('![Photo](//images.example/photo.jpg)')).toBe(200)
+    expect(await status('img = Image("Photo", "https://images.example/photo.jpg")')).toBe(200)
+    expect(await status('See https://images.example/photo.jpg.')).toBe(200)
+    expect(await status('![Wiki](https://images.example/a_(b).jpg)', 'https://images.example/a_(b).jpg')).toBe(200)
+    // Fragments of a longer URL and other schemes are not proxied.
+    expect(await status('![Photo](https://images.example/photo.jpg?size=large)')).toBe(404)
+    expect(await status(`![Photo](${imageUrl})`, 'https://images.example/photo')).toBe(404)
+    expect(await status('ftp://images.example/photo.jpg')).toBe(404)
+  })
 })
