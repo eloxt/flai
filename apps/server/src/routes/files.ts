@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { config } from '../config'
 import { db, schema } from '../db'
 import { badRequest, notFound } from '../lib/errors'
+import { uploadMediaType } from '../lib/file-types'
 import type { AppEnv } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toFile } from '../lib/serialize'
@@ -29,7 +30,7 @@ export const fileRoutes = new Hono<AppEnv>()
 
     const bytes = new Uint8Array(await file.arrayBuffer())
     const hash = createHash('md5').update(bytes).digest('hex')
-    const mediaType = file.type || 'application/octet-stream'
+    const mediaType = uploadMediaType(file)
     const id = newId()
 
     // Identical content is stored once; a new row just points at the existing object.
