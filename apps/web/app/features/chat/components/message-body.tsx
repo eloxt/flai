@@ -100,7 +100,8 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
             return null
         }
       })}
-      {sources.length > 0 && <Sources sources={sources} />}
+      {/* Sources arrive with each tool result; show them once, after the agent has finished. */}
+      {!streaming && sources.length > 0 && <Sources sources={sources} />}
     </div>
   )
 })

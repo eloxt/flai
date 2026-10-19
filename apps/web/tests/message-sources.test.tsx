@@ -177,4 +177,16 @@ describe("message sources", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByRole("list")).not.toBeInTheDocument()
   })
+
+  it("keeps the source list hidden until the agent has finished", () => {
+    const parts = [
+      { type: "tool-web_search", toolCallId: "search-1", state: "output-available", input: { query: "research" }, output: { results: [] } },
+      { type: "source-url", sourceId: "https://research.example/paper", title: "Paper", url: "https://research.example/paper" },
+      { type: "text", text: "Still writing" },
+    ] as const
+    const { rerender } = render(<MessageBody role="assistant" parts={[...parts]} streaming />)
+    expect(screen.queryByRole("button", { name: "来源 1" })).toBeNull()
+    rerender(<MessageBody role="assistant" parts={[...parts]} />)
+    expect(screen.getByRole("button", { name: "来源 1" })).toBeVisible()
+  })
 })
