@@ -84,6 +84,15 @@ describe('provider-native tools', () => {
     expect(resolved.model.modelId).toBe('openai/gpt-4.1:online')
     expect(resolved.tools).toEqual({})
   })
+
+  it('recognises OpenRouter by its base URL whatever the provider is called', () => {
+    const resolved = buildModel({
+      provider: { ...provider, name: 'Router', type: 'openai_completion', baseUrl: 'https://openrouter.ai/api/v1' },
+      model: modelConfigSchema.parse({ id: 'openai/gpt-4.1', internalTools: ['web_search'] }),
+      options: { webSearch: true },
+    })
+    expect(resolved.model.modelId).toBe('openai/gpt-4.1:online')
+  })
 })
 
 describe('geminiBaseUrl', () => {

@@ -24,7 +24,8 @@ interface BuildOptions {
   requestId?: string
 }
 
-const isOpenRouter = (provider: ProviderRow) => provider.name.toLowerCase().includes('openrouter')
+const isOpenRouter = (provider: ProviderRow) =>
+  /(^|\.)openrouter\.ai$/i.test(URL.parse(provider.baseUrl ?? '')?.hostname ?? '') || /openrouter/i.test(provider.name)
 
 /**
  * `@ai-sdk/google` appends `/models/...` straight onto its base URL, so a bare gateway root such as
