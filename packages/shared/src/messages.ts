@@ -9,6 +9,10 @@ export const askUserQuestionSchema = z.object({
 })
 export type AskUserQuestion = z.infer<typeof askUserQuestionSchema>
 
+/** Multi-select questions (with options to pick from) take an array of answers; the rest take one string. */
+export const isMultiSelect = (question: AskUserQuestion) =>
+  question.selectionMode === 'multi_select' && Boolean(question.options?.length)
+
 export const askUserAnswerSchema = z.union([
   z.string().trim().min(1).max(20_000),
   z.array(z.string().trim().min(1).max(2000)).min(1).max(32)
@@ -62,6 +66,17 @@ export function isAskUserPart(part: FlaiPart): part is Extract<FlaiPart, { toolC
   return part.type === 'tool-ask_user' || (part.type === 'dynamic-tool' && part.toolName === 'ask_user')
 }
 
+/** Whether the message asked questions and every one of them has been answered. */
+export function questionsAnswered(parts: FlaiPart[]): boolean {
+  const questions = parts.filter(isAskUserPart)
+  return questions.length > 0 && questions.every((p) => p.state === 'output-available')
+}
+
+/** A reply can continue a user turn, or an assistant turn whose questions are all answered. */
+export function canReplyTo(message: { role: 'user' | 'assistant'; parts: FlaiPart[] }): boolean {
+  return message.role === 'user' || questionsAnswered(message.parts)
+}
+
 /** Extra data we attach to user file parts via providerMetadata.flai. */
 export interface FlaiFileMeta {
   fileId: string
@@ -71,6 +86,17 @@ export interface FlaiFileMeta {
 export function fileMetaOf(part: { providerMetadata?: unknown }): FlaiFileMeta | undefined {
   const meta = (part.providerMetadata as { flai?: FlaiFileMeta } | undefined)?.flai
   return meta?.fileId ? meta : undefined
+}
+
+/** The message part for an uploaded file. */
+export function toFilePart(file: { id: string; name: string; mediaType: string; size: number; url: string }): FlaiPart {
+  return {
+    type: 'file',
+    mediaType: file.mediaType,
+    filename: file.name,
+    url: file.url,
+    providerMetadata: { flai: { fileId: file.id, size: file.size } },
+  }
 }
 
 /** A persisted node of a conversation's message tree. */

@@ -1,4 +1,5 @@
 import type { AskUserAnswer, AskUserQuestion } from "@flai/shared"
+import { isMultiSelect } from "@flai/shared"
 import { CheckIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -40,8 +41,7 @@ export function QuestionCard({
   const submittingRef = useRef(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const options = question.options ?? []
-  const multiple =
-    question.selectionMode === "multi_select" && options.length > 0
+  const multiple = isMultiSelect(question)
   const disabled = !onAnswer || submitting
   const summary = Array.isArray(answer) ? answer.join(", ") : answer
 

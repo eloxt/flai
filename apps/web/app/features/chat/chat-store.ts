@@ -12,7 +12,15 @@ import type {
   RegenerateInput,
   SendMessageInput,
 } from "@flai/shared"
-import { askUserQuestionSchema, fileMetaOf, isAskUserPart } from "@flai/shared"
+import {
+  askUserQuestionSchema,
+  canReplyTo,
+  fileMetaOf,
+  isAskUserPart,
+  isMultiSelect,
+  questionsAnswered,
+  toFilePart,
+} from "@flai/shared"
 import { readUIMessageStream } from "ai"
 import { create } from "zustand"
 import i18n from "~/i18n"
@@ -79,6 +87,21 @@ function setMap(map: MessageMap, path?: string[]) {
 let viewToken = 0
 let loadAbort: AbortController | null = null
 const replyControllers = new Map<string, AbortController>()
+
+const markReplying = (conversationId: string, assistantId: string) =>
+  useConversationStore.setState((s) => ({
+    replying: { ...s.replying, [conversationId]: assistantId },
+  }))
+
+/** Stop showing the conversation as replying, unless a newer reply has taken over. */
+function clearReplying(conversationId: string, assistantId: string) {
+  if (useConversationStore.getState().replying[conversationId] !== assistantId)
+    return
+  useConversationStore.setState((s) => {
+    const { [conversationId]: _, ...replying } = s.replying
+    return { replying }
+  })
+}
 
 onSessionChange(() => {
   for (const controller of replyControllers.values()) controller.abort()
@@ -194,20 +217,6 @@ function currentSelection(): { model: ModelRef; options: ChatOptions } | null {
   }
 }
 
-const fileParts = (files: FileRecord[]): FlaiPart[] =>
-  files.map((f) => ({
-    type: "file",
-    mediaType: f.mediaType,
-    filename: f.name,
-    url: f.url,
-    providerMetadata: { flai: { fileId: f.id, size: f.size } },
-  }))
-
-export const fileIdsOf = (parts: FlaiPart[]) =>
-  parts
-    .flatMap((p) => (p.type === "file" ? [fileMetaOf(p)?.fileId] : []))
-    .filter((id): id is string => Boolean(id))
-
 interface SendArgs {
   text: string
   files?: FileRecord[]
@@ -238,16 +247,12 @@ export async function sendMessage({
     : undefined
   if (parent && pending && isAskUserPart(pending) && files.length === 0) {
     const question = askUserQuestionSchema.safeParse(pending.input)
-    if (question.success) {
-      const multiple =
-        question.data.selectionMode === "multi_select" &&
-        Boolean(question.data.options?.length)
+    if (question.success)
       return answerQuestion(
         parent,
         pending.toolCallId,
-        multiple ? [text] : text
+        isMultiSelect(question.data) ? [text] : text
       )
-    }
   }
   const selection = currentSelection()
   if (!selection) {
@@ -263,7 +268,7 @@ export async function sendMessage({
     role: "user",
     parts: [
       ...(text ? [{ type: "text" as const, text }] : []),
-      ...fileParts(files),
+      ...files.map(toFilePart),
     ],
     metadata: {},
     createdAt: new Date().toISOString(),
@@ -314,9 +319,7 @@ export async function answerQuestion(
     answer,
   }
   set({ answering: true })
-  useConversationStore.setState((s) => ({
-    replying: { ...s.replying, [conversationId]: body.assistantId },
-  }))
+  markReplying(conversationId, body.assistantId)
   try {
     const result = await api<AnswerQuestionResult>(
       `/conversations/${conversationId}/messages/${messageId}/answer`,
@@ -343,15 +346,9 @@ export async function answerQuestion(
     if (token === viewToken) set({ answering: false })
     if (
       session === useAuthStore.getState().sessionVersion &&
-      !replyControllers.has(body.assistantId) &&
-      useConversationStore.getState().replying[conversationId] ===
-        body.assistantId
-    ) {
-      useConversationStore.setState((s) => {
-        const { [conversationId]: _, ...replying } = s.replying
-        return { replying }
-      })
-    }
+      !replyControllers.has(body.assistantId)
+    )
+      clearReplying(conversationId, body.assistantId)
   }
 }
 
@@ -361,25 +358,13 @@ export async function regenerate(messageId: string): Promise<boolean> {
   const conversationId = state.conversationId
   if (!conversationId || state.streaming || state.answering) return false
   const target = state.map[messageId]
-  const questions = target?.parts.filter(isAskUserPart) ?? []
-  let parentId = target?.role === "assistant" ? target.parentId : target?.id
-  if (
-    target &&
-    questions.length > 0 &&
-    questions.every((p) => p.state === "output-available")
-  )
-    parentId = target.id
+  // Retrying a reply answers its parent again; a user turn or answered question is answered itself.
+  const parentId =
+    target && (target.role === "user" || questionsAnswered(target.parts))
+      ? target.id
+      : target?.parentId
   const parent = parentId ? state.map[parentId] : undefined
-  const parentQuestions = parent?.parts.filter(isAskUserPart) ?? []
-  if (
-    !parentId ||
-    !parent ||
-    (parent.role !== "user" &&
-      !(
-        parentQuestions.length > 0 &&
-        parentQuestions.every((p) => p.state === "output-available")
-      ))
-  ) {
+  if (!parentId || !parent || !canReplyTo(parent)) {
     notify.error(i18n.t("common.error.retry"))
     return false
   }
@@ -519,9 +504,7 @@ async function followReply({
   // Reopening a conversation replaces its background subscription with the visible one.
   replyControllers.get(assistantId)?.abort()
   replyControllers.set(assistantId, controller)
-  useConversationStore.setState((s) => ({
-    replying: { ...s.replying, [conversationId]: assistantId },
-  }))
+  markReplying(conversationId, assistantId)
 
   let message: FlaiUIMessage = { id: assistantId, role: "assistant", parts: [] }
   if (live())
@@ -573,15 +556,8 @@ async function followReply({
     if (frame !== null) cancelAnimationFrame(frame)
     if (replyControllers.get(assistantId) === controller) {
       replyControllers.delete(assistantId)
-      if (
-        session === useAuthStore.getState().sessionVersion &&
-        useConversationStore.getState().replying[conversationId] === assistantId
-      ) {
-        useConversationStore.setState((s) => {
-          const { [conversationId]: _, ...replying } = s.replying
-          return { replying }
-        })
-      }
+      if (session === useAuthStore.getState().sessionVersion)
+        clearReplying(conversationId, assistantId)
     }
   }
   if (!live()) return false

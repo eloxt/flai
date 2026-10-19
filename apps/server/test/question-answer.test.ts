@@ -17,7 +17,7 @@ vi.mock('../src/db', async () => ({
 vi.mock('../src/llm/generation', () => ({ startGeneration: mocks.start, cancelGeneration: vi.fn() }))
 vi.mock('../src/llm/stream-bus', () => ({ generationBus: () => ({ active: mocks.active, info: mocks.info }), isStreamPosition: vi.fn() }))
 vi.mock('../src/services/providers', () => ({ resolveModel: mocks.resolve }))
-vi.mock('../src/routes/files', () => ({ ownedFiles: vi.fn() }))
+vi.mock('../src/services/files', () => ({ ownedFiles: vi.fn() }))
 vi.mock('../src/services/conversations', async (original) => ({
   ...await original<typeof import('../src/services/conversations')>(), loadPath: mocks.path, touchConversation: vi.fn(),
 }))

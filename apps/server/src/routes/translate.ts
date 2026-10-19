@@ -8,9 +8,9 @@ import { chatContext, getChatAgent } from '../llm/agent'
 import { alertLlmError } from '../llm/error-alert'
 import { userFacingError } from '../llm/generation'
 import { buildModel } from '../llm/models'
+import { ownedFiles } from '../services/files'
 import { resolveModel } from '../services/providers'
 import { getSetting } from '../services/settings'
-import { ownedFiles } from './files'
 
 const IMAGE_ONLY_TEXT = 'Translate the text content of the attached image(s).'
 

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { extname } from 'node:path'
-import { and, desc, eq, inArray, ne } from 'drizzle-orm'
+import { and, desc, eq, ne } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { config } from '../config'
 import { db, schema } from '../db'
@@ -65,14 +65,3 @@ export const fileRoutes = new Hono<AppEnv>()
     if (!stillUsed) await deleteObject(row.storageKey).catch((error) => console.warn('failed to delete object', error))
     return c.body(null, 204)
   })
-
-/** Load files by id, ensuring they all belong to `userId`. */
-export async function ownedFiles(userId: string, ids: string[]) {
-  if (ids.length === 0) return []
-  const rows = await db
-    .select()
-    .from(schema.files)
-    .where(and(inArray(schema.files.id, ids), eq(schema.files.userId, userId)))
-  if (rows.length !== new Set(ids).size) throw badRequest('One or more files were not found')
-  return ids.map((id) => rows.find((r) => r.id === id)!)
-}
