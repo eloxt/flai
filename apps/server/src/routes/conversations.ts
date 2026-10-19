@@ -5,11 +5,11 @@ import {
   type SearchHit,
   updateConversationSchema,
 } from '@flai/shared'
-import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db, schema } from '../db'
-import { decodeCursor, paginate } from '../lib/cursor'
+import { afterCursor, decodeCursor, paginate } from '../lib/cursor'
 import { highlight } from '../lib/highlight'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
@@ -35,7 +35,7 @@ export const conversationRoutes = new Hono<AppEnv>()
           eq(c_.userId, user.id),
           isNull(c_.deletedAt),
           q.favourite === undefined ? undefined : eq(c_.favourite, q.favourite),
-          cursor ? or(lt(sortCol, cursor.at), and(eq(sortCol, cursor.at), lt(c_.id, cursor.id))) : undefined,
+          afterCursor(sortCol, c_.id, cursor),
         ),
       )
       .orderBy(desc(sortCol), desc(c_.id))

@@ -10,12 +10,12 @@ import {
   type SettingKey,
   settingSchemas,
 } from '@flai/shared'
-import { and, desc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db, schema } from '../db'
 import { hashPassword } from '../lib/auth'
-import { decodeCursor, paginate } from '../lib/cursor'
+import { afterCursor, decodeCursor, paginate } from '../lib/cursor'
 import { isUniqueViolation } from '../lib/db-errors'
 import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body, query } from '../lib/hono'
@@ -23,6 +23,7 @@ import { newId } from '../lib/ids'
 import { toConversation, toUser } from '../lib/serialize'
 import { maskKey, type ProviderRow, reloadProviders, resolveModel } from '../services/providers'
 import { getSetting, updateSetting } from '../services/settings'
+import { findUserByEmail } from '../services/users'
 import { adminNotificationRoutes } from './notifications'
 
 const toAdminProvider = (p: ProviderRow): AdminProvider => ({
@@ -54,10 +55,7 @@ async function liveProvider(id: string) {
 }
 
 async function ensureEmailFree(email: string, exceptId?: string) {
-  const clash = await db.query.users.findFirst({
-    where: and(sql`lower(btrim(${u.email})) = ${email}`, isNull(u.deletedAt), exceptId ? ne(u.id, exceptId) : undefined),
-  })
-  if (clash) throw new AppError('CONFLICT', 'Email is already registered')
+  if (await findUserByEmail(email, { exceptId })) throw new AppError('CONFLICT', 'Email is already registered')
 }
 
 function isSettingKey(key: string): key is SettingKey {
@@ -113,7 +111,7 @@ const userRoutes = new Hono<AppEnv>()
         and(
           eq(cv.userId, target.id),
           isNull(cv.deletedAt),
-          cursor ? or(lt(cv.createdAt, cursor.at), and(eq(cv.createdAt, cursor.at), lt(cv.id, cursor.id))) : undefined,
+          afterCursor(cv.createdAt, cv.id, cursor),
         ),
       )
       .orderBy(desc(cv.createdAt), desc(cv.id))

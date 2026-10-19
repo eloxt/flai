@@ -3,7 +3,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { notFound } from '../lib/errors'
-import { type AppEnv, body, query } from '../lib/hono'
+import { type AppEnv, body, query, type UserRow } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toMessage } from '../lib/serialize'
 import { getConversation, loadPath } from '../services/conversations'
@@ -22,16 +22,9 @@ const toShare = (row: ShareRow): Share => ({
 
 const isExpired = (row: ShareRow) => row.expiresAt !== null && row.expiresAt.getTime() <= Date.now()
 
-async function snapshot(userId: string, conversationId: string, leafMessageId: string) {
-  const conversation = await db.query.conversations.findFirst({
-    where: and(
-      eq(schema.conversations.id, conversationId),
-      eq(schema.conversations.userId, userId),
-      isNull(schema.conversations.deletedAt),
-    ),
-  })
-  if (!conversation) throw notFound('Conversation')
-  const path = await loadPath(conversationId, leafMessageId)
+async function snapshot(user: UserRow, conversationId: string, leafMessageId: string) {
+  const conversation = await getConversation(user, conversationId)
+  const path = await loadPath(conversation.id, leafMessageId)
   return {
     conversation: { title: conversation.title, icon: conversation.icon },
     messages: path.map(toMessage),
@@ -58,7 +51,7 @@ export const shareRoutes = new Hono<AppEnv>()
   .post('/shares', async (c) => {
     const user = c.get('user')
     const input = await body(c, createShareSchema)
-    const snap = await snapshot(user.id, input.conversationId, input.leafMessageId)
+    const snap = await snapshot(user, input.conversationId, input.leafMessageId)
     const [row] = await db
       .insert(schema.shares)
       .values({
@@ -77,7 +70,7 @@ export const shareRoutes = new Hono<AppEnv>()
     const input = await body(c, updateShareSchema)
     const patch: Partial<typeof schema.shares.$inferInsert> = {}
     if (input.expiresAt !== undefined) patch.expiresAt = input.expiresAt ? new Date(input.expiresAt) : null
-    if (input.leafMessageId) Object.assign(patch, await snapshot(user.id, share.conversationId, input.leafMessageId))
+    if (input.leafMessageId) Object.assign(patch, await snapshot(user, share.conversationId, input.leafMessageId))
     if (Object.keys(patch).length === 0) return c.json(toShare(share))
     const [row] = await db.update(schema.shares).set(patch).where(eq(schema.shares.id, share.id)).returning()
     return c.json(toShare(row!))

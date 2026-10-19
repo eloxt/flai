@@ -1,3 +1,4 @@
+import { and, type Column, eq, lt, or, type SQL } from 'drizzle-orm'
 import { AppError } from './errors'
 
 /** Opaque keyset cursor over (timestamp, id), newest first. */
@@ -20,6 +21,11 @@ export function decodeCursor(raw: string | undefined): Cursor | undefined {
   } catch {
     throw new AppError('BAD_REQUEST', 'Invalid cursor')
   }
+}
+
+/** Rows strictly after `cursor` in (`at` desc, `id` desc) order; no condition without a cursor. */
+export function afterCursor(at: Column, id: Column, cursor: Cursor | undefined): SQL | undefined {
+  return cursor ? or(lt(at, cursor.at), and(eq(at, cursor.at), lt(id, cursor.id))) : undefined
 }
 
 /** Fetch `limit + 1` rows, then call this to split off the next cursor. */

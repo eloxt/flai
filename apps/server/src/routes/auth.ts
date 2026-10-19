@@ -1,5 +1,5 @@
 import { loginSchema, refreshSchema, registerSchema } from '@flai/shared'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { hashPassword, issueTokens, tokenMatchesUser, verifyPassword, verifyToken } from '../lib/auth'
@@ -8,16 +8,12 @@ import { AppError } from '../lib/errors'
 import { body } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toUser } from '../lib/serialize'
-
-const findByEmail = (email: string) =>
-  db.query.users.findFirst({
-    where: and(sql`lower(btrim(${schema.users.email})) = ${email}`, isNull(schema.users.deletedAt)),
-  })
+import { findUserByEmail } from '../services/users'
 
 export const authRoutes = new Hono()
   .post('/register', async (c) => {
     const input = await body(c, registerSchema)
-    if (await findByEmail(input.email)) throw new AppError('CONFLICT', 'Email is already registered')
+    if (await findUserByEmail(input.email)) throw new AppError('CONFLICT', 'Email is already registered')
     try {
       // New accounts wait for an administrator to activate them.
       const [user] = await db
@@ -38,7 +34,7 @@ export const authRoutes = new Hono()
   })
   .post('/login', async (c) => {
     const input = await body(c, loginSchema)
-    const user = await findByEmail(input.email)
+    const user = await findUserByEmail(input.email)
     if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
       throw new AppError('UNAUTHORIZED', 'Incorrect email or password')
     }
