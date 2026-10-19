@@ -8,6 +8,7 @@ import {
 } from "~/components/ui/message-scroller"
 import { Skeleton } from "~/components/ui/skeleton"
 import { sendMessage, useChatStore, useVisibleMessages } from "../chat-store"
+import { asksUser, groupTurns } from "../turns"
 import { ConversationNav } from "./conversation-nav"
 import { MessageBody } from "./message-body"
 import { MessageRow } from "./message-row"
@@ -20,6 +21,10 @@ export function ChatThread({ footer }: { footer: React.ReactNode }) {
   const streaming = useChatStore((s) => s.streaming)
   const answering = useChatStore((s) => s.answering)
   const messages = useVisibleMessages()
+  const turns = groupTurns(messages)
+  // Continuing after an answered question: stream into the question's turn.
+  const lastMessage = messages.at(-1)
+  const streamingJoinsTurn = Boolean(streaming && lastMessage?.id === streaming.parentId && asksUser(lastMessage))
 
   return (
     <MessageScroller className="min-h-0 flex-1">
@@ -32,20 +37,26 @@ export function ChatThread({ footer }: { footer: React.ReactNode }) {
               </MessageScrollerItem>
             ) : (
               <>
-                {messages.map((message, index) => (
-                  <MessageScrollerItem
-                    key={message.id}
-                    messageId={message.id}
-                    scrollAnchor={message.role === "user"}
-                  >
-                    <MessageRow
-                      message={message}
-                      isLast={!streaming && index === messages.length - 1}
-                      busy={Boolean(streaming) || answering}
-                    />
-                  </MessageScrollerItem>
-                ))}
-                {streaming && (
+                {turns.map((turn, index) => {
+                  const last = index === turns.length - 1
+                  const message = turn.at(-1)!
+                  return (
+                    <MessageScrollerItem
+                      key={turn[0]!.id}
+                      messageId={turn[0]!.id}
+                      scrollAnchor={message.role === "user"}
+                    >
+                      <MessageRow
+                        message={message}
+                        earlier={turn.slice(0, -1)}
+                        continuation={last && streamingJoinsTurn ? streaming!.message : undefined}
+                        isLast={!streaming && last}
+                        busy={Boolean(streaming) || answering}
+                      />
+                    </MessageScrollerItem>
+                  )
+                })}
+                {streaming && !streamingJoinsTurn && (
                   <MessageScrollerItem
                     key={streaming.assistantId}
                     messageId={streaming.assistantId}

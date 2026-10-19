@@ -1,4 +1,4 @@
-import type { MessageRecord } from "@flai/shared"
+import type { FlaiUIMessage, MessageRecord } from "@flai/shared"
 import { textOf } from "@flai/shared"
 import { cn } from "cn"
 import { memo, useState } from "react"
@@ -11,7 +11,12 @@ import { MessageActions } from "./message-actions"
 import { MessageBody } from "./message-body"
 
 interface MessageRowProps {
+  /** The turn's latest record; actions apply to it. */
   message: MessageRecord
+  /** Earlier assistant records of the same turn: questions the reply continued after. */
+  earlier?: MessageRecord[]
+  /** A continuation still streaming after the turn's answered question. */
+  continuation?: FlaiUIMessage
   isLast: boolean
   /** Actions are hidden while a reply is streaming. */
   busy: boolean
@@ -19,7 +24,7 @@ interface MessageRowProps {
 
 const sendFollowUp = (text: string) => void sendMessage({ text })
 
-export const MessageRow = memo(function MessageRow({ message, isLast, busy }: MessageRowProps) {
+export const MessageRow = memo(function MessageRow({ message, earlier = [], continuation, isLast, busy }: MessageRowProps) {
   const { t } = useTranslation()
   const [editing, setEditing] = useState<string | null>(null)
   const isUser = message.role === "user"
@@ -60,22 +65,32 @@ export const MessageRow = memo(function MessageRow({ message, isLast, busy }: Me
             </div>
           </div>
         ) : (
-          <MessageBody
-            role={message.role}
-            parts={message.parts}
-            metadata={message.metadata}
-            onSend={busy ? undefined : sendFollowUp}
-            onAnswer={isLast && !busy ? (toolCallId, answer) => answerQuestion(message.id, toolCallId, answer) : undefined}
-          />
+          // One turn: consecutive records sit as close together as the parts within each one.
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            {earlier.map((record) => (
+              <MessageBody key={record.id} role={record.role} parts={record.parts} metadata={record.metadata} onSend={busy ? undefined : sendFollowUp} />
+            ))}
+            <MessageBody
+              role={message.role}
+              parts={message.parts}
+              metadata={message.metadata}
+              onSend={busy ? undefined : sendFollowUp}
+              onAnswer={isLast && !busy ? (toolCallId, answer) => answerQuestion(message.id, toolCallId, answer) : undefined}
+            />
+            {continuation && (
+              <MessageBody role="assistant" parts={continuation.parts} metadata={continuation.metadata} streaming onSend={sendFollowUp} />
+            )}
+          </div>
         )}
         {editing === null && !busy && (
           <div className={cn(isUser && "md:opacity-0 md:transition-opacity md:group-hover/row:opacity-100 md:focus-within:opacity-100")}>
             <MessageActions
               message={message}
+              turn={[...earlier, message]}
               isLast={isLast}
               onRegenerate={() => void regenerate(message.id)}
               onDelete={deleteLastMessage}
-              onSwitch={(direction) => switchSibling(message.id, direction)}
+              onSwitch={switchSibling}
               onEdit={isUser ? () => setEditing(textOf(message.parts)) : undefined}
             />
           </div>

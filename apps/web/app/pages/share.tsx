@@ -9,6 +9,7 @@ import { Button } from "~/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty"
 import { Message, MessageContent } from "~/components/ui/message"
 import { Skeleton } from "~/components/ui/skeleton"
+import { groupTurns } from "~/features/chat/turns"
 import { MessageBody } from "~/features/chat/components/message-body"
 import { api, ApiError } from "~/lib/api"
 import { formatDateTime } from "~/lib/format"
@@ -59,10 +60,12 @@ export default function SharePage() {
           </div>
         ) : (
           <ImageProxyContext value={`/public/shares/${share.id}/images`}>
-            {share.messages.map((m) => (
-              <Message key={m.id} align={m.role === "user" ? "end" : "start"}>
-                <MessageContent className={m.role === "user" ? "items-end" : "w-full"}>
-                  <MessageBody role={m.role} parts={m.parts} metadata={m.metadata} />
+            {groupTurns(share.messages).map((turn) => (
+              <Message key={turn[0]!.id} align={turn[0]!.role === "user" ? "end" : "start"}>
+                <MessageContent className={turn[0]!.role === "user" ? "items-end" : "w-full gap-2"}>
+                  {turn.map((m) => (
+                    <MessageBody key={m.id} role={m.role} parts={m.parts} metadata={m.metadata} />
+                  ))}
                 </MessageContent>
               </Message>
             ))}

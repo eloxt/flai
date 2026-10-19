@@ -14,10 +14,12 @@ import { siblingsOf } from "../tree"
 
 interface MessageActionsProps {
   message: MessageRecord
+  /** Every record shown in this row, oldest first; defaults to the message alone. */
+  turn?: MessageRecord[]
   isLast: boolean
   onRegenerate: () => void
   onDelete: () => Promise<void>
-  onSwitch: (direction: -1 | 1) => void
+  onSwitch: (messageId: string, direction: -1 | 1) => void
   onEdit?: () => void
 }
 
@@ -33,15 +35,17 @@ function IconAction({ label, onClick, children }: { label: string; onClick?: () 
   )
 }
 
-export function MessageActions({ message, isLast, onRegenerate, onDelete, onSwitch, onEdit }: MessageActionsProps) {
+export function MessageActions({ message, turn = [message], isLast, onRegenerate, onDelete, onSwitch, onEdit }: MessageActionsProps) {
   const { t } = useTranslation()
   const tree = useChatStore((s) => s.tree)
-  const siblings = siblingsOf(tree, message.id)
+  // A merged turn has one branch control: the latest record with alternatives.
+  const branch = turn.findLast((record) => siblingsOf(tree, record.id).count > 1) ?? message
+  const siblings = siblingsOf(tree, branch.id)
   const [copied, setCopied] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const copy = async () => {
-    await navigator.clipboard.writeText(textOf(message.parts))
+    await navigator.clipboard.writeText(turn.map((record) => textOf(record.parts)).filter(Boolean).join("\n\n"))
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
@@ -50,13 +54,13 @@ export function MessageActions({ message, isLast, onRegenerate, onDelete, onSwit
     <div className="flex items-center gap-0.5 text-muted-foreground">
       {siblings.count > 1 && (
         <div className="flex items-center">
-          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.previous")} disabled={!siblings.prev} onClick={() => onSwitch(-1)}>
+          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.previous")} disabled={!siblings.prev} onClick={() => onSwitch(branch.id, -1)}>
             <ChevronLeftIcon />
           </Button>
           <span className="text-xs tabular-nums">
             {siblings.index + 1}/{siblings.count}
           </span>
-          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.next")} disabled={!siblings.next} onClick={() => onSwitch(1)}>
+          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.next")} disabled={!siblings.next} onClick={() => onSwitch(branch.id, 1)}>
             <ChevronRightIcon />
           </Button>
         </div>
