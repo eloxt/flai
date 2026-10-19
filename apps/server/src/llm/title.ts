@@ -1,7 +1,8 @@
 import { textOf } from '@flai/shared'
+import { and, asc, eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
+import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
-import { listMessages } from '../services/conversations'
 import { resolveModel } from '../services/providers'
 import { getSetting } from '../services/settings'
 import { chatContext, getChatAgent } from './agent'
@@ -26,7 +27,12 @@ export async function generateTitle(conversationId: string, content?: string): P
 
   let input = content?.trim()
   if (!input) {
-    const first = (await listMessages(conversationId)).find((m) => m.role === 'user')
+    const m = schema.messages
+    const first = await db.query.messages.findFirst({
+      where: and(eq(m.conversationId, conversationId), eq(m.role, 'user'), isNull(m.deletedAt)),
+      orderBy: [asc(m.createdAt), asc(m.id)],
+      columns: { parts: true },
+    })
     input = first ? textOf(first.parts) : ''
   }
   if (!input) throw new AppError('BAD_REQUEST', 'Nothing to generate a title from')
