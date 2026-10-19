@@ -4,6 +4,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { compress } from 'hono/compress'
+import { HTTPException } from 'hono/http-exception'
 import { logger } from 'hono/logger'
 import { config } from './config'
 import { AppError } from './lib/errors'
@@ -22,6 +23,8 @@ import { publicShareRoutes, shareRoutes } from './routes/shares'
 import { translateRoutes } from './routes/translate'
 import { listPublicProviders } from './services/providers'
 
+const JSON_BODY_LIMIT = 4 * 1024 * 1024
+
 export function createApp() {
   const app = new Hono<AppEnv>()
 
@@ -29,6 +32,7 @@ export function createApp() {
     if (error instanceof AppError) {
       return c.json({ error: { code: error.code, message: error.message, details: error.details } }, error.status)
     }
+    if (error instanceof HTTPException) return error.getResponse()
     console.error(error)
     return c.json({ error: { code: 'INTERNAL', message: 'Internal server error' } }, 500)
   })
@@ -36,7 +40,13 @@ export function createApp() {
   if (config().NODE_ENV !== 'test') app.use('/api/*', logger())
 
   const api = new Hono<AppEnv>()
-  api.use('*', bodyLimit({ maxSize: config().MAX_UPLOAD_BYTES + 1024 * 1024 }))
+  // Only uploads may be large; JSON bodies (at most a long message or a provider's model list) stay small.
+  const tooLarge = () => {
+    throw new AppError('PAYLOAD_TOO_LARGE', 'Request body is too large')
+  }
+  const uploadLimit = bodyLimit({ maxSize: config().MAX_UPLOAD_BYTES + 1024 * 1024, onError: tooLarge })
+  const jsonLimit = bodyLimit({ maxSize: JSON_BODY_LIMIT, onError: tooLarge })
+  api.use('*', (c, next) => (c.req.method === 'POST' && c.req.path === '/api/v1/files' ? uploadLimit : jsonLimit)(c, next))
   api.route('/auth', authRoutes)
   api.route('/public', publicShareRoutes)
 

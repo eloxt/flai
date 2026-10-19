@@ -263,6 +263,16 @@ suite('API integration', () => {
     expect((await call(`/shares/${share.id}`, { method: 'DELETE', token: bob })).status).toBe(404)
   })
 
+  it('limits JSON bodies but lets uploads use the upload limit', async () => {
+    const big = 'x'.repeat(5 * 1024 * 1024)
+    expect((await call('/me/preferences', { method: 'PATCH', token: alice, body: { big } })).status).toBe(413)
+    const form = new FormData()
+    form.append('file', new File([big], 'big.txt', { type: 'text/plain' }))
+    const upload = await app.request('/api/v1/files', { method: 'POST', headers: { authorization: `Bearer ${alice}` }, body: form })
+    // Past the body limit; tests run without object storage.
+    expect(upload.status).toBe(412)
+  })
+
   it('revokes tokens after a password change', async () => {
     const res = await call('/me/password', { method: 'PUT', token: alice, body: { oldPassword: 'password123', newPassword: 'newpassword456' } })
     expect(res.status).toBe(200)

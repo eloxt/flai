@@ -9,6 +9,7 @@ const STATUS: Record<ErrorCode, ContentfulStatusCode> = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  PAYLOAD_TOO_LARGE: 413,
   NOT_CONFIGURED: 412,
   UPSTREAM: 502,
   UNAVAILABLE: 503,
