@@ -197,6 +197,25 @@ col = Buttons([Button("Stacked one", @ToAssistant("One"), "secondary"), Button("
     ],
   },
   {
+    name: "Media",
+    advertised: true,
+    samples: [
+      {
+        title: "SearchImage",
+        components: ["SearchImage"],
+        code: `root = Stack([row, card])
+row = Stack([SearchImage("Belém Tower Lisbon"), SearchImage("Pena Palace Sintra"), SearchImage("pastel de nata")], "row", "s", "stretch", "start", true)
+card = Card([CardHeader("Jerónimos Monastery", "Square crop, inside a Card"), SearchImage("Jerónimos Monastery", 1)])`,
+      },
+      {
+        title: "HtmlView",
+        components: ["HtmlView"],
+        code: `root = Stack([TextContent("Click the canvas to add a ball.", "small"), game])
+game = HtmlView("<canvas id='c' style='display:block;width:100%;height:240px'></canvas><script>const c=document.getElementById('c'),x=c.getContext('2d');const balls=[{x:40,y:40,vx:2.4,vy:1.7,r:14}];function size(){c.width=c.clientWidth;c.height=c.clientHeight}size();addEventListener('resize',size);c.addEventListener('click',e=>balls.push({x:e.offsetX,y:e.offsetY,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,r:8+Math.random()*12}));function tick(){x.clearRect(0,0,c.width,c.height);for(const b of balls){b.x+=b.vx;b.y+=b.vy;if(b.x<b.r||b.x>c.width-b.r)b.vx*=-1;if(b.y<b.r||b.y>c.height-b.r)b.vy*=-1;x.beginPath();x.arc(b.x,b.y,b.r,0,7);x.fillStyle='#003b8e';x.fill()}requestAnimationFrame(tick)}tick()</script>", null, "Bouncing balls")`,
+      },
+    ],
+  },
+  {
     name: "Drawing",
     advertised: true,
     samples: [

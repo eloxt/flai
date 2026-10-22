@@ -630,6 +630,14 @@
       "input": "Input",
       "output": "Output",
       "error": "Error"
+    },
+    "genui": {
+      "run": "Run",
+      "stop": "Stop",
+      "preparing": "Preparing the interactive view…",
+      "tooLarge": "This interactive view is too large to run.",
+      "title": "Interactive view",
+      "noPhoto": "No photo found"
     }
   }
 }

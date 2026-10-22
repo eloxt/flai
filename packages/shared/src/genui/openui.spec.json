@@ -3,7 +3,7 @@
     "root": "Stack",
     "components": {
       "Card": {
-        "signature": "Card(children: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Tabs | Stack | Svg)[], variant?: \"card\" | \"sunk\" | \"clear\", direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
+        "signature": "Card(children: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Tabs | Stack | Svg | SearchImage | HtmlView)[], variant?: \"card\" | \"sunk\" | \"clear\", direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
         "description": "Styled container. variant: \"card\" (default, elevated) | \"sunk\" (recessed) | \"clear\" (transparent). Always full width. Accepts all Stack flex params (default: direction \"column\"). Cards flex to share space in row/wrap layouts."
       },
       "CardHeader": {
@@ -115,7 +115,7 @@
         "description": "Tabbed container"
       },
       "TabItem": {
-        "signature": "TabItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg)[])",
+        "signature": "TabItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg | SearchImage | HtmlView)[])",
         "description": "value is unique id, trigger is tab label, content is array of components"
       },
       "Accordion": {
@@ -123,7 +123,7 @@
         "description": "Collapsible sections"
       },
       "AccordionItem": {
-        "signature": "AccordionItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg)[])",
+        "signature": "AccordionItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg | SearchImage | HtmlView)[])",
         "description": "value is unique id, trigger is section title"
       },
       "Separator": {
@@ -169,6 +169,14 @@
       "SvgText": {
         "signature": "SvgText(text: string, x: number, y: number, size?: number, fill?: Color, anchor?: \"start\" | \"middle\" | \"end\", weight?: \"normal\" | \"medium\")",
         "description": ""
+      },
+      "SearchImage": {
+        "signature": "SearchImage(query: string, aspectRatio?: number)",
+        "description": "A real photo the app finds for query; it needs no URL. Name the exact subject in English in 2 to 4 words: \"Belém Tower Lisbon\", \"pastel de nata\". aspectRatio is width / height (default 1.5)."
+      },
+      "HtmlView": {
+        "signature": "HtmlView(html: string, height?: number, title?: string)",
+        "description": "Sandboxed HTML page with inline JS and CSS, for a game, canvas or animation that needs a loop. No network: no external scripts, styles, fonts or images. It runs when the user presses Run. Fits its content unless height is set."
       }
     },
     "componentGroups": [
@@ -227,6 +235,13 @@
         "components": [
           "Button",
           "Buttons"
+        ]
+      },
+      {
+        "name": "Media",
+        "components": [
+          "SearchImage",
+          "HtmlView"
         ]
       },
       {
@@ -572,6 +587,12 @@
         },
         "SvgText": {
           "$ref": "#/$defs/SvgText"
+        },
+        "SearchImage": {
+          "$ref": "#/$defs/SearchImage"
+        },
+        "HtmlView": {
+          "$ref": "#/$defs/HtmlView"
         }
       },
       "required": [
@@ -616,7 +637,9 @@
         "Path",
         "Polyline",
         "Polygon",
-        "SvgText"
+        "SvgText",
+        "SearchImage",
+        "HtmlView"
       ],
       "additionalProperties": false,
       "$defs": {
@@ -674,6 +697,12 @@
                   },
                   {
                     "$ref": "#/$defs/Svg"
+                  },
+                  {
+                    "$ref": "#/$defs/SearchImage"
+                  },
+                  {
+                    "$ref": "#/$defs/HtmlView"
                   }
                 ]
               }
@@ -1725,6 +1754,12 @@
                   },
                   {
                     "$ref": "#/$defs/Svg"
+                  },
+                  {
+                    "$ref": "#/$defs/SearchImage"
+                  },
+                  {
+                    "$ref": "#/$defs/HtmlView"
                   }
                 ]
               }
@@ -1767,6 +1802,41 @@
           ],
           "additionalProperties": false,
           "description": "A drawing for steps, parts, mechanisms, diagrams and layouts. Scales to its width; its shapes take expressions, so state can move them."
+        },
+        "SearchImage": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "aspectRatio": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "description": "A real photo the app finds for query; it needs no URL. Name the exact subject in English in 2 to 4 words: \"Belém Tower Lisbon\", \"pastel de nata\". aspectRatio is width / height (default 1.5)."
+        },
+        "HtmlView": {
+          "type": "object",
+          "properties": {
+            "html": {
+              "type": "string"
+            },
+            "height": {
+              "type": "number"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "html"
+          ],
+          "additionalProperties": false,
+          "description": "Sandboxed HTML page with inline JS and CSS, for a game, canvas or animation that needs a loop. No network: no external scripts, styles, fonts or images. It runs when the user presses Run. Fits its content unless height is set."
         },
         "Stack": {
           "type": "object",
@@ -1895,6 +1965,12 @@
                   },
                   {
                     "$ref": "#/$defs/Svg"
+                  },
+                  {
+                    "$ref": "#/$defs/SearchImage"
+                  },
+                  {
+                    "$ref": "#/$defs/HtmlView"
                   }
                 ]
               }
@@ -3348,10 +3424,11 @@
       "Use Tabs or Accordion for alternative views or collapsible details.",
       "For forms, define one FormControl reference per field and always provide Buttons as the second Form argument.",
       "Never nest Form inside Form.",
-      "Image URLs must come from the user or tool results; never invent or template image URLs.",
+      "Image URLs must come from the user or tool results; never invent or template image URLs. For a photo of a place, dish, product or other thing with a look, use SearchImage with an English query instead.",
       "When the request involves numbers, lists or steps, keep inputs in $variables and compute what is shown with the listed @functions, so the page works without another message. Change state with @Set.",
       "$variable defaults are literals, never expressions or @calls. @Random, @Pick and @Shuffle draw anew on every evaluation, so call them inside @Set.",
-      "Use Svg drawings for how something is built or works: assembly steps, mechanisms, geometry, layouts. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels."
+      "Use Svg drawings for how something is built or works: assembly steps, mechanisms, geometry, layouts. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels.",
+      "Use HtmlView only for a game or animation that needs a loop; build everything else from components."
     ]
   }
 }

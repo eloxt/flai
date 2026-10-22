@@ -1,2 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap");
 @import "@openuidev/react-ui/layered/styles/index.css";
+
+/* Photos share a row Stack and wrap; in a column Stack a flex-basis would override their aspect ratio. */
+:not([style*="column"]) > .genui-search-image {
+  flex: 1 1 10rem;
+}

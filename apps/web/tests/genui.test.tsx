@@ -55,7 +55,7 @@ describe("official OpenUI library", () => {
     const curated = extended.extend({
       components: { remove: Object.keys(extended.components).filter((name) => !names.includes(name)) },
     })
-    expect(names).toHaveLength(42)
+    expect(names).toHaveLength(44)
     expect(Object.keys(spec.library.functions)).toEqual(genuiFunctions.map((fn) => fn.name))
     expect(spec.library).toEqual({ ...curated.toSpec(), componentGroups: spec.library.componentGroups })
     expect(spec.promptOptions.examples).toEqual(openuiPromptOptions.examples?.slice(0, 4))

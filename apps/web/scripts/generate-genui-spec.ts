@@ -3,7 +3,10 @@ import {
   openuiLibrary,
   openuiPromptOptions,
 } from "@openuidev/react-ui/genui-lib"
-import { genuiExtension } from "../app/components/genui/extensions"
+import {
+  genuiExtension,
+  mediaComponentGroup,
+} from "../app/components/genui/extensions"
 import { svgComponentGroup } from "../app/components/genui/svg"
 
 // Advertise a small everyday set; the frontend still renders the full library for old replies.
@@ -52,6 +55,7 @@ const componentGroups = [
     ],
   },
   { name: "Actions", components: ["Button", "Buttons"] },
+  mediaComponentGroup,
   svgComponentGroup,
 ]
 const keep = new Set(componentGroups.flatMap((group) => group.components))
@@ -74,10 +78,11 @@ const promptOptions = {
     "Use Tabs or Accordion for alternative views or collapsible details.",
     "For forms, define one FormControl reference per field and always provide Buttons as the second Form argument.",
     "Never nest Form inside Form.",
-    "Image URLs must come from the user or tool results; never invent or template image URLs.",
+    "Image URLs must come from the user or tool results; never invent or template image URLs. For a photo of a place, dish, product or other thing with a look, use SearchImage with an English query instead.",
     "When the request involves numbers, lists or steps, keep inputs in $variables and compute what is shown with the listed @functions, so the page works without another message. Change state with @Set.",
     "$variable defaults are literals, never expressions or @calls. @Random, @Pick and @Shuffle draw anew on every evaluation, so call them inside @Set.",
     "Use Svg drawings for how something is built or works: assembly steps, mechanisms, geometry, layouts. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels.",
+    "Use HtmlView only for a game or animation that needs a loop; build everything else from components.",
   ],
 }
 
