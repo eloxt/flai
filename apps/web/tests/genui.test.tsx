@@ -1,4 +1,5 @@
 import { buildGenuiPrompt } from "@flai/shared/genui"
+import { genuiFunctions } from "@flai/shared/genui/functions"
 import spec from "../../../packages/shared/src/genui/openui.spec.json"
 import { openuiLibrary, openuiPromptOptions } from "@openuidev/react-ui"
 import { createParser } from "@openuidev/react-lang"
@@ -18,6 +19,7 @@ import {
   it,
   vi,
 } from "vitest"
+import { genuiExtension } from "~/components/genui/extensions"
 import { GenuiBlock } from "~/components/genui/genui-block"
 import { ThemeProvider } from "~/components/theme-provider"
 
@@ -49,10 +51,12 @@ afterEach(() => {
 describe("official OpenUI library", () => {
   it("advertises a compact subset with official signatures and keeps the full renderer available", () => {
     const names = Object.keys(spec.library.components)
-    const curated = openuiLibrary.extend({
-      components: { remove: Object.keys(openuiLibrary.components).filter((name) => !names.includes(name)) },
+    const extended = openuiLibrary.extend(genuiExtension)
+    const curated = extended.extend({
+      components: { remove: Object.keys(extended.components).filter((name) => !names.includes(name)) },
     })
-    expect(names).toHaveLength(32)
+    expect(names).toHaveLength(42)
+    expect(Object.keys(spec.library.functions)).toEqual(genuiFunctions.map((fn) => fn.name))
     expect(spec.library).toEqual({ ...curated.toSpec(), componentGroups: spec.library.componentGroups })
     expect(spec.promptOptions.examples).toEqual(openuiPromptOptions.examples?.slice(0, 4))
     const parser = createParser(curated.toJSONSchema(), curated.root)
@@ -67,6 +71,9 @@ describe("official OpenUI library", () => {
     for (const component of Object.values(spec.library.components)) {
       expect(prompt).toContain(component.signature)
     }
+    for (const fn of Object.values(spec.library.functions)) {
+      expect(prompt).toContain(fn.signature)
+    }
     expect(prompt).toContain("tagged `openui-lang`")
     expect(prompt).toContain("complete, standalone program")
     expect(prompt).not.toContain(
@@ -76,7 +83,7 @@ describe("official OpenUI library", () => {
     for (const name of ["VisualCardBlock", "CompositeCardBlock", "EditableTable", "RadarChart", "Modal"]) {
       expect(prompt).not.toContain(name)
     }
-    expect(prompt.length).toBeLessThan(20_000)
+    expect(prompt.length).toBeLessThan(26_000)
   })
 
   it("renders official card and column-oriented table signatures", () => {

@@ -2,6 +2,7 @@ import { openuiLibrary } from "@openuidev/react-ui"
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { GenuiBlock } from "~/components/genui/genui-block"
+import { genuiExtension } from "~/components/genui/extensions"
 import { imageLibrary } from "~/components/genui/image-library"
 import { ThemeProvider } from "~/components/theme-provider"
 import { ImageProxyContext } from "~/hooks/use-proxied-images"
@@ -35,7 +36,7 @@ afterAll(() => vi.unstubAllGlobals())
 
 describe("OpenUI image proxy", () => {
   it("keeps official schemas and prompt signatures intact", () => {
-    expect(imageLibrary.toSpec()).toEqual(openuiLibrary.toSpec())
+    expect(imageLibrary.toSpec()).toEqual(openuiLibrary.extend(genuiExtension).toSpec())
   })
 
   it("proxies VisualCardItem background images before applying any remote CSS URLs", async () => {

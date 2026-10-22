@@ -15,6 +15,7 @@ export default [
       route("/search", "./pages/search.tsx"),
       route("/chat/:conversationId", "./pages/chat.tsx"),
       route("/translate", "./pages/translate.tsx"),
+      route("/dev/genui", "./pages/genui-gallery.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig

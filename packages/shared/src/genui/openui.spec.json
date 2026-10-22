@@ -3,7 +3,7 @@
     "root": "Stack",
     "components": {
       "Card": {
-        "signature": "Card(children: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Tabs | Stack)[], variant?: \"card\" | \"sunk\" | \"clear\", direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
+        "signature": "Card(children: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Tabs | Stack | Svg)[], variant?: \"card\" | \"sunk\" | \"clear\", direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
         "description": "Styled container. variant: \"card\" (default, elevated) | \"sunk\" (recessed) | \"clear\" (transparent). Always full width. Accepts all Stack flex params (default: direction \"column\"). Cards flex to share space in row/wrap layouts."
       },
       "CardHeader": {
@@ -115,7 +115,7 @@
         "description": "Tabbed container"
       },
       "TabItem": {
-        "signature": "TabItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons)[])",
+        "signature": "TabItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg)[])",
         "description": "value is unique id, trigger is tab label, content is array of components"
       },
       "Accordion": {
@@ -123,12 +123,52 @@
         "description": "Collapsible sections"
       },
       "AccordionItem": {
-        "signature": "AccordionItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons)[])",
+        "signature": "AccordionItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg)[])",
         "description": "value is unique id, trigger is section title"
       },
       "Separator": {
         "signature": "Separator(orientation?: \"horizontal\" | \"vertical\", decorative?: boolean)",
         "description": "Visual divider between content sections"
+      },
+      "Svg": {
+        "signature": "Svg(children: Node[], viewBox: string, width?: number | string, height?: number | string)",
+        "description": "A drawing for steps, parts, mechanisms, diagrams and layouts. Scales to its width; its shapes take expressions, so state can move them."
+      },
+      "G": {
+        "signature": "G(children: Node[], transform?: string, opacity?: number)",
+        "description": "Group; transform like \"rotate(30 50 50)\" or \"translate(10 0)\"."
+      },
+      "Circle": {
+        "signature": "Circle(cx: number, cy: number, r: number, fill?: Color, stroke?: Color, strokeWidth?: number, opacity?: number)",
+        "description": ""
+      },
+      "Ellipse": {
+        "signature": "Ellipse(cx: number, cy: number, rx: number, ry: number, fill?: Color, stroke?: Color, strokeWidth?: number, opacity?: number)",
+        "description": ""
+      },
+      "Rect": {
+        "signature": "Rect(x: number, y: number, width: number, height: number, fill?: Color, stroke?: Color, strokeWidth?: number, opacity?: number, rx?: number)",
+        "description": ""
+      },
+      "Line": {
+        "signature": "Line(x1: number, y1: number, x2: number, y2: number, stroke?: Color, strokeWidth?: number, opacity?: number)",
+        "description": ""
+      },
+      "Path": {
+        "signature": "Path(d: string, fill?: Color, stroke?: Color, strokeWidth?: number, opacity?: number)",
+        "description": ""
+      },
+      "Polyline": {
+        "signature": "Polyline(points: string, stroke?: Color, strokeWidth?: number, fill?: Color, opacity?: number)",
+        "description": "points like \"0,0 10,5 20,0\"."
+      },
+      "Polygon": {
+        "signature": "Polygon(points: string, fill?: Color, stroke?: Color, strokeWidth?: number, opacity?: number)",
+        "description": ""
+      },
+      "SvgText": {
+        "signature": "SvgText(text: string, x: number, y: number, size?: number, fill?: Color, anchor?: \"start\" | \"middle\" | \"end\", weight?: \"normal\" | \"medium\")",
+        "description": ""
       }
     },
     "componentGroups": [
@@ -188,8 +228,221 @@
           "Button",
           "Buttons"
         ]
+      },
+      {
+        "name": "Drawing",
+        "components": [
+          "Svg",
+          "G",
+          "Circle",
+          "Ellipse",
+          "Rect",
+          "Line",
+          "Path",
+          "Polyline",
+          "Polygon",
+          "SvgText"
+        ],
+        "notes": [
+          "- Color is \"ink\", \"muted\", \"faint\", \"surface\", \"line\", \"canvas\", \"brand\", \"danger\", \"chart1\" to \"chart5\", or a CSS color like \"#16a34a\".",
+          "- Coordinates are in viewBox units. A Line with a small Polygon head makes an arrow."
+        ]
       }
     ],
+    "functions": {
+      "Append": {
+        "signature": "Append(list: any[], item: any) → any[]",
+        "description": "Copy of the list with item added at the end"
+      },
+      "Prepend": {
+        "signature": "Prepend(list: any[], item: any) → any[]",
+        "description": "Copy of the list with item added at the start"
+      },
+      "Concat": {
+        "signature": "Concat(list: any[], more: any[]) → any[]",
+        "description": "Joins two lists"
+      },
+      "Remove": {
+        "signature": "Remove(list: any[], field: string, value: any) → any[]",
+        "description": "Copy without the items whose field equals value; field \"\" compares the items themselves"
+      },
+      "RemoveAt": {
+        "signature": "RemoveAt(list: any[], index: number) → any[]",
+        "description": "Copy without the item at index (0-based; negative counts from the end)"
+      },
+      "Update": {
+        "signature": "Update(list: any[], field: string, value: any, setField: string, setValue: any) → any[]",
+        "description": "Copy where items whose field equals value get setField set to setValue"
+      },
+      "Toggle": {
+        "signature": "Toggle(list: any[], item: any) → any[]",
+        "description": "Adds item if missing, removes it if present (a set of strings or numbers)"
+      },
+      "Includes": {
+        "signature": "Includes(list: any[] | string, item: any) → boolean",
+        "description": "True if the list has item, or the text contains it"
+      },
+      "Find": {
+        "signature": "Find(list: any[], field: string, value: any) → any",
+        "description": "First item whose field equals value, or null"
+      },
+      "IndexOf": {
+        "signature": "IndexOf(list: any[], item: any) → number",
+        "description": "Index of item in the list, or -1"
+      },
+      "Take": {
+        "signature": "Take(list: any[], n: number) → any[]",
+        "description": "The first n items; a negative n takes the last n"
+      },
+      "SliceOf": {
+        "signature": "SliceOf(list: any[] | string, start: number, end?: number) → any[] | string",
+        "description": "Items, or characters of text, from start up to end (not included); negative counts from the end"
+      },
+      "Unique": {
+        "signature": "Unique(list: any[]) → any[]",
+        "description": "Distinct items in first-seen order"
+      },
+      "Reverse": {
+        "signature": "Reverse(list: any[]) → any[]",
+        "description": "Copy in reverse order"
+      },
+      "Range": {
+        "signature": "Range(start: number, end: number, step?: number) → number[]",
+        "description": "Numbers from start up to end (not included) by step (default 1), e.g. @Range(0, 3) is [0, 1, 2]"
+      },
+      "Pick": {
+        "signature": "Pick(list: any[]) → any",
+        "description": "A random item, or null for an empty list; draws anew each time, so call it inside @Set"
+      },
+      "Shuffle": {
+        "signature": "Shuffle(list: any[]) → any[]",
+        "description": "Copy in random order; call it inside @Set"
+      },
+      "Flatten": {
+        "signature": "Flatten(list: any[]) → any[]",
+        "description": "One list from a list of lists, e.g. [[1, 2], [3]] is [1, 2, 3]"
+      },
+      "Chunk": {
+        "signature": "Chunk(list: any[], size: number) → any[][]",
+        "description": "The list cut into lists of size items, e.g. for weeks of 7 days or pages"
+      },
+      "Pow": {
+        "signature": "Pow(base: number, exponent: number) → number",
+        "description": "base raised to exponent"
+      },
+      "Sqrt": {
+        "signature": "Sqrt(number: number) → number",
+        "description": "Square root; null for a negative number"
+      },
+      "Random": {
+        "signature": "Random(min: number, max: number, integer?: boolean) → number",
+        "description": "Random number from min to max (integer true: a whole number, max included); draws anew each time, so call it inside @Set"
+      },
+      "Clamp": {
+        "signature": "Clamp(number: number, min: number, max: number) → number",
+        "description": "number kept between min and max"
+      },
+      "Percent": {
+        "signature": "Percent(part: number, total: number) → number",
+        "description": "part / total * 100, e.g. @Percent(3, 4) is 75; 0 when total is 0"
+      },
+      "Lerp": {
+        "signature": "Lerp(a: number, b: number, t: number) → number",
+        "description": "The value a fraction t of the way from a to b"
+      },
+      "Allocate": {
+        "signature": "Allocate(total: number, weights: number[], decimals?: number) → number[]",
+        "description": "Splits total in proportion to weights, rounded to decimals (default 2), so the parts add up to exactly total, e.g. @Allocate(100, [1, 1, 1]) is [33.34, 33.33, 33.33]"
+      },
+      "Payment": {
+        "signature": "Payment(principal: number, rate: number, periods: number) → number",
+        "description": "Payment per period that repays principal over periods at rate percent per period, e.g. a 30-year loan at 6% a year: @Payment(300000, 6 / 12, 360)"
+      },
+      "Convert": {
+        "signature": "Convert(value: number, from: string, to: string) → number",
+        "description": "value from one unit to another: mm cm m km in ft yd mi; mg g kg oz lb st; ml l tsp tbsp floz cup pt qt gal (US); m/s km/h mph kn; m2 km2 ft2 ha acre; c f k"
+      },
+      "Format": {
+        "signature": "Format(value: number, kind?: \"number\" | \"currency\" | \"percent\" | \"compact\", decimals?: number, currency?: string) → string",
+        "description": "Number as text: \"number\" 12,345.6, \"currency\" $12,345.68 (currency is a code like \"EUR\"), \"percent\" 45 -> 45%, \"compact\" 1.2M ($1.2M with a currency)"
+      },
+      "Join": {
+        "signature": "Join(list: any[], sep?: string, field?: string) → string",
+        "description": "Joins the items (or their field) into text with sep (default \", \"), skipping nulls"
+      },
+      "Plural": {
+        "signature": "Plural(n: number, word: string, plural?: string) → string",
+        "description": "Count and word: @Plural(1, \"guest\") is \"1 guest\", 3 gives \"3 guests\"; plural defaults to word + \"s\""
+      },
+      "Pad": {
+        "signature": "Pad(value: string | number, length: number, char?: string) → string",
+        "description": "Pads the start of value to length with char (default \"0\"), e.g. 7 -> \"07\""
+      },
+      "Upper": {
+        "signature": "Upper(text: string) → string",
+        "description": "Text in upper case"
+      },
+      "Lower": {
+        "signature": "Lower(text: string) → string",
+        "description": "Text in lower case"
+      },
+      "Trim": {
+        "signature": "Trim(text: string) → string",
+        "description": "Text without spaces at the start and end"
+      },
+      "Capitalize": {
+        "signature": "Capitalize(text: string) → string",
+        "description": "Each word with a capital first letter, e.g. \"new york\" is \"New York\""
+      },
+      "Split": {
+        "signature": "Split(text: string, sep?: string) → string[]",
+        "description": "List of the parts of text between sep (default \",\"), each trimmed, empty parts dropped, e.g. @Split(\"a, b,,c\") is [\"a\", \"b\", \"c\"]"
+      },
+      "Replace": {
+        "signature": "Replace(text: string, find: string, replacement: string) → string",
+        "description": "Text with every find replaced by replacement"
+      },
+      "Duration": {
+        "signature": "Duration(seconds: number, style?: \"short\" | \"clock\") → string",
+        "description": "Seconds as text: \"short\" 1h 20m, 4m 05s, 45s (default); \"clock\" 1:20:00, 4:05"
+      },
+      "Default": {
+        "signature": "Default(value?: any, fallback: any) → any",
+        "description": "value, or fallback when value is null, \"\" or not a number, e.g. an empty number input: @Default($weight, 0)"
+      },
+      "Now": {
+        "signature": "Now() → string",
+        "description": "The current date and time as an ISO string"
+      },
+      "Today": {
+        "signature": "Today() → string",
+        "description": "Today's date in the viewer's time zone, as \"YYYY-MM-DD\""
+      },
+      "FormatDate": {
+        "signature": "FormatDate(date: string | number, style?: \"date\" | \"short\" | \"long\" | \"weekday\" | \"month\" | \"time\" | \"datetime\" | \"iso\") → string",
+        "description": "A date as text: \"date\" Oct 9, 2026 (default), \"short\" Oct 9, \"long\" Friday, October 9, 2026, \"weekday\" Fri, \"month\" Oct 2026, \"time\" 9:30 PM, \"datetime\", \"iso\" 2026-10-09. Dates are \"YYYY-MM-DD\", ISO or a timestamp"
+      },
+      "AddDays": {
+        "signature": "AddDays(date: string | number, days: number) → string",
+        "description": "The date days later (negative: earlier), as \"YYYY-MM-DD\""
+      },
+      "AddMonths": {
+        "signature": "AddMonths(date: string | number, months: number) → string",
+        "description": "The date months later (negative: earlier), kept within the month (Jan 31 + 1 is Feb 28), as \"YYYY-MM-DD\"; 12 months is a year"
+      },
+      "DaysBetween": {
+        "signature": "DaysBetween(from: string | number, to: string | number) → number",
+        "description": "Calendar days from one date to another (negative if to is earlier)"
+      },
+      "MonthsBetween": {
+        "signature": "MonthsBetween(from: string | number, to: string | number) → number",
+        "description": "Whole months from one date to another (negative if to is earlier); @Floor(@MonthsBetween(birthday, @Today()) / 12) is an age"
+      },
+      "StartOf": {
+        "signature": "StartOf(date: string | number, unit: \"week\" | \"month\" | \"year\") → string",
+        "description": "First day of the date's \"week\" (Monday), \"month\" or \"year\", as \"YYYY-MM-DD\""
+      }
+    },
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -289,6 +542,36 @@
         },
         "Separator": {
           "$ref": "#/$defs/Separator"
+        },
+        "Svg": {
+          "$ref": "#/$defs/Svg"
+        },
+        "G": {
+          "$ref": "#/$defs/G"
+        },
+        "Circle": {
+          "$ref": "#/$defs/Circle"
+        },
+        "Ellipse": {
+          "$ref": "#/$defs/Ellipse"
+        },
+        "Rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "Line": {
+          "$ref": "#/$defs/Line"
+        },
+        "Path": {
+          "$ref": "#/$defs/Path"
+        },
+        "Polyline": {
+          "$ref": "#/$defs/Polyline"
+        },
+        "Polygon": {
+          "$ref": "#/$defs/Polygon"
+        },
+        "SvgText": {
+          "$ref": "#/$defs/SvgText"
         }
       },
       "required": [
@@ -323,7 +606,17 @@
         "TabItem",
         "Accordion",
         "AccordionItem",
-        "Separator"
+        "Separator",
+        "Svg",
+        "G",
+        "Circle",
+        "Ellipse",
+        "Rect",
+        "Line",
+        "Path",
+        "Polyline",
+        "Polygon",
+        "SvgText"
       ],
       "additionalProperties": false,
       "$defs": {
@@ -378,6 +671,9 @@
                   },
                   {
                     "$ref": "#/$defs/Stack"
+                  },
+                  {
+                    "$ref": "#/$defs/Svg"
                   }
                 ]
               }
@@ -1426,6 +1722,9 @@
                   },
                   {
                     "$ref": "#/$defs/Buttons"
+                  },
+                  {
+                    "$ref": "#/$defs/Svg"
                   }
                 ]
               }
@@ -1438,6 +1737,36 @@
           ],
           "additionalProperties": false,
           "description": "value is unique id, trigger is tab label, content is array of components"
+        },
+        "Svg": {
+          "type": "object",
+          "properties": {
+            "children": {
+              "type": "array",
+              "items": {}
+            },
+            "viewBox": {
+              "type": "string"
+            },
+            "width": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "height": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "children",
+            "viewBox"
+          ],
+          "additionalProperties": false,
+          "description": "A drawing for steps, parts, mechanisms, diagrams and layouts. Scales to its width; its shapes take expressions, so state can move them."
         },
         "Stack": {
           "type": "object",
@@ -1563,6 +1892,9 @@
                   },
                   {
                     "$ref": "#/$defs/Buttons"
+                  },
+                  {
+                    "$ref": "#/$defs/Svg"
                   }
                 ]
               }
@@ -1575,6 +1907,1431 @@
           ],
           "additionalProperties": false,
           "description": "value is unique id, trigger is section title"
+        },
+        "G": {
+          "type": "object",
+          "properties": {
+            "children": {
+              "type": "array",
+              "items": {}
+            },
+            "transform": {
+              "type": "string"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "children"
+          ],
+          "additionalProperties": false,
+          "description": "Group; transform like \"rotate(30 50 50)\" or \"translate(10 0)\"."
+        },
+        "Circle": {
+          "type": "object",
+          "properties": {
+            "cx": {
+              "type": "number"
+            },
+            "cy": {
+              "type": "number"
+            },
+            "r": {
+              "type": "number"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "cx",
+            "cy",
+            "r"
+          ],
+          "additionalProperties": false
+        },
+        "Ellipse": {
+          "type": "object",
+          "properties": {
+            "cx": {
+              "type": "number"
+            },
+            "cy": {
+              "type": "number"
+            },
+            "rx": {
+              "type": "number"
+            },
+            "ry": {
+              "type": "number"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "cx",
+            "cy",
+            "rx",
+            "ry"
+          ],
+          "additionalProperties": false
+        },
+        "Rect": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "opacity": {
+              "type": "number"
+            },
+            "rx": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "width",
+            "height"
+          ],
+          "additionalProperties": false
+        },
+        "Line": {
+          "type": "object",
+          "properties": {
+            "x1": {
+              "type": "number"
+            },
+            "y1": {
+              "type": "number"
+            },
+            "x2": {
+              "type": "number"
+            },
+            "y2": {
+              "type": "number"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x1",
+            "y1",
+            "x2",
+            "y2"
+          ],
+          "additionalProperties": false
+        },
+        "Path": {
+          "type": "object",
+          "properties": {
+            "d": {
+              "type": "string"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "d"
+          ],
+          "additionalProperties": false
+        },
+        "Polyline": {
+          "type": "object",
+          "properties": {
+            "points": {
+              "type": "string"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "points"
+          ],
+          "additionalProperties": false,
+          "description": "points like \"0,0 10,5 20,0\"."
+        },
+        "Polygon": {
+          "type": "object",
+          "properties": {
+            "points": {
+              "type": "string"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "stroke": {
+              "type": "string"
+            },
+            "strokeWidth": {
+              "type": "number"
+            },
+            "opacity": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "points"
+          ],
+          "additionalProperties": false
+        },
+        "SvgText": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "size": {
+              "type": "number"
+            },
+            "fill": {
+              "type": "string"
+            },
+            "anchor": {
+              "type": "string",
+              "enum": [
+                "start",
+                "middle",
+                "end"
+              ]
+            },
+            "weight": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "medium"
+              ]
+            }
+          },
+          "required": [
+            "text",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "functions": {
+        "Append": {
+          "description": "Copy of the list with item added at the end",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "item": {}
+            },
+            "required": [
+              "list",
+              "item"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Prepend": {
+          "description": "Copy of the list with item added at the start",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "item": {}
+            },
+            "required": [
+              "list",
+              "item"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Concat": {
+          "description": "Joins two lists",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "more": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "list",
+              "more"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Remove": {
+          "description": "Copy without the items whose field equals value; field \"\" compares the items themselves",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "field": {
+                "type": "string"
+              },
+              "value": {}
+            },
+            "required": [
+              "list",
+              "field",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "RemoveAt": {
+          "description": "Copy without the item at index (0-based; negative counts from the end)",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "index": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "list",
+              "index"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Update": {
+          "description": "Copy where items whose field equals value get setField set to setValue",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "field": {
+                "type": "string"
+              },
+              "value": {},
+              "setField": {
+                "type": "string"
+              },
+              "setValue": {}
+            },
+            "required": [
+              "list",
+              "field",
+              "value",
+              "setField",
+              "setValue"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Toggle": {
+          "description": "Adds item if missing, removes it if present (a set of strings or numbers)",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "item": {}
+            },
+            "required": [
+              "list",
+              "item"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Includes": {
+          "description": "True if the list has item, or the text contains it",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {}
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "item": {}
+            },
+            "required": [
+              "list",
+              "item"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "boolean"
+          }
+        },
+        "Find": {
+          "description": "First item whose field equals value, or null",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "field": {
+                "type": "string"
+              },
+              "value": {}
+            },
+            "required": [
+              "list",
+              "field",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {}
+        },
+        "IndexOf": {
+          "description": "Index of item in the list, or -1",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "item": {}
+            },
+            "required": [
+              "list",
+              "item"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Take": {
+          "description": "The first n items; a negative n takes the last n",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "n": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "list",
+              "n"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "SliceOf": {
+          "description": "Items, or characters of text, from start up to end (not included); negative counts from the end",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {}
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "list",
+              "start"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {}
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Unique": {
+          "description": "Distinct items in first-seen order",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "list"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Reverse": {
+          "description": "Copy in reverse order",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "list"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Range": {
+          "description": "Numbers from start up to end (not included) by step (default 1), e.g. @Range(0, 3) is [0, 1, 2]",
+          "params": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              },
+              "step": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "Pick": {
+          "description": "A random item, or null for an empty list; draws anew each time, so call it inside @Set",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "list"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {}
+        },
+        "Shuffle": {
+          "description": "Copy in random order; call it inside @Set",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "list"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Flatten": {
+          "description": "One list from a list of lists, e.g. [[1, 2], [3]] is [1, 2, 3]",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "list"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "Chunk": {
+          "description": "The list cut into lists of size items, e.g. for weeks of 7 days or pages",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "size": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "list",
+              "size"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {}
+            }
+          }
+        },
+        "Pow": {
+          "description": "base raised to exponent",
+          "params": {
+            "type": "object",
+            "properties": {
+              "base": {
+                "type": "number"
+              },
+              "exponent": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "base",
+              "exponent"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Sqrt": {
+          "description": "Square root; null for a negative number",
+          "params": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "number"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Random": {
+          "description": "Random number from min to max (integer true: a whole number, max included); draws anew each time, so call it inside @Set",
+          "params": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "integer": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Clamp": {
+          "description": "number kept between min and max",
+          "params": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number"
+              },
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "number",
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Percent": {
+          "description": "part / total * 100, e.g. @Percent(3, 4) is 75; 0 when total is 0",
+          "params": {
+            "type": "object",
+            "properties": {
+              "part": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "part",
+              "total"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Lerp": {
+          "description": "The value a fraction t of the way from a to b",
+          "params": {
+            "type": "object",
+            "properties": {
+              "a": {
+                "type": "number"
+              },
+              "b": {
+                "type": "number"
+              },
+              "t": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "a",
+              "b",
+              "t"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Allocate": {
+          "description": "Splits total in proportion to weights, rounded to decimals (default 2), so the parts add up to exactly total, e.g. @Allocate(100, [1, 1, 1]) is [33.34, 33.33, 33.33]",
+          "params": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number"
+              },
+              "weights": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "decimals": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "total",
+              "weights"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "Payment": {
+          "description": "Payment per period that repays principal over periods at rate percent per period, e.g. a 30-year loan at 6% a year: @Payment(300000, 6 / 12, 360)",
+          "params": {
+            "type": "object",
+            "properties": {
+              "principal": {
+                "type": "number"
+              },
+              "rate": {
+                "type": "number"
+              },
+              "periods": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "principal",
+              "rate",
+              "periods"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Convert": {
+          "description": "value from one unit to another: mm cm m km in ft yd mi; mg g kg oz lb st; ml l tsp tbsp floz cup pt qt gal (US); m/s km/h mph kn; m2 km2 ft2 ha acre; c f k",
+          "params": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "from",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "Format": {
+          "description": "Number as text: \"number\" 12,345.6, \"currency\" $12,345.68 (currency is a code like \"EUR\"), \"percent\" 45 -> 45%, \"compact\" 1.2M ($1.2M with a currency)",
+          "params": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "number",
+                  "currency",
+                  "percent",
+                  "compact"
+                ]
+              },
+              "decimals": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Join": {
+          "description": "Joins the items (or their field) into text with sep (default \", \"), skipping nulls",
+          "params": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "type": "array",
+                "items": {}
+              },
+              "sep": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "list"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Plural": {
+          "description": "Count and word: @Plural(1, \"guest\") is \"1 guest\", 3 gives \"3 guests\"; plural defaults to word + \"s\"",
+          "params": {
+            "type": "object",
+            "properties": {
+              "n": {
+                "type": "number"
+              },
+              "word": {
+                "type": "string"
+              },
+              "plural": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "n",
+              "word"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Pad": {
+          "description": "Pads the start of value to length with char (default \"0\"), e.g. 7 -> \"07\"",
+          "params": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "length": {
+                "type": "number"
+              },
+              "char": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "length"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Upper": {
+          "description": "Text in upper case",
+          "params": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Lower": {
+          "description": "Text in lower case",
+          "params": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Trim": {
+          "description": "Text without spaces at the start and end",
+          "params": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Capitalize": {
+          "description": "Each word with a capital first letter, e.g. \"new york\" is \"New York\"",
+          "params": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Split": {
+          "description": "List of the parts of text between sep (default \",\"), each trimmed, empty parts dropped, e.g. @Split(\"a, b,,c\") is [\"a\", \"b\", \"c\"]",
+          "params": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "sep": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "Replace": {
+          "description": "Text with every find replaced by replacement",
+          "params": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "find": {
+                "type": "string"
+              },
+              "replacement": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text",
+              "find",
+              "replacement"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Duration": {
+          "description": "Seconds as text: \"short\" 1h 20m, 4m 05s, 45s (default); \"clock\" 1:20:00, 4:05",
+          "params": {
+            "type": "object",
+            "properties": {
+              "seconds": {
+                "type": "number"
+              },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "short",
+                  "clock"
+                ]
+              }
+            },
+            "required": [
+              "seconds"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Default": {
+          "description": "value, or fallback when value is null, \"\" or not a number, e.g. an empty number input: @Default($weight, 0)",
+          "params": {
+            "type": "object",
+            "properties": {
+              "value": {},
+              "fallback": {}
+            },
+            "required": [
+              "fallback"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {}
+        },
+        "Now": {
+          "description": "The current date and time as an ISO string",
+          "params": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "Today": {
+          "description": "Today's date in the viewer's time zone, as \"YYYY-MM-DD\"",
+          "params": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "FormatDate": {
+          "description": "A date as text: \"date\" Oct 9, 2026 (default), \"short\" Oct 9, \"long\" Friday, October 9, 2026, \"weekday\" Fri, \"month\" Oct 2026, \"time\" 9:30 PM, \"datetime\", \"iso\" 2026-10-09. Dates are \"YYYY-MM-DD\", ISO or a timestamp",
+          "params": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "date",
+                  "short",
+                  "long",
+                  "weekday",
+                  "month",
+                  "time",
+                  "datetime",
+                  "iso"
+                ]
+              }
+            },
+            "required": [
+              "date"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "AddDays": {
+          "description": "The date days later (negative: earlier), as \"YYYY-MM-DD\"",
+          "params": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "days": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "date",
+              "days"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "AddMonths": {
+          "description": "The date months later (negative: earlier), kept within the month (Jan 31 + 1 is Feb 28), as \"YYYY-MM-DD\"; 12 months is a year",
+          "params": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "months": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "date",
+              "months"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
+        },
+        "DaysBetween": {
+          "description": "Calendar days from one date to another (negative if to is earlier)",
+          "params": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "MonthsBetween": {
+          "description": "Whole months from one date to another (negative if to is earlier); @Floor(@MonthsBetween(birthday, @Today()) / 12) is an age",
+          "params": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "number"
+          }
+        },
+        "StartOf": {
+          "description": "First day of the date's \"week\" (Monday), \"month\" or \"year\", as \"YYYY-MM-DD\"",
+          "params": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "week",
+                  "month",
+                  "year"
+                ]
+              }
+            },
+            "required": [
+              "date",
+              "unit"
+            ],
+            "additionalProperties": false
+          },
+          "returns": {
+            "type": "string"
+          }
         }
       }
     }
@@ -1591,7 +3348,10 @@
       "Use Tabs or Accordion for alternative views or collapsible details.",
       "For forms, define one FormControl reference per field and always provide Buttons as the second Form argument.",
       "Never nest Form inside Form.",
-      "Image URLs must come from the user or tool results; never invent or template image URLs."
+      "Image URLs must come from the user or tool results; never invent or template image URLs.",
+      "When the request involves numbers, lists or steps, keep inputs in $variables and compute what is shown with the listed @functions, so the page works without another message. Change state with @Set.",
+      "$variable defaults are literals, never expressions or @calls. @Random, @Pick and @Shuffle draw anew on every evaluation, so call them inside @Set.",
+      "Use Svg drawings for how something is built or works: assembly steps, mechanisms, geometry, layouts. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels."
     ]
   }
 }

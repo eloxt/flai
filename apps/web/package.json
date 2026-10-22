@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "react-router dev",
     "build": "pnpm genui:spec && react-router build",
-    "genui:spec": "node scripts/generate-genui-spec.mjs",
+    "genui:spec": "tsx scripts/generate-genui-spec.ts",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest run",
     "format": "prettier --write \"**/*.{ts,tsx}\""
@@ -58,6 +58,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "shadcn": "^4.21.4",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.2",
     "vite": "^8",
     "vitest": "^5.0.4"

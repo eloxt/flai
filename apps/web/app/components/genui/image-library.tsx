@@ -2,6 +2,7 @@ import type { ComponentRenderer, ComponentRenderProps } from "@openuidev/react-l
 import { MarkDownRenderer, openuiLibrary } from "@openuidev/react-ui"
 import { ProxiedImage } from "~/components/proxied-image"
 import { useProxiedImages } from "~/hooks/use-proxied-images"
+import { genuiExtension } from "./extensions"
 
 /** Image fields can live inside gallery arrays or a card item's nested props. */
 function mapImageSources(value: unknown, resolve: (src: string) => string | undefined): unknown {
@@ -27,7 +28,7 @@ function ProxiedComponent({ component: Component, ...input }: ComponentRenderPro
 }
 
 // Override renderers only: component schemas, card layouts and gallery modals stay official.
-export const imageLibrary = openuiLibrary.extend({
+export const imageLibrary = openuiLibrary.extend(genuiExtension).extend({
   components: {
     override: [
       ...["Image", "ImageBlock", "ImageText", "ImageTextLarge", "ImageGallery", "VisualCardBlock", "ContextCardBlock"].map((name) => {
