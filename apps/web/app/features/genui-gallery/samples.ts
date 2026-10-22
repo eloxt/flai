@@ -1,3 +1,5 @@
+import { workingToolExample } from "~/components/genui/prompt-examples"
+
 export interface GenuiSample {
   title: string
   /** Components this sample demonstrates. */
@@ -264,6 +266,18 @@ drawings = [s0, s1, s2]`,
     name: "Functions",
     advertised: true,
     samples: [
+      {
+        title: "Prompt example: working tool",
+        components: [
+          "Input",
+          "SearchImage",
+          "@Clamp",
+          "@Default",
+          "@Plural",
+          "@Format",
+        ],
+        code: workingToolExample,
+      },
       {
         title: "Scale a shopping list",
         components: ["@Clamp", "@Plural", "@Round", "@Each", "@Join"],

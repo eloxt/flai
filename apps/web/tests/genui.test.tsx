@@ -21,6 +21,7 @@ import {
 } from "vitest"
 import { genuiExtension } from "~/components/genui/extensions"
 import { GenuiBlock } from "~/components/genui/genui-block"
+import { workingToolExample } from "~/components/genui/prompt-examples"
 import { ThemeProvider } from "~/components/theme-provider"
 
 beforeAll(() => {
@@ -58,7 +59,8 @@ describe("official OpenUI library", () => {
     expect(names).toHaveLength(44)
     expect(Object.keys(spec.library.functions)).toEqual(genuiFunctions.map((fn) => fn.name))
     expect(spec.library).toEqual({ ...curated.toSpec(), componentGroups: spec.library.componentGroups })
-    expect(spec.promptOptions.examples).toEqual(openuiPromptOptions.examples?.slice(0, 4))
+    expect(spec.promptOptions.examples.slice(0, 2)).toEqual(openuiPromptOptions.examples?.slice(0, 2))
+    expect(spec.promptOptions.examples[2]).toContain(workingToolExample)
     const parser = createParser(curated.toJSONSchema(), curated.root)
     for (const example of spec.promptOptions.examples) {
       const parsed = parser.parse(example.slice(example.indexOf("root = ")))
@@ -83,7 +85,7 @@ describe("official OpenUI library", () => {
     for (const name of ["VisualCardBlock", "CompositeCardBlock", "EditableTable", "RadarChart", "Modal"]) {
       expect(prompt).not.toContain(name)
     }
-    expect(prompt.length).toBeLessThan(26_000)
+    expect(prompt.length).toBeLessThan(27_000)
   })
 
   it("renders official card and column-oriented table signatures", () => {

@@ -15,7 +15,7 @@ export function buildGenuiPrompt(): string {
       preamble: [
         '# Generative UI',
         'You can optionally render rich UI inside your reply using openui-lang, a small declarative UI language.',
-        '- Reply in normal markdown by default. Use openui-lang only when structured or interactive UI clearly helps: tabular data, charts, comparisons, step-by-step plans, choices or forms.',
+        '- Reply in normal markdown by default, and answer plain knowledge questions in markdown. Use openui-lang when UI helps more than prose: numbers to adjust or compute, comparisons, choices, step-by-step plans, places or things worth a photo, charts and forms.',
         '- Use only the listed components. Prefer simple cards, text and images over complex nested layouts.',
         `- Put each openui-lang program in its own fenced code block tagged \`${GENUI_FENCE}\`. Text outside fences is rendered as markdown.`,
         '- Each fenced block is a complete, standalone program that starts with `root = Stack(...)`. Always include all referenced statements, even in follow-up replies.',

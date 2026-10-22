@@ -7,6 +7,7 @@ import {
   genuiExtension,
   mediaComponentGroup,
 } from "../app/components/genui/extensions"
+import { workingToolExample } from "../app/components/genui/prompt-examples"
 import { svgComponentGroup } from "../app/components/genui/svg"
 
 // Advertise a small everyday set; the frontend still renders the full library for old replies.
@@ -71,17 +72,25 @@ const library = extended
   })
   .toSpec()
 const promptOptions = {
-  // The remaining official examples cover tables, charts, basic forms and tabs.
-  examples: openuiPromptOptions.examples!.slice(0, 4),
+  // Official table and chart examples, then one working tool for $variables, @functions and photos.
+  examples: [
+    ...openuiPromptOptions.examples!.slice(0, 2),
+    `Example 3 — A working tool with state, @functions and photos:\n\n${workingToolExample}`,
+  ],
   additionalRules: [
     'For grid-like layouts, use Stack with direction "row" and wrap=true; avoid large gutters.',
     "Use Tabs or Accordion for alternative views or collapsible details.",
-    "For forms, define one FormControl reference per field and always provide Buttons as the second Form argument.",
-    "Never nest Form inside Form.",
-    "Image URLs must come from the user or tool results; never invent or template image URLs. For a photo of a place, dish, product or other thing with a look, use SearchImage with an English query instead.",
-    "When the request involves numbers, lists or steps, keep inputs in $variables and compute what is shown with the listed @functions, so the page works without another message. Change state with @Set.",
+    "For forms, define one FormControl reference per field and always provide Buttons as the second Form argument. Never nest Form inside Form.",
+    "When the request involves numbers, choices, lists or steps, make the page a working tool: keep inputs in $variables, compute everything shown from them with expressions and @functions, and change them with @Set, so it works without another message. Every input either changes something shown or sits in a submitted Form.",
+    'Use @ToAssistant only for what the page cannot compute: submitting a Form or a new request. Its message is short and first person, as if the user typed it ("Plan my days"); form values are sent with it, so never repeat them.',
+    "Input, TextArea and Select values are text: convert with $x * 1 before number @functions, and guard counts with @Clamp(@Default($x * 1, 1), 1, 50) so empty or 0 cannot break the page.",
     "$variable defaults are literals, never expressions or @calls. @Random, @Pick and @Shuffle draw anew on every evaluation, so call them inside @Set.",
-    "Use Svg drawings for how something is built or works: assembly steps, mechanisms, geometry, layouts. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels.",
+    "cond ? a : b also picks between components; there is no @If, and only the listed @functions exist.",
+    'Derive rows once in a statement with @Each(list, "x", {...}), then reuse them in Table, charts, @Sum(rows.field) and @Join.',
+    "Format money and percentages with @Format, counts with @Plural and dates with @FormatDate. Relative dates start from @Today(); compare dates with @DaysBetween, since < and > compare numbers only.",
+    'Image URLs must come from the user or tool results; never invent them. For a place, dish, product or other thing with a look, use SearchImage naming the exact subject in English ("Belém Tower Lisbon", not "old tower by the sea").',
+    "Cards side by side share the same blocks in the same order and the same SearchImage aspectRatio, so they line up.",
+    "Draw with Svg whenever the user would otherwise have to picture how something is built or works: assembly steps, knots, mechanisms, geometry, a room or board layout. A photo shows what a thing looks like; a drawing shows how it works. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels, driven by $variables such as the current step.",
     "Use HtmlView only for a game or animation that needs a loop; build everything else from components.",
   ],
 }
