@@ -8,7 +8,6 @@ import { newId } from '../lib/ids'
 import { toMessage } from '../lib/serialize'
 import { getConversation, loadPath } from '../services/conversations'
 import { imageProxyQuerySchema, proxyImage } from '../services/image-proxy'
-import { IMAGE_SEARCH_HOSTS, imageSearchQuerySchema, searchImages } from '../services/image-search'
 
 type ShareRow = typeof schema.shares.$inferSelect
 
@@ -123,31 +122,14 @@ function snapshotHasUrl(messages: MessageRecord[], url: string): boolean {
   }))
 }
 
-const snapshotHasText = (messages: MessageRecord[], text: string) =>
-  messages.some((message) => message.parts.some((part) => part.type === 'text' && part.text.includes(text)))
-
-/** Searched photos are not in the snapshot text; they come from the search hosts for a SearchImage in it. */
-const isSearchedImage = (messages: MessageRecord[], url: string) =>
-  IMAGE_SEARCH_HOSTS.has(new URL(url).hostname) && snapshotHasText(messages, 'SearchImage(')
-
-async function activeShare(id: string): Promise<ShareRow> {
-  const row = await db.query.shares.findFirst({
-    where: and(eq(schema.shares.id, id), isNull(schema.shares.deletedAt)),
-  })
-  if (!row || isExpired(row)) throw notFound('Share')
-  return row
-}
-
 export const publicShareRoutes = new Hono().get('/shares/:id/images', async (c) => {
   const { url } = query(c, imageProxyQuerySchema)
-  const messages = (await activeShare(c.req.param('id'))).messages as MessageRecord[]
-  if (!snapshotHasUrl(messages, url) && !isSearchedImage(messages, url)) throw notFound('Image')
+  const row = await db.query.shares.findFirst({
+    where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),
+  })
+  if (!row || isExpired(row)) throw notFound('Share')
+  if (!snapshotHasUrl(row.messages as MessageRecord[], url)) throw notFound('Image')
   return proxyImage(url, c.req.raw.signal)
-}).get('/shares/:id/image-search', async (c) => {
-  const { q } = query(c, imageSearchQuerySchema)
-  // Only queries the shared answer itself asks for, so the share is not an open search proxy.
-  if (!snapshotHasText((await activeShare(c.req.param('id'))).messages as MessageRecord[], q)) throw notFound('Image search')
-  return c.json({ images: await searchImages(q, c.req.raw.signal) })
 }).get('/shares/:id', async (c) => {
   const row = await db.query.shares.findFirst({
     where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),

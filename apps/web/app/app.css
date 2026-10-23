@@ -661,6 +661,15 @@ code {
         animation: none;
     }
 
+    /* Photo cards share a row Stack and wrap; in a column a flex-basis would override their aspect ratio. */
+    [data-slot="genui"] :not([style*="column"]) > .genui-media-card {
+        flex: 1 1 12rem;
+    }
+
+    [data-slot="genui"] :not([style*="column"]) > .genui-media-card[data-layout="horizontal"] {
+        flex-basis: 20rem;
+    }
+
     @container (max-width: 480px) {
         /* Stack and Card declare their chosen direction inline. */
         [data-slot="genui"] div:has(> .openui-card + .openui-card) {

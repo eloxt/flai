@@ -14,6 +14,20 @@ export interface GenuiSampleGroup {
   samples: GenuiSample[]
 }
 
+// Real Wikimedia thumbnails, as image_search returns them.
+const wiki = (path: string) =>
+  `https://thumb.wikimedia.org/wikipedia/commons/thumb/${path}`
+const tower = wiki(
+  "6/65/Torre_Bel%C3%A9m_April_2009-4a.jpg/960px-Torre_Bel%C3%A9m_April_2009-4a.jpg"
+)
+const pena = wiki(
+  "3/3e/Sintra_-_Palacio_da_Pena_%2820332995770%29.jpg/960px-Sintra_-_Palacio_da_Pena_%2820332995770%29.jpg"
+)
+const nata = wiki("0/0c/Pasteis_de_Belem.jpg/960px-Pasteis_de_Belem.jpg")
+const monastery = wiki(
+  "0/0e/1502_legte_K%C3%B6nig_Manuel_I._den_Grundstein_f%C3%BCr_das_Hieronymus_Kloster_in_Lissabon._06.jpg/960px-1502_legte_K%C3%B6nig_Manuel_I._den_Grundstein_f%C3%BCr_das_Hieronymus_Kloster_in_Lissabon._06.jpg"
+)
+
 const img = (seed: string, w = 480, h = 320) =>
   `https://picsum.photos/seed/${seed}/${w}/${h}`
 
@@ -203,11 +217,31 @@ col = Buttons([Button("Stacked one", @ToAssistant("One"), "secondary"), Button("
     advertised: true,
     samples: [
       {
-        title: "SearchImage",
-        components: ["SearchImage"],
-        code: `root = Stack([row, card])
-row = Stack([SearchImage("Belém Tower Lisbon"), SearchImage("Pena Palace Sintra"), SearchImage("pastel de nata")], "row", "s", "stretch", "start", true)
-card = Card([CardHeader("Jerónimos Monastery", "Square crop, inside a Card"), SearchImage("Jerónimos Monastery", 1)])`,
+        title: "MediaCard grid",
+        components: ["MediaCard"],
+        code: `root = Stack([a, b, c], "row", "m", "stretch", "start", true)
+a = MediaCard("${tower}", "Belém Tower", "Belém Tower", "A 16th-century fort on the Tagus; climb it at opening time.", ["Belém", "€8"])
+b = MediaCard("${pena}", "Pena Palace", "Pena Palace", "Romanticist palace above Sintra, best on a clear morning.", ["Sintra", "€20"])
+c = MediaCard("${monastery}", "Jerónimos Monastery", "Jerónimos Monastery", "Manueline cloisters next to the tower.", ["Belém", "€12"])`,
+      },
+      {
+        title: "MediaCard horizontal",
+        components: ["MediaCard"],
+        code: `root = Stack([d1, d2])
+d1 = MediaCard("${tower}", "Belém Tower", "Day 1 · Belém", "Start at the tower, walk to the monastery, then queue for pastéis de Belém.", ["Tram 15"], "horizontal")
+d2 = MediaCard("${pena}", "Pena Palace", "Day 2 · Sintra", "Train from Rossio, then the 434 bus up the hill. Book the 9 AM slot.", ["Train 40 min", "Bus 434"], "horizontal")`,
+      },
+      {
+        title: "Carousel",
+        components: ["Carousel"],
+        code: `root = Stack([Carousel([[MediaCard("${tower}", "Belém Tower", "Belém Tower", null, ["Fort"])], [MediaCard("${pena}", "Pena Palace", "Pena Palace", null, ["Palace"])], [MediaCard("${nata}", "Pastel de nata", "Pastel de nata", null, ["Food"], null, 1.5)], [Image("Jerónimos Monastery", "${monastery}"), TextContent("A plain Image slide", "small")]])])`,
+      },
+      {
+        title: "ListBlock",
+        components: ["ListBlock", "ListItem"],
+        code: `root = Stack([photos, steps], "column", "l")
+photos = ListBlock([ListItem("Belém Tower", "16th-century fort on the Tagus", {src: "${tower}", alt: "Belém Tower"}), ListItem("Pena Palace", "Romanticist palace above Sintra", {src: "${pena}", alt: "Pena Palace"}, "Tickets", @ToAssistant("Find Pena Palace tickets")), ListItem("Pastel de nata", "Custard tart, best warm", {src: "${nata}", alt: "Pastel de nata"})], "image")
+steps = ListBlock([ListItem("Read the spec", "10 min"), ListItem("Build the prototype", "2 h"), ListItem("Review", "30 min")], "number", "small")`,
       },
       {
         title: "HtmlView",
@@ -268,14 +302,7 @@ drawings = [s0, s1, s2]`,
     samples: [
       {
         title: "Prompt example: working tool",
-        components: [
-          "Input",
-          "SearchImage",
-          "@Clamp",
-          "@Default",
-          "@Plural",
-          "@Format",
-        ],
+        components: ["Input", "@Clamp", "@Default", "@Plural", "@Format"],
         code: workingToolExample,
       },
       {
@@ -386,11 +413,6 @@ results = [@Join(@Concat(@Prepend(@Append([2], 3), 1), [4])), @Join(@RemoveAt(@R
         title: "Steps",
         components: ["Steps", "StepsItem"],
         code: `root = Stack([Steps([StepsItem("Install", "pnpm install"), StepsItem("Configure", "Copy .env.example to .env"), StepsItem("Run", "pnpm dev")])])`,
-      },
-      {
-        title: "Carousel",
-        components: ["Carousel"],
-        code: `root = Stack([Carousel([[TextContent("Slide one", "large-heavy"), TextContent("First slide body.")], [TextContent("Slide two", "large-heavy"), TextContent("Second slide body.")], [TextContent("Slide three", "large-heavy"), TextContent("Third slide body.")]])])`,
       },
       {
         title: "Modal",
@@ -522,11 +544,6 @@ tier = FormControl("Tier", OptionCards("tier", "single", [OptionCard("basic", "B
         title: "EntityList",
         components: ["EntityList"],
         code: `root = Stack([EntityList([{left: "Subtotal", right: "$120.00", rightVariant: "number"}, {left: "Shipping", right: "$8.00", rightVariant: "number"}], "default", {left: "Item", right: "Amount"}, {left: "Total", right: "$128.00", rightVariant: "number"})])`,
-      },
-      {
-        title: "ListBlock",
-        components: ["ListBlock", "ListItem"],
-        code: `root = Stack([ListBlock([ListItem("Read the spec", "10 min"), ListItem("Build the prototype", "2 h", null, "Start", @ToAssistant("Start prototype")), ListItem("Review", "30 min")], "number")])`,
       },
     ],
   },

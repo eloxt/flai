@@ -7,6 +7,7 @@ import type { LanguageModel } from 'ai'
 import { AppError } from '../lib/errors'
 import type { ProviderRow } from '../services/providers'
 import { getSetting } from '../services/settings'
+import { imageSearchTool } from './image-search'
 import { createWebSearchTool } from './web-search'
 import { createWebFetchTool } from './web-fetch'
 
@@ -67,6 +68,8 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
     tools.web_search = createWebSearchTool(search.exaApiKey)
     tools.web_fetch = createWebFetchTool(search.exaApiKey)
   }
+  // Wikimedia needs no key, so photos are available to every model that can call tools.
+  if (model.toolCall) tools.image_search = imageSearchTool
 
   switch (provider.type) {
     case 'openai': {

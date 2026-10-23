@@ -53,6 +53,16 @@ second = VisualCardItem(BoldText("text", "Other", null, "text", "sm"), "second",
     expect(URL.revokeObjectURL).toHaveBeenCalledTimes(2)
   })
 
+  it("proxies MediaCard photos and ListBlock thumbnails", async () => {
+    const code = `root = Stack([MediaCard("${photo}", "Dragon's Back", "Dragon's Back", "A ridge walk.", ["Hike", "3 h"], "horizontal"), ListBlock([ListItem("Other", "A second place", {src: "${other}", alt: "Other"})], "image")])`
+    const { container } = render(<GenuiBlock code={code} streaming={false} />, { wrapper: ThemeProvider })
+    expect(container.querySelectorAll('img[src^="https://"]')).toHaveLength(0)
+    await waitFor(() => expect(container.querySelectorAll('img[src^="blob:"]')).toHaveLength(2))
+    expect(screen.getByAltText("Dragon's Back")).toHaveAttribute("src", expect.stringMatching(/^blob:/))
+    expect(screen.getByText("3 h")).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it("keeps direct image, gallery thumbnails and modal previews on blob URLs", async () => {
     const code = `root = Stack([Image("Single", "${photo}"), ImageBlock("${other}", "Block"), ImageGallery([{src: "${photo}", alt: "Gallery photo"}])])`
     const { container } = render(<GenuiBlock code={code} streaming={false} />, { wrapper: ThemeProvider })

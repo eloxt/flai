@@ -56,7 +56,7 @@ describe("official OpenUI library", () => {
     const curated = extended.extend({
       components: { remove: Object.keys(extended.components).filter((name) => !names.includes(name)) },
     })
-    expect(names).toHaveLength(44)
+    expect(names).toHaveLength(47)
     expect(Object.keys(spec.library.functions)).toEqual(genuiFunctions.map((fn) => fn.name))
     expect(spec.library).toEqual({ ...curated.toSpec(), componentGroups: spec.library.componentGroups })
     expect(spec.promptOptions.examples.slice(0, 2)).toEqual(openuiPromptOptions.examples?.slice(0, 2))
@@ -85,7 +85,7 @@ describe("official OpenUI library", () => {
     for (const name of ["VisualCardBlock", "CompositeCardBlock", "EditableTable", "RadarChart", "Modal"]) {
       expect(prompt).not.toContain(name)
     }
-    expect(prompt.length).toBeLessThan(27_000)
+    expect(prompt.length).toBeLessThan(28_000)
   })
 
   it("renders official card and column-oriented table signatures", () => {

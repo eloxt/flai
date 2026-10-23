@@ -72,10 +72,10 @@ const library = extended
   })
   .toSpec()
 const promptOptions = {
-  // Official table and chart examples, then one working tool for $variables, @functions and photos.
+  // Official table and chart examples, then one working tool for $variables and @functions.
   examples: [
     ...openuiPromptOptions.examples!.slice(0, 2),
-    `Example 3 — A working tool with state, @functions and photos:\n\n${workingToolExample}`,
+    `Example 3 — A working tool with state and @functions:\n\n${workingToolExample}`,
   ],
   additionalRules: [
     'For grid-like layouts, use Stack with direction "row" and wrap=true; avoid large gutters.',
@@ -88,8 +88,9 @@ const promptOptions = {
     "cond ? a : b also picks between components; there is no @If, and only the listed @functions exist.",
     'Derive rows once in a statement with @Each(list, "x", {...}), then reuse them in Table, charts, @Sum(rows.field) and @Join.',
     "Format money and percentages with @Format, counts with @Plural and dates with @FormatDate. Relative dates start from @Today(); compare dates with @DaysBetween, since < and > compare numbers only.",
-    'Image URLs must come from the user or tool results; never invent them. For a place, dish, product or other thing with a look, use SearchImage naming the exact subject in English ("Belém Tower Lisbon", not "old tower by the sea").',
-    "Cards side by side share the same blocks in the same order and the same SearchImage aspectRatio, so they line up.",
+    'Image URLs must come from the user or tool results; never invent them. When the image_search tool is available, call it for a place, dish, product or other thing with a look, naming the exact subject in English ("Belém Tower Lisbon", not "old tower by the sea"), and show a result whose title matches.',
+    'To show photos: ImageGallery for several photos of one subject; MediaCard side by side in a row Stack (2 or 3) or a Carousel (more) to compare places, dishes or products; horizontal MediaCard for days, steps or picks with a sentence each; ListBlock with variant "image" for a compact list of named things.',
+    "Cards side by side share the same blocks in the same order, the same tags count and the same aspectRatio, so they line up; pick photos of a similar shape from the width and height image_search returns.",
     "Draw with Svg whenever the user would otherwise have to picture how something is built or works: assembly steps, knots, mechanisms, geometry, a room or board layout. A photo shows what a thing looks like; a drawing shows how it works. Keep each simple: a viewBox about 240 wide, a dozen shapes, SvgText labels, driven by $variables such as the current step.",
     "Use HtmlView only for a game or animation that needs a loop; build everything else from components.",
   ],

@@ -122,7 +122,7 @@ describe('global Exa search', () => {
       options: { webSearch: false, urlContext: false },
     })
     expect(resolved.model.modelId).toBe('test-model')
-    expect(Object.keys(resolved.tools)).toEqual(['web_search', 'web_fetch'])
+    expect(Object.keys(resolved.tools)).toEqual(['web_search', 'web_fetch', 'image_search'])
     expect(resolved.tools.web_search).toMatchObject({ id: 'web_search', execute: expect.any(Function) })
     expect(resolved.tools.web_fetch).toMatchObject({ id: 'web_fetch', execute: expect.any(Function) })
   })
@@ -131,7 +131,18 @@ describe('global Exa search', () => {
     Object.assign(settings, { provider: 'exa', exaApiKey: 'exa-test-key' })
     const model = modelConfigSchema.parse({ id: 'test', toolCall: true, internalTools: ['web_search', 'url_context'] })
     for (const type of ['openai', 'openai_completion', 'gemini'] as const) {
-      expect(Object.keys(buildModel({ provider: { ...provider, type }, model, options }).tools)).toEqual(['web_search', 'web_fetch'])
+      expect(Object.keys(buildModel({ provider: { ...provider, type }, model, options }).tools)).toEqual(['web_search', 'web_fetch', 'image_search'])
+    }
+  })
+
+  it('offers image_search to every model that can call tools, without an Exa key', () => {
+    Object.assign(settings, { provider: 'native', exaApiKey: '' })
+    const model = modelConfigSchema.parse({ id: 'test', toolCall: true })
+    for (const type of ['openai', 'openai_completion', 'gemini'] as const) {
+      const tools = buildModel({ provider: { ...provider, type }, model, options: {} }).tools
+      expect(Object.keys(tools)).toEqual(['image_search'])
+      expect(tools.image_search).toMatchObject({ id: 'image_search', execute: expect.any(Function) })
+      expect(buildModel({ provider: { ...provider, type }, model: { ...model, toolCall: false }, options: {} }).tools).toEqual({})
     }
   })
 

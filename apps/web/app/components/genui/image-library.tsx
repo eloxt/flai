@@ -31,7 +31,7 @@ function ProxiedComponent({ component: Component, ...input }: ComponentRenderPro
 export const imageLibrary = openuiLibrary.extend(genuiExtension).extend({
   components: {
     override: [
-      ...["Image", "ImageBlock", "ImageText", "ImageTextLarge", "ImageGallery", "VisualCardBlock", "ContextCardBlock"].map((name) => {
+      ...["Image", "ImageBlock", "ImageText", "ImageTextLarge", "ImageGallery", "VisualCardBlock", "ContextCardBlock", "ListBlock"].map((name) => {
         const definition = openuiLibrary.components[name]!
         return { ...definition, component: (input: ComponentRenderProps) => <ProxiedComponent {...input} component={definition.component} /> }
       }),

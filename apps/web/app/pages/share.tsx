@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useParams } from "react-router"
 import { ImageProxyContext } from "~/components/proxied-image"
-import { ImageSearchContext } from "~/hooks/use-image-search"
 import { type Theme, useTheme } from "~/components/theme-provider"
 import { Button } from "~/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty"
@@ -61,17 +60,15 @@ export default function SharePage() {
           </div>
         ) : (
           <ImageProxyContext value={`/public/shares/${share.id}/images`}>
-            <ImageSearchContext value={`/public/shares/${share.id}/image-search`}>
-              {groupTurns(share.messages).map((turn) => (
-                <Message key={turn[0]!.id} align={turn[0]!.role === "user" ? "end" : "start"}>
-                  <MessageContent className={turn[0]!.role === "user" ? "items-end" : "w-full gap-2"}>
-                    {turn.map((m) => (
-                      <MessageBody key={m.id} role={m.role} parts={m.parts} metadata={m.metadata} />
-                    ))}
-                  </MessageContent>
-                </Message>
-              ))}
-            </ImageSearchContext>
+            {groupTurns(share.messages).map((turn) => (
+              <Message key={turn[0]!.id} align={turn[0]!.role === "user" ? "end" : "start"}>
+                <MessageContent className={turn[0]!.role === "user" ? "items-end" : "w-full gap-2"}>
+                  {turn.map((m) => (
+                    <MessageBody key={m.id} role={m.role} parts={m.parts} metadata={m.metadata} />
+                  ))}
+                </MessageContent>
+              </Message>
+            ))}
           </ImageProxyContext>
         )}
       </main>
