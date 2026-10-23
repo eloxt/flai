@@ -16,6 +16,8 @@ async function downloadText(url: string): Promise<string> {
 /**
  * Turn the stored parts into parts the model can consume:
  * - reasoning, sources and step markers are UI-only and dropped from history;
+ * - provider-executed tools (native web search) are dropped too: the answer that follows already carries
+ *   their results, and some OpenAI endpoints reject replayed `web_search_call` items;
  * - text-like attachments are inlined as text, since providers only accept images/PDFs as files;
  * - Chat Completions providers only accept images.
  */
@@ -24,6 +26,7 @@ async function prepareParts(parts: FlaiPart[], providerType: ProviderType): Prom
     if (part.type === 'reasoning' || part.type === 'source-url' || part.type === 'source-document' || part.type === 'step-start') {
       return null
     }
+    if ('providerExecuted' in part && part.providerExecuted) return null
     if (part.type === 'file' && isTextFile(part.mediaType, part.filename)) {
       let content: string
       try {

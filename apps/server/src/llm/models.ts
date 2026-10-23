@@ -39,28 +39,6 @@ export function geminiBaseUrl(baseUrl: string | null | undefined): string | unde
   return /\/v\d+(alpha|beta)?$/.test(url) ? url : `${url}/v1beta`
 }
 
-/**
- * With `store: false` the SDK replays earlier output items inline but leaves out their `status`, which
- * some Responses endpoints require (`Missing required parameter: 'input[n].status'`). Earlier items are
- * finished by definition, so mark them completed.
- */
-const ITEMS_WITH_STATUS = new Set(['function_call', 'function_call_output', 'reasoning', 'web_search_call'])
-
-export const completeInputStatus: typeof fetch = async (url, init) => {
-  if (typeof init?.body !== 'string') return fetch(url, init)
-  let body: { input?: unknown }
-  try {
-    body = JSON.parse(init.body)
-  } catch {
-    return fetch(url, init)
-  }
-  if (!Array.isArray(body.input)) return fetch(url, init)
-  for (const item of body.input as Record<string, unknown>[]) {
-    if (ITEMS_WITH_STATUS.has(item?.type as string) && item.status == null) item.status = 'completed'
-  }
-  return fetch(url, { ...init, body: JSON.stringify(body) })
-}
-
 /** Validate the requested thinking level against the model, defaulting to its first level. */
 export function resolveThinking(model: ModelConfig, requested: ThinkingLevel | undefined): ThinkingLevel | undefined {
   if (!requested) return model.thinkingLevels[0]
@@ -95,7 +73,7 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
 
   switch (provider.type) {
     case 'openai': {
-      const openai = createOpenAI({ apiKey: provider.apiKey, baseURL, headers, fetch: completeInputStatus })
+      const openai = createOpenAI({ apiKey: provider.apiKey, baseURL, headers })
       if (nativeSearch) tools.web_search = openai.tools.webSearch()
       return {
         model: openai.responses(model.id),
