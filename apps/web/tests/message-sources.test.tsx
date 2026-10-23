@@ -32,7 +32,7 @@ describe("message sources", () => {
     expect(within(screen.getByRole("list")).getByRole("link")).toHaveAttribute("href", "https://research.example/paper")
     await userEvent.click(screen.getByRole("button", { name: /pages\.chat\.activity\.usedTools/ }))
     // Named in the collapsed summary and in the expanded call row.
-    expect(screen.getAllByText("web_search")).toHaveLength(2)
+    expect(screen.getAllByText("components.tools.webSearch.done")).toHaveLength(2)
   })
 
   it("renders OpenAI and Gemini sources with the same list markup", async () => {

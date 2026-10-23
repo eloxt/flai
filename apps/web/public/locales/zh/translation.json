@@ -116,7 +116,6 @@
       "placeholder": "问点什么…",
       "activity": {
         "thinking": "思考中…",
-        "usingTool": "正在使用",
         "thought": "已思考",
         "usedTools_other": "已使用 {{count}} 个工具",
         "failed_other": "{{count}} 个失败"
@@ -625,6 +624,28 @@
       "input": "输入",
       "output": "输出",
       "error": "错误"
+    },
+    "tools": {
+      "webSearch": {
+        "running": "正在搜索网页",
+        "done": "搜索了网页"
+      },
+      "webFetch": {
+        "running": "正在阅读网页",
+        "done": "阅读了网页"
+      },
+      "urlContext": {
+        "running": "正在读取链接",
+        "done": "读取了链接"
+      },
+      "imageSearch": {
+        "running": "正在查找图片",
+        "done": "查找了图片"
+      },
+      "askUser": {
+        "running": "正在向你提问",
+        "done": "向你提了问题"
+      }
     },
     "genui": {
       "run": "运行",

@@ -3,6 +3,7 @@ import { askUserQuestionSchema, askUserResultSchema, fileMetaOf, isAskUserPart }
 import { cn } from "cn"
 import { ArrowUpRightIcon, ChevronRightIcon, FileIcon, GlobeIcon } from "lucide-react"
 import { lazy, memo, Suspense, useMemo } from "react"
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 import { PhotoProvider, PhotoView } from "react-photo-view"
 import {
@@ -18,11 +19,13 @@ import { Bubble, BubbleContent } from "~/components/ui/bubble"
 import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "~/components/ui/avatar"
 import { GenuiBoundary } from "~/components/genui/genui-boundary"
 import { Markdown } from "~/components/markdown"
+import { Orb } from "~/components/orb"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible"
 import { Separator } from "~/components/ui/separator"
 import { formatBytes } from "~/lib/format"
 import { applyGoogleCitations } from "../grounding"
 import { splitSegments } from "../segments"
+import { toolMeta } from "../tool-meta"
 import { QuestionCard } from "./question-card"
 import "react-photo-view/dist/react-photo-view.css"
 
@@ -44,6 +47,7 @@ interface MessageBodyProps {
 }
 
 export const MessageBody = memo(function MessageBody({ role, parts, metadata, streaming = false, onSend, onAnswer }: MessageBodyProps) {
+  const { t } = useTranslation()
   const grounding = metadata?.googleGrounding
   // Citations are derived for display only; stored text stays untouched.
   const texts = useMemo(() => {
@@ -68,7 +72,12 @@ export const MessageBody = memo(function MessageBody({ role, parts, metadata, st
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
-      {pending && <Shimmer />}
+      {/* Nothing streamed yet: the orb alone says the agent has the message. */}
+      {pending && (
+        <div className={statusRow}>
+          <Orb label={t("pages.chat.pending")} />
+        </div>
+      )}
       {groupActivity(visible).map((part, i, items) => {
         const isLast = i === items.length - 1
         if (Array.isArray(part)) return <Activity key={i} parts={part} active={streaming && isLast} />
@@ -172,9 +181,8 @@ function AssistantText({ text, streaming, onSend }: { text: string; streaming: b
 }
 
 /** In-progress status text: muted, sized to its text, with the shared constant-speed shimmer. */
-function Shimmer({ children, className }: { children?: React.ReactNode; className?: string }) {
-  const { t } = useTranslation()
-  return <span className={cn("w-fit text-sm text-muted-foreground text-shimmer", className)}>{children ?? t("pages.chat.pending")}</span>
+function Shimmer({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <span className={cn("w-fit text-sm text-muted-foreground text-shimmer", className)}>{children}</span>
 }
 
 const statusRow = "flex min-h-8 max-w-full min-w-0 items-center gap-2 rounded-sm px-1 text-xs text-foreground/70"
@@ -186,19 +194,27 @@ function Activity({ parts, active }: { parts: FlaiPart[]; active: boolean }) {
   const tools = parts.filter((part) => part.type !== "reasoning").map(toDynamic)
   const running = active ? tools.find(isRunning) : undefined
   const failed = tools.filter((part) => part.state === "output-error").length
-  const names = [...new Set(tools.map(toolLabel))]
+  const names = [...new Set(tools.map((part) => toolLabel(t, part, "done")))]
   const status = active ? (
-    <>
-      <Shimmer className="shrink-0 text-xs text-foreground/70">{running ? t("pages.chat.activity.usingTool") : t("pages.chat.activity.thinking")}</Shimmer>
-      {running && <code className="min-w-0 truncate font-mono text-[11px] text-foreground/70">{toolLabel(running)}</code>}
-    </>
+    running ? (
+      <>
+        <ToolIcon part={running} className="text-foreground/70" />
+        <Shimmer className="shrink-0 text-xs text-foreground/70">{toolLabel(t, running, "running")}</Shimmer>
+        <span className="min-w-0 truncate text-foreground/40">{inputSummary(running.input)}</span>
+      </>
+    ) : (
+      <>
+        <Orb state="thinking" />
+        <Shimmer className="shrink-0 text-xs text-foreground/70">{t("pages.chat.activity.thinking")}</Shimmer>
+      </>
+    )
   ) : (
     <>
       <span className="shrink-0">
         {tools.length > 0 ? t("pages.chat.activity.usedTools", { count: tools.length }) : t("pages.chat.activity.thought")}
         {failed > 0 && <span className="text-destructive"> · {t("pages.chat.activity.failed", { count: failed })}</span>}
       </span>
-      {names.length > 0 && <code className="min-w-0 truncate font-mono text-[11px] text-foreground/40">{names.join(" · ")}</code>}
+      {names.length > 0 && <span className="min-w-0 truncate text-foreground/40">{names.join(" · ")}</span>}
     </>
   )
   // Without tool details there is nothing to expand.
@@ -226,8 +242,15 @@ function isRunning(part: ToolPart): boolean {
   return part.state !== "output-available" && part.state !== "output-error"
 }
 
-function toolLabel(part: ToolPart): string {
-  return part.title ?? part.toolName
+/** Built-in tools read as an action in the user's language; MCP tools keep their own title. */
+function toolLabel(t: TFunction, part: ToolPart, phase: "running" | "done"): string {
+  const { key } = toolMeta(part.toolName)
+  return key ? t(`components.tools.${key}.${phase}`) : (part.title ?? part.toolName)
+}
+
+function ToolIcon({ part, className }: { part: ToolPart; className?: string }) {
+  const { icon: Icon } = toolMeta(part.toolName)
+  return <Icon aria-hidden="true" className={cn("size-3.5 shrink-0", className)} />
 }
 
 /** The first text argument (a query, a URL) identifies a call at a glance. */
@@ -252,7 +275,8 @@ function ToolCall({ part, index }: { part: ToolPart; index: number }) {
       <Collapsible defaultOpen={failed}>
         <CollapsibleTrigger className="group/call flex min-h-8 w-full min-w-0 items-center gap-2 rounded-sm px-1 text-left text-xs hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset">
           <span className="w-5 shrink-0 text-foreground/40 tabular-nums">{String(index + 1).padStart(2, "0")}</span>
-          <code className="shrink-0 font-mono text-[11px] text-foreground/70">{toolLabel(part)}</code>
+          <ToolIcon part={part} className="text-foreground/70" />
+          <span className="shrink-0 text-foreground/70">{toolLabel(t, part, done ? "done" : "running")}</span>
           <span className="min-w-0 flex-1 truncate text-foreground/40">{summary}</span>
           {failed ? (
             <span className={cn(caption, "text-destructive")}>{t("components.toolCall.failed")}</span>
@@ -267,8 +291,8 @@ function ToolCall({ part, index }: { part: ToolPart; index: number }) {
           />
         </CollapsibleTrigger>
         <CollapsibleContent className="transition-none">
-          {/* Indented to the tool name, past the index column. */}
-          <div className="flex min-w-0 flex-col gap-3 pt-1 pr-1 pb-3 pl-8">
+          {/* Indented to the tool name, past the index column and icon. */}
+          <div className="flex min-w-0 flex-col gap-3 pt-1 pr-1 pb-3 pl-13.5">
             {part.input !== undefined && <ToolData label={t("components.toolCall.input")}>{JSON.stringify(part.input, null, 2)}</ToolData>}
             {output && (
               <ToolData label={failed ? t("components.toolCall.error") : t("components.toolCall.output")} failed={failed}>

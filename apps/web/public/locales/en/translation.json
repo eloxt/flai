@@ -116,7 +116,6 @@
       "placeholder": "Ask anything…",
       "activity": {
         "thinking": "Thinking…",
-        "usingTool": "Using",
         "thought": "Thought",
         "usedTools_one": "Used {{count}} tool",
         "usedTools_other": "Used {{count}} tools",
@@ -630,6 +629,28 @@
       "input": "Input",
       "output": "Output",
       "error": "Error"
+    },
+    "tools": {
+      "webSearch": {
+        "running": "Searching the web",
+        "done": "Searched the web"
+      },
+      "webFetch": {
+        "running": "Reading web pages",
+        "done": "Read web pages"
+      },
+      "urlContext": {
+        "running": "Reading links",
+        "done": "Read links"
+      },
+      "imageSearch": {
+        "running": "Finding images",
+        "done": "Found images"
+      },
+      "askUser": {
+        "running": "Asking you",
+        "done": "Asked you"
+      }
     },
     "genui": {
       "run": "Run",
