@@ -18,6 +18,11 @@ import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './st
 
 const GENERATION_TIMEOUT_MS = 20 * 60 * 1000
 const MAX_STEPS = 10
+/**
+ * Tool calls from one step run in parallel. The "called" strategy keeps a batch sequential only
+ * when it includes a suspending tool (ask_user); merely registering one would serialize every step.
+ */
+const TOOL_CALL_CONCURRENCY = { limit: 8, strategy: 'called' } as const
 /** How long shutdown waits for in-flight replies to save what they have. */
 const SHUTDOWN_GRACE_MS = 15_000
 
@@ -184,6 +189,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       // The browser supplies the answer; the existing message store preserves it across restarts.
       clientTools: model.toolCall ? { ask_user: askUserTool } : {},
       maxSteps: MAX_STEPS,
+      toolCallConcurrency: TOOL_CALL_CONCURRENCY,
       abortSignal: generation.controller.signal,
     })
 
