@@ -316,5 +316,5 @@ export function userFacingError(error: unknown, apiKey?: string): string {
   if (error instanceof AppError) return error.message
   let message = errorMessage(error).slice(0, 500)
   if (apiKey) message = message.replaceAll(apiKey, '[REDACTED]')
-  return message ? `Generation failed: ${message}` : 'Generation failed. Please retry.'
+  return message || 'Generation failed. Please retry.'
 }
