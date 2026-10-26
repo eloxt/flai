@@ -31,7 +31,7 @@ export function PreferenceSettings() {
 
   return (
     <PanelSection title={t("pages.settings.preference.title")} description={t("pages.settings.preference.description")}>
-      <FieldGroup className="max-w-xl gap-0 divide-y rounded-lg bg-card px-4 shadow-(--edge-inside)">
+      <FieldGroup className="max-w-xl gap-0 divide-y rounded-lg border border-border bg-card px-4 shadow-(--highlight)">
         <Field orientation="horizontal" className="items-center py-4">
           <FieldContent>
             <FieldLabel htmlFor="pref-language">{t("pages.settings.preference.language")}</FieldLabel>

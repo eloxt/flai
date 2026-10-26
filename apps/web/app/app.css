@@ -121,9 +121,6 @@
     --elev-3: var(--highlight), 0 0 0 1px rgb(0 0 0 / 5%), 0 1px 1px rgb(0 0 0 / 3%), 0 32px 64px -40px rgb(0 0 0 / 22%);
     --sunken-edge: rgb(0 0 0 / 9%);
     --sunken: inset 0 0 0 1px var(--sunken-edge), inset 0 1px 2px rgb(0 0 0 / 4%);
-    /* A raised surface drawn entirely inside its box, for places that clip (message rows use
-       content-visibility, which clips like overflow). */
-    --edge-inside: var(--highlight), inset 0 0 0 1px var(--border);
     /* A bordered control lifted like the sidebar's active row: top highlight and a soft drop. */
     --lift: var(--highlight), 0 1px 2px rgb(0 0 0 / 5%);
     --ink-fill: linear-gradient(180deg, #3b3b3b, #111111);

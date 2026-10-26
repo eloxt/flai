@@ -74,7 +74,7 @@ export function PanelSection({ title, description, action, children }: { title: 
 /** Bordered, horizontally scrollable table with roomy cells, for lists inside panel tabs. */
 export function PanelTable({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-lg bg-card shadow-(--edge-inside) [&_td]:px-4 [&_td]:py-3 [&_td]:tabular-nums [&_th]:h-11 [&_th]:px-4 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
+    <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-(--highlight) [&_td]:px-4 [&_td]:py-3 [&_td]:tabular-nums [&_th]:h-11 [&_th]:px-4 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
       {children}
     </div>
   )
