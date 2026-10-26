@@ -60,6 +60,7 @@ describe('Exa chat generation', () => {
       userId: 'alice', conversationId: 'c1', assistantId: 'exa-generation', provider,
       model: modelConfigSchema.parse({ id: 'test', toolCall: true }),
       options: { webSearch: false, urlContext: false, mcpTools: [] },
+      chatHistory: false,
       path: [{
         id: 'u1', parentId: null, conversationId: 'c1', role: 'user', parts: [{ type: 'text', text: 'Find research' }],
         metadata: {}, createdAt: new Date(), deletedAt: null, searchText: 'Find research', tsv: null,

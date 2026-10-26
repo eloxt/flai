@@ -41,11 +41,12 @@ export function getGenuiPrompt(): string {
   return genuiPrompt
 }
 
-export function chatInstructions(model: ModelConfig, now = new Date()): string {
+export function chatInstructions(model: ModelConfig, { chatHistory = false, now = new Date() } = {}): string {
   const base = getSetting('system_prompt').chat.replaceAll('{{currentDateTime}}', now.toISOString())
   return [
     base,
     model.toolCall && 'Use ask_user when you need clarification or a decision from the user. Ask in the user’s language, provide concise choices when helpful, and wait for the answer before continuing.',
+    model.toolCall && chatHistory && 'Use search_chats and read_chat to recall the user’s earlier conversations when they refer to something discussed before or when past context would clearly help; don’t mention them otherwise.',
     model.generativeUi && getGenuiPrompt(),
   ].filter(Boolean).join('\n\n')
 }

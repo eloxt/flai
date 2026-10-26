@@ -9,6 +9,7 @@ import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
 import type { ProviderRow } from '../services/providers'
 import { chatContext, chatInstructions, getChatAgent } from './agent'
+import { createChatHistoryTools } from './chat-history'
 import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
 import { buildMcpToolset } from './mcp'
@@ -115,6 +116,8 @@ export interface StartGenerationInput {
   provider: ProviderRow
   model: ModelConfig
   options: ChatOptions
+  /** Whether the model may search and read the user's other conversations. */
+  chatHistory: boolean
 }
 
 /** Start generating a reply in the background. Read it with `generationBus().read(assistantId, "0", …)`. */
@@ -182,10 +185,12 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   try {
     const resolved = buildModel({ provider, model, options, requestId: input.assistantId })
     const messages = await toModelMessages(input.path, provider.type)
+    const chatHistory = model.toolCall && input.chatHistory
+    const memory = chatHistory ? createChatHistoryTools({ userId: input.userId, conversationId: input.conversationId }) : {}
     const stream = await getChatAgent().stream(messages as never, {
-      requestContext: chatContext({ model: resolved.model, instructions: chatInstructions(model) }),
+      requestContext: chatContext({ model: resolved.model, instructions: chatInstructions(model, { chatHistory }) }),
       providerOptions: resolved.providerOptions as never,
-      toolsets: { builtin: resolved.tools, mcp: model.toolCall ? mcp.tools : {} },
+      toolsets: { builtin: resolved.tools, memory, mcp: model.toolCall ? mcp.tools : {} },
       // The browser supplies the answer; the existing message store preserves it across restarts.
       clientTools: model.toolCall ? { ask_user: askUserTool } : {},
       maxSteps: MAX_STEPS,

@@ -254,6 +254,32 @@ suite('API integration', () => {
     expect(res.data[0].highlight).toContain('<em>世界</em>')
   })
 
+  it('lets the chat-history tools recall the user’s other chats', async () => {
+    const { noopObserve } = await import('@mastra/core/tools')
+    const { createChatHistoryTools } = await import('../src/llm/chat-history')
+    const userId = async (token: string) => (await call('/me', { token })).data.id as string
+    const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
+    const current = (await call('/conversations', { token: alice, body: {} })).data.id
+    const tools = createChatHistoryTools({ userId: await userId(alice), conversationId: current })
+
+    const found = await run(tools.search_chats, { query: '世界' })
+    expect(found.chats[0]).toMatchObject({ id: conversationId })
+    expect(found.chats[0].snippet).toContain('世界')
+    expect(found.chats[0].snippet).not.toContain('<em>')
+    expect((await run(tools.search_chats, {})).chats.map((c: any) => c.id)).not.toContain(current)
+
+    const read = await run(tools.read_chat, { id: conversationId })
+    expect(read.messages[0]).toMatchObject({ role: 'user' })
+    expect(read.messages[0].text).toContain('世界')
+    expect(await run(tools.read_chat, { id: current })).toEqual({ error: 'Chat not found' })
+
+    const own = createChatHistoryTools({ userId: await userId(alice), conversationId })
+    expect((await run(own.search_chats, { query: '世界' })).chats.map((c: any) => c.id)).not.toContain(conversationId)
+    const bobs = createChatHistoryTools({ userId: await userId(bob), conversationId: 'none' })
+    expect((await run(bobs.search_chats, { query: '世界' })).chats).toEqual([])
+    expect(await run(bobs.read_chat, { id: conversationId })).toEqual({ error: 'Chat not found' })
+  })
+
   it('shares a branch snapshot publicly until it expires', async () => {
     const share = (await call('/shares', { token: alice, body: { conversationId, leafMessageId: a1, expiresAt: null } })).data
     const pub = await call(`/public/shares/${share.id}`)

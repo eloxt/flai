@@ -52,6 +52,8 @@ export interface User {
 
 export interface Preferences {
   sidebarShowEmoji?: boolean
+  /** Let the assistant search and read the user's other chats. Defaults to on. */
+  chatHistory?: boolean
   translate?: { source?: string; target?: string; instruction?: string }
   [key: string]: unknown
 }

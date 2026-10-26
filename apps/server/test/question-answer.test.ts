@@ -28,7 +28,7 @@ let message: MessageRow
 const nextId = '10000000-0000-4000-8000-000000000001'
 const app = new Hono<AppEnv>()
   .use('*', async (c, next) => {
-    c.set('user', { id: c.req.header('x-test-user') ?? 'alice', role: 'user' } as UserRow)
+    c.set('user', { id: c.req.header('x-test-user') ?? 'alice', role: 'user', preferences: {} } as UserRow)
     await next()
   })
   .route('/', messageRoutes)
@@ -74,7 +74,7 @@ describe('answering a question', () => {
     expect(result.generation).toEqual({ assistantId: nextId, parentId: 'a1' })
     expect(mocks.resolve).toHaveBeenCalledWith('original-provider', 'original-model')
     expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({
-      assistantId: nextId, userId: 'alice', path: [message], options: message.metadata.chatOptions,
+      assistantId: nextId, userId: 'alice', path: [message], options: message.metadata.chatOptions, chatHistory: true,
     }))
   })
 

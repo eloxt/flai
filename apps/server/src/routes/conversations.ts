@@ -5,7 +5,7 @@ import {
   type SearchHit,
   updateConversationSchema,
 } from '@flai/shared'
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db, schema } from '../db'
@@ -17,6 +17,7 @@ import { toConversation, toMessage } from '../lib/serialize'
 import { generateTitle } from '../llm/title'
 import { activeGeneration, cancelConversationGeneration } from '../llm/generation'
 import { deleteMessage, getConversation, listMessages } from '../services/conversations'
+import { searchMessages } from '../services/search'
 
 const c_ = schema.conversations
 
@@ -95,30 +96,8 @@ export const conversationRoutes = new Hono<AppEnv>()
   })
   .get('/search', async (c) => {
     const { q } = query(c, z.object({ q: z.string().trim().min(1).max(200) }))
-    const tsq = sql`websearch_to_tsquery('zhcfg', ${q})`
-    const [result, termRows] = await Promise.all([
-      db.execute<{
-        conversation_id: string
-        message_id: string
-        title: string
-        icon: string | null
-        created_at: Date
-        search_text: string
-      }>(sql`
-        SELECT DISTINCT ON (m.conversation_id)
-          m.conversation_id, m.id AS message_id, cv.title, cv.icon, cv.created_at, m.search_text
-        FROM message m
-        JOIN conversation cv ON cv.id = m.conversation_id
-        WHERE m.tsv @@ ${tsq}
-          AND cv.user_id = ${c.get('user').id}
-          AND cv.deleted_at IS NULL AND m.deleted_at IS NULL
-        ORDER BY m.conversation_id, ts_rank(m.tsv, ${tsq}) DESC
-        LIMIT 50
-      `),
-      db.execute<{ term: string }>(sql`SELECT unnest(tsvector_to_array(to_tsvector('zhcfg', ${q}))) AS term`),
-    ])
-    const terms = termRows.rows.map((r) => r.term)
-    const hits: SearchHit[] = result.rows
+    const { rows, terms } = await searchMessages(c.get('user').id, q)
+    const hits: SearchHit[] = rows
       .map((r) => ({
         conversationId: r.conversation_id,
         messageId: r.message_id,

@@ -90,6 +90,7 @@ export const messageRoutes = new Hono<AppEnv>()
     const path = await loadPath(conversation.id, message.id)
     await startGeneration({
       userId: user.id,
+      chatHistory: user.preferences.chatHistory !== false,
       conversationId: conversation.id,
       assistantId: input.assistantId,
       path,
@@ -114,6 +115,7 @@ export const messageRoutes = new Hono<AppEnv>()
     }
     await startGeneration({
       userId: user.id,
+      chatHistory: user.preferences.chatHistory !== false,
       conversationId: conversation.id,
       assistantId: input.assistantId,
       path,
@@ -173,6 +175,7 @@ export const messageRoutes = new Hono<AppEnv>()
 
     if (!result.pending) await startGeneration({
       userId: user.id, conversationId: conversation.id, assistantId: input.assistantId,
+      chatHistory: user.preferences.chatHistory !== false,
       path: result.path, provider: result.provider, model: result.model, options: result.options,
     })
     return c.json({
