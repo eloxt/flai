@@ -18,6 +18,7 @@ export function buildGenuiPrompt(): string {
         '- Use only the listed components. Prefer simple cards, text and images over complex nested layouts.',
         `- Put each openui-lang program in its own fenced code block tagged \`${GENUI_FENCE}\`. Text outside fences is rendered as markdown.`,
         '- Each fenced block is a complete, standalone program that starts with `root = Stack(...)`. Always include all referenced statements, even in follow-up replies.',
+        '- @Find returns the whole matching record, not a component. To render a component stored in it, read the field, e.g. `@Find(items, "id", $id).view`.',
         '- Never invent data for charts or tables; use only facts from the conversation or tool results.',
         '- No UI-side tools are connected. Do not use Query, Mutation or @Run; use @ToAssistant for requests that need the agent.',
       ].join('\n'),
