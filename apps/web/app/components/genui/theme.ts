@@ -26,10 +26,18 @@ export const genuiTheme = createTheme({
               ),
       ])
   ),
+  // The app's three radius tiers: small elements, controls, panels.
   ...Object.fromEntries(
     Object.keys(defaultLightTheme)
       .filter((key) => key.startsWith("radius") && key !== "radiusFull")
-      .map((key) => [key, "0px"])
+      .map((key) => [
+        key,
+        /(xs|S|M)$/.test(key)
+          ? "var(--radius-sm)"
+          : /(L|Xl)$/.test(key)
+            ? "var(--radius-lg)"
+            : "var(--radius-xl)",
+      ])
   ),
   ...Object.fromEntries(
     Object.keys(defaultLightTheme)
@@ -57,8 +65,8 @@ export const genuiTheme = createTheme({
   textNeutralTertiary: "color-mix(in srgb, var(--genui-ink) 40%, transparent)",
   textNeutralLink: "var(--brand)",
   textBrand: "var(--brand)",
-  textWhite: "#fafaf9",
-  textBlack: "#1c1917",
+  textWhite: "#fafafa",
+  textBlack: "#111111",
   textAccentPrimary: "var(--genui-on-accent)",
   textAccentSecondary: "var(--genui-on-accent)",
   textAccentTertiary: "var(--genui-on-accent)",
@@ -144,10 +152,10 @@ export const genuiTheme = createTheme({
   space2xl: "48px",
   space3xl: "64px",
   defaultChartPalette: [
-    "color-mix(in srgb, var(--brand) 20%, var(--background))",
-    "var(--brand)",
-    "var(--genui-ink)",
-    "color-mix(in srgb, var(--genui-ink) 70%, var(--background))",
-    "color-mix(in srgb, var(--genui-ink) 40%, var(--background))",
+    "var(--chart-1)",
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--chart-5)",
   ],
 })

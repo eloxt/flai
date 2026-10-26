@@ -41,7 +41,7 @@ export default function Home() {
     <div className="relative flex h-full min-h-0 flex-col">
       <Notifications />
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 px-4 pb-[10vh] md:gap-16 md:px-8">
-        <h1 className="text-4xl leading-none font-light tracking-tight text-balance sm:text-5xl md:text-6xl">{t("pages.chat.greeting")}</h1>
+        <h1 className="text-title py-1 text-4xl leading-none font-light tracking-tight text-balance sm:text-5xl md:text-6xl">{t("pages.chat.greeting")}</h1>
         <ChatInput draftKey="new" autoFocus onSubmit={start} />
       </div>
     </div>

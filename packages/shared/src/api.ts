@@ -321,6 +321,13 @@ export const settingSchemas = {
   embedding: z.object({
     providerId: z.string().default(''),
     modelId: z.string().trim().max(200).default(''),
+    /** Overrides the provider's base URL, e.g. for a separate embedding server; the provider's API key is still used. */
+    baseUrl: z
+      .string()
+      .trim()
+      .max(1000)
+      .refine((v) => v === '' || isSafeHttpUrl(v), 'must be an http(s) URL without credentials or fragment')
+      .default(''),
   }),
   error_alert: z.object({
     barkUrl: z

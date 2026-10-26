@@ -314,6 +314,8 @@
         "modelId": "向量模型 ID",
         "modelPlaceholder": "text-embedding-3-small",
         "modelHelp": "模型需输出 1024 维向量，或支持设置维度。保存时会发送一次测试请求。更换模型后，所有消息会在后台重新生成向量。",
+        "baseUrl": "接口地址",
+        "baseUrlHelp": "可选。覆盖服务商的接口地址，例如使用单独的向量服务；仍会使用该服务商的 API Key。",
         "off": "关闭",
         "turnedOff": "语义检索已关闭"
       },

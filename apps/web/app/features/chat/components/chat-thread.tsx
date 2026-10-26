@@ -94,9 +94,9 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
           </MessageScrollerContent>
         </MessageScrollerViewport>
         <ConversationNav />
-        <MessageScrollerButton size="icon-lg" className="z-10 rounded-full" onClick={onScrollToEnd} />
+        <MessageScrollerButton size="icon-lg" className="z-10 rounded-lg bg-card shadow-md hover:bg-muted" onClick={onScrollToEnd} />
       </div>
-      <div className="mx-auto w-full max-w-4xl shrink-0 px-4 pb-4 md:px-8">
+      <div className="mx-auto w-full max-w-4xl shrink-0 px-4 pb-6 md:px-8">
         {footer({ collapsed, expand })}
       </div>
     </MessageScroller>

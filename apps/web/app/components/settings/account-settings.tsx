@@ -57,9 +57,9 @@ export function AccountSettings() {
             <Field>
               <FieldLabel>{t("pages.settings.account.avatar")}</FieldLabel>
               <div className="flex items-center gap-4">
-                <Avatar className="size-16 rounded-none after:rounded-none">
-                  {user?.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
-                  <AvatarFallback className="rounded-none">{initials(user?.username)}</AvatarFallback>
+                <Avatar className="size-16 rounded-lg after:rounded-lg">
+                  {user?.avatar && <AvatarImage className="rounded-lg" src={user.avatar} alt={user.username} />}
+                  <AvatarFallback className="rounded-lg">{initials(user?.username)}</AvatarFallback>
                 </Avatar>
                 <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => void changeAvatar(e.target.files?.[0])} />
                 <Button type="button" variant="outline" disabled={uploading} onClick={() => fileInput.current?.click()}>

@@ -161,7 +161,7 @@ export default function TranslatePage() {
       style={{ fontFamily: '"IBM Plex Sans", var(--font-sans)' }}
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-16 md:px-8">
-        <h1 className="text-4xl leading-tight font-light tracking-tight text-balance md:text-5xl">
+        <h1 className="text-title text-4xl leading-tight font-light tracking-tight text-balance md:text-5xl">
           {t("pages.translate.title")}
         </h1>
 
@@ -177,7 +177,7 @@ export default function TranslatePage() {
               id="tr-instruction"
               name="translationInstruction"
               autoComplete="off"
-              className="col-span-12 min-h-12 rounded-none px-4 shadow-none @2xl/translate:col-span-9"
+              className="col-span-12 min-h-12 px-4 @2xl/translate:col-span-9"
               maxLength={500}
               value={prefs.instruction}
               placeholder={t("pages.translate.customInstructionPlaceholder")}
@@ -186,7 +186,7 @@ export default function TranslatePage() {
           </Field>
         </FieldGroup>
 
-        <div className="grid grid-cols-12 border-y border-border border-t-foreground/40">
+        <div className="grid grid-cols-12 overflow-hidden rounded-xl bg-card shadow-lg">
           <section
             aria-labelledby="tr-source-label"
             className="col-span-12 flex min-w-0 flex-col @2xl/translate:col-span-6 @2xl/translate:border-r"
@@ -208,13 +208,12 @@ export default function TranslatePage() {
                   }
                 >
                   <SelectTrigger
-                    className="min-h-11 w-28 rounded-none border-transparent px-2 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="min-h-11 w-28 border-transparent bg-transparent px-2 shadow-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={t("pages.translate.sourceLanguage")}
                   >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent
-                    className="rounded-none border shadow-none ring-0"
                     alignItemWithTrigger={false}
                   >
                     <SelectGroup>
@@ -222,7 +221,7 @@ export default function TranslatePage() {
                         <SelectItem
                           key={lang}
                           value={lang}
-                          className="min-h-11 rounded-none"
+                          className="min-h-11"
                         >
                           {lang}
                         </SelectItem>
@@ -233,7 +232,7 @@ export default function TranslatePage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="size-11 rounded-none"
+                  className="size-11"
                   aria-label={t("pages.translate.swap")}
                   disabled={running}
                   onClick={swap}
@@ -247,7 +246,7 @@ export default function TranslatePage() {
               name="sourceText"
               dir="auto"
               autoComplete="off"
-              className="mx-auto min-h-64 max-w-[60ch] flex-1 resize-y rounded-none border-0 px-4 py-8 text-base leading-relaxed shadow-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:min-h-80 md:px-8 md:text-base"
+              className="mx-auto min-h-64 max-w-[60ch] flex-1 resize-y rounded-none border-0 bg-transparent px-4 py-8 text-base leading-relaxed shadow-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:min-h-80 md:px-8 md:text-base"
               value={text}
               placeholder={t("pages.translate.sourcePlaceholder")}
               onChange={(e) => setText(e.target.value)}
@@ -284,7 +283,7 @@ export default function TranslatePage() {
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="absolute top-0 right-0 size-11 rounded-none"
+                      className="absolute top-0 right-0 size-11"
                       aria-label={t("pages.translate.removeImage")}
                       disabled={running}
                       onClick={() =>
@@ -330,7 +329,7 @@ export default function TranslatePage() {
               />
               <Button
                 variant="ghost"
-                className="min-h-11 rounded-none px-2"
+                className="min-h-11 px-2"
                 disabled={running || images.length + uploading >= MAX_IMAGES}
                 onClick={() => imageInput.current?.click()}
               >
@@ -340,7 +339,7 @@ export default function TranslatePage() {
               {running ? (
                 <Button
                   variant="outline"
-                  className="min-h-11 min-w-28 rounded-none px-4"
+                  className="min-h-11 min-w-28 px-4"
                   onClick={stop}
                 >
                   <SquareIcon aria-hidden="true" data-icon="inline-start" />
@@ -348,7 +347,7 @@ export default function TranslatePage() {
                 </Button>
               ) : (
                 <Button
-                  className="min-h-11 min-w-28 rounded-none px-4"
+                  className="min-h-11 min-w-28 px-4"
                   onClick={() => void translate()}
                   disabled={uploading > 0}
                 >
@@ -377,13 +376,12 @@ export default function TranslatePage() {
                 onValueChange={(value) => prefs.set({ target: String(value) })}
               >
                 <SelectTrigger
-                  className="min-h-11 w-28 rounded-none border-transparent px-2 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="min-h-11 w-28 border-transparent bg-transparent px-2 shadow-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={t("pages.translate.targetLanguage")}
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent
-                  className="rounded-none border shadow-none ring-0"
                   alignItemWithTrigger={false}
                 >
                   <SelectGroup>
@@ -391,7 +389,7 @@ export default function TranslatePage() {
                       <SelectItem
                         key={lang}
                         value={lang}
-                        className="min-h-11 rounded-none"
+                        className="min-h-11"
                       >
                         {lang}
                       </SelectItem>
@@ -405,7 +403,7 @@ export default function TranslatePage() {
               name="translatedText"
               dir="auto"
               autoComplete="off"
-              className="mx-auto min-h-64 max-w-[60ch] flex-1 resize-y rounded-none border-0 px-4 py-8 text-base leading-relaxed shadow-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:min-h-80 md:px-8 md:text-base"
+              className="mx-auto min-h-64 max-w-[60ch] flex-1 resize-y rounded-none border-0 bg-transparent px-4 py-8 text-base leading-relaxed shadow-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:min-h-80 md:px-8 md:text-base"
               value={output}
               readOnly={running}
               aria-busy={running}
@@ -431,7 +429,7 @@ export default function TranslatePage() {
                 {running && (
                   <Spinner
                     aria-hidden="true"
-                    className="text-brand motion-reduce:animate-none"
+                    className="text-foreground motion-reduce:animate-none"
                   />
                 )}
                 {running
@@ -442,7 +440,7 @@ export default function TranslatePage() {
               </p>
               <Button
                 variant="ghost"
-                className="min-h-11 rounded-none px-2"
+                className="min-h-11 px-2"
                 disabled={!output || running}
                 onClick={async () => {
                   try {

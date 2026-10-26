@@ -291,13 +291,26 @@ export function EmbeddingSettings() {
               />
               <FieldDescription>{t(`${p}.modelHelp`)}</FieldDescription>
             </Field>
+            <Field>
+              <FieldLabel htmlFor="embedding-base-url">{t(`${p}.baseUrl`)}</FieldLabel>
+              <Input
+                id="embedding-base-url"
+                type="url"
+                spellCheck={false}
+                disabled={saving}
+                placeholder={providers.find((provider) => provider.id === value.providerId)?.baseUrl ?? ""}
+                value={value.baseUrl}
+                onChange={(e) => setValue({ ...value, baseUrl: e.target.value })}
+              />
+              <FieldDescription>{t(`${p}.baseUrlHelp`)}</FieldDescription>
+            </Field>
             <div className="mt-2 flex gap-2">
               <Button type="submit" disabled={saving}>
                 {saving && <Spinner data-icon="inline-start" />}
                 {t("common.actions.save")}
               </Button>
-              {(value.providerId || value.modelId) && (
-                <Button type="button" variant="outline" disabled={saving} onClick={() => void save({ providerId: "", modelId: "" }, t(`${p}.turnedOff`))}>
+              {(value.providerId || value.modelId || value.baseUrl) && (
+                <Button type="button" variant="outline" disabled={saving} onClick={() => void save({ providerId: "", modelId: "", baseUrl: "" }, t(`${p}.turnedOff`))}>
                   {t(`${p}.off`)}
                 </Button>
               )}

@@ -66,7 +66,7 @@ export default function SearchPage() {
     <main className="min-h-0 flex-1 overflow-y-auto font-['IBM_Plex_Sans',system-ui,sans-serif]">
       <div className="mx-auto grid w-full max-w-5xl grid-cols-12 gap-x-4 gap-y-8 px-4 py-16 md:gap-x-8 md:px-8 md:py-24">
         <header className="col-span-12 flex flex-col gap-4">
-          <h1 className="text-4xl leading-tight font-light tracking-tight text-balance sm:text-5xl">
+          <h1 className="text-title text-4xl leading-tight font-light tracking-tight text-balance sm:text-5xl">
             {t("pages.search.title")}
           </h1>
           <p className="max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
@@ -93,7 +93,7 @@ export default function SearchPage() {
                 {t("pages.search.title")}
               </FieldLabel>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <InputGroup className="h-14 rounded-none has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 sm:flex-1">
+                <InputGroup className="h-14 has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 sm:flex-1">
                   <InputGroupAddon className="pl-4">
                     <SearchIcon aria-hidden="true" />
                   </InputGroupAddon>
@@ -120,7 +120,7 @@ export default function SearchPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="h-14 rounded-none px-8 has-data-[icon=inline-start]:pl-8"
+                  className="h-14 px-8 has-data-[icon=inline-start]:pl-8"
                 >
                   {loading ? (
                     <Spinner
@@ -160,7 +160,7 @@ export default function SearchPage() {
           </div>
 
           {!query ? (
-            <Empty className="rounded-none py-16">
+            <Empty className="py-16">
               <EmptyHeader>
                 <EmptyTitle>{t("pages.search.emptyTitle")}</EmptyTitle>
                 <EmptyDescription>
@@ -169,7 +169,7 @@ export default function SearchPage() {
               </EmptyHeader>
             </Empty>
           ) : !loading && response?.failed ? (
-            <Empty className="rounded-none py-16">
+            <Empty className="py-16">
               <EmptyHeader>
                 <EmptyTitle>{t("pages.search.failed")}</EmptyTitle>
                 <EmptyDescription>
@@ -178,7 +178,7 @@ export default function SearchPage() {
               </EmptyHeader>
               <Button
                 variant="outline"
-                className="min-h-11 rounded-none px-4"
+                className="min-h-11 px-4"
                 onClick={() => {
                   setResponse(null)
                   setAttempt((value) => value + 1)
@@ -188,7 +188,7 @@ export default function SearchPage() {
               </Button>
             </Empty>
           ) : !loading && response?.hits.length === 0 ? (
-            <Empty className="rounded-none py-16">
+            <Empty className="py-16">
               <EmptyHeader>
                 <EmptyTitle>{t("common.empty.noResults")}</EmptyTitle>
                 <EmptyDescription>
@@ -222,7 +222,7 @@ export default function SearchPage() {
                             .map((chunk, index) => (
                               <Fragment key={index}>
                                 {chunk.startsWith("<em>") ? (
-                                  <mark className="bg-brand/20 text-foreground">
+                                  <mark className="rounded-xs bg-foreground/12 text-foreground">
                                     {chunk.slice(4, -5)}
                                   </mark>
                                 ) : (
