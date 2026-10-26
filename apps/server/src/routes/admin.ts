@@ -208,7 +208,7 @@ const settingRoutes = new Hono<AppEnv>()
         if (!provider) throw notFound('Provider')
         if (!merged.modelId) throw badRequest('Model is required')
         // Fail now rather than in the background indexer.
-        await embedWith({ provider, modelId: merged.modelId, baseUrl: merged.baseUrl }, ['test'], AbortSignal.timeout(30_000)).catch((error: unknown) => {
+        await embedWith(provider, merged.modelId, ['test'], AbortSignal.timeout(30_000)).catch((error: unknown) => {
           throw badRequest(error instanceof Error ? error.message : String(error))
         })
       }

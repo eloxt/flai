@@ -46,160 +46,101 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
-    /* Three radius tiers, never mixed within a tier: 8px small elements (icon buttons, menu items,
-       badges), 12px controls (buttons, inputs, code blocks, menus), 20px panels (sheets, dialogs,
-       cards, the composer, message bubbles). 4px is only for checkboxes and inline code. */
-    --radius-xs: 4px;
-    --radius-sm: 8px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 20px;
-    --radius-2xl: 20px;
-    --radius-3xl: 20px;
-    --radius-4xl: 20px;
-    /* Elevation: each step carries its own hairline edge and top highlight, so surfaces
-       need no ring or border on top. */
-    --shadow-2xs: var(--elev-1);
-    --shadow-xs: var(--elev-1);
-    --shadow-sm: var(--elev-1);
-    --shadow-md: var(--elev-2);
-    --shadow-lg: var(--elev-2);
-    --shadow-xl: var(--elev-3);
-    --shadow-2xl: var(--elev-3);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
     --genui-font: "IBM Plex Sans", var(--font-sans);
-    --genui-ink: #111111;
-    --genui-surface: #f2f2f2;
-    --genui-line: rgb(0 0 0 / 8%);
-    --genui-on-accent: #fafafa;
-    /* Black, white and grey only: no hue anywhere. Hierarchy comes from lightness,
-       opacity and shadow; emphasis is a deeper grey, and actions are ink. */
+    --genui-ink: #1c1917;
+    --genui-surface: #f5f5f4;
+    --genui-line: #e7e5e4;
+    --genui-on-accent: #fafaf9;
+    /* Swiss International Style: stone neutrals, one accent (cobalt blue).
+       Hierarchy comes from opacity of the ink colour, never a second hue. */
     color-scheme: light;
-    --brand: var(--foreground);
-    --user-msg: var(--card);
-    /* Page ground (behind the sidebar), the content sheet, and raised surfaces. */
-    --page: #ebebeb;
-    --background: #f9f9f9;
-    --foreground: #111111;
-    --card: #ffffff;
+    --brand: #003b8e;
+    --user-msg: oklch(0.923 0.003 48.717);
+    --background: oklch(0.985 0.001 106.423);
+    --foreground: #000;
+    --card: oklch(0.985 0.001 106.423);
     --card-foreground: var(--foreground);
-    --popover: #ffffff;
+    --popover: oklch(0.985 0.001 106.423);
     --popover-foreground: var(--foreground);
-    --primary: #111111;
-    --primary-foreground: #fafafa;
-    --secondary: #f0f0f0;
+    --primary: var(--foreground);
+    --primary-foreground: oklch(0.985 0.001 106.423);
+    --secondary: oklch(0.97 0.001 106.424);
     --secondary-foreground: var(--foreground);
-    --muted: #f2f2f2;
-    --muted-foreground: #646464;
-    --accent: rgb(0 0 0 / 5.5%);
+    --muted: oklch(0.97 0.001 106.424);
+    --muted-foreground: rgb(0 0 0 / 85%);
+    --accent: oklch(0.923 0.003 48.717);
     --accent-foreground: var(--foreground);
-    --destructive: #b3261e;
-    --border: rgb(0 0 0 / 8%);
-    --input: rgb(0 0 0 / 12%);
-    --ring: #111111;
-    --chart-1: #111111;
-    --chart-2: #3d3d3d;
-    --chart-3: #6b6b6b;
-    --chart-4: #9a9a9a;
-    --chart-5: #c8c8c8;
-    --radius: 12px;
-    --sidebar: var(--page);
+    --destructive: #c8102e;
+    --border: oklch(0.923 0.003 48.717);
+    --input: oklch(0.869 0.005 56.366);
+    --ring: oklch(0.216 0.006 56.043);
+    /* Charts: the accent first, then ink at decreasing strength. */
+    --chart-1: var(--brand);
+    --chart-2: oklch(0.216 0.006 56.043);
+    --chart-3: oklch(0.553 0.013 58.071);
+    --chart-4: oklch(0.709 0.01 56.259);
+    --chart-5: oklch(0.869 0.005 56.366);
+    --radius: 0.125rem;
+    --sidebar: oklch(0.97 0.001 106.424);
     --sidebar-foreground: var(--foreground);
     --sidebar-primary: var(--foreground);
-    --sidebar-primary-foreground: #fafafa;
-    --sidebar-accent: rgb(0 0 0 / 5.5%);
+    --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
+    --sidebar-accent: oklch(0.923 0.003 48.717);
     --sidebar-accent-foreground: var(--foreground);
-    --sidebar-border: rgb(0 0 0 / 8%);
-    --sidebar-ring: #111111;
-
-    /* Materials. */
-    --highlight: inset 0 1px 0 rgb(255 255 255 / 90%);
-    --elev-1: var(--highlight), 0 0 0 1px rgb(0 0 0 / 7%), 0 1px 2px rgb(0 0 0 / 5%);
-    --elev-2: var(--highlight), 0 0 0 1px rgb(0 0 0 / 6%), 0 2px 4px -2px rgb(0 0 0 / 6%), 0 16px 40px -16px rgb(0 0 0 / 16%);
-    --elev-3: var(--highlight), 0 0 0 1px rgb(0 0 0 / 5%), 0 1px 1px rgb(0 0 0 / 3%), 0 32px 64px -40px rgb(0 0 0 / 22%);
-    --sunken: inset 0 0 0 1px rgb(0 0 0 / 9%), inset 0 1px 2px rgb(0 0 0 / 4%);
-    --ink-fill: linear-gradient(180deg, #3b3b3b, #111111);
-    --ink-edge: inset 0 1px 0 rgb(255 255 255 / 24%), inset 0 0 0 1px #0a0a0a, 0 3px 3px -3px rgb(0 0 0 / 40%);
-    --title-fill: linear-gradient(180deg, var(--foreground) 35%, rgb(17 17 17 / 50%));
-    --grid-line: rgb(0 0 0 / 4.5%);
-    --grain-opacity: 0.06;
-    --grain-blend: multiply;
+    --sidebar-border: oklch(0.923 0.003 48.717);
+    --sidebar-ring: oklch(0.216 0.006 56.043);
 }
 
 .dark {
-    --genui-ink: #f1f1f1;
-    --genui-surface: #1a1a1a;
-    --genui-line: rgb(255 255 255 / 8%);
-    --genui-on-accent: #0d0d0d;
+    --genui-ink: #fafaf9;
+    --genui-surface: #1c1917;
+    --genui-line: #292524;
+    --genui-on-accent: #0c0a09;
     color-scheme: dark;
-    --page: #080808;
-    --background: #111111;
-    --foreground: #f1f1f1;
-    --card: #1a1a1a;
-    --card-foreground: var(--foreground);
-    --popover: #1c1c1c;
-    --popover-foreground: var(--foreground);
-    --primary: #f1f1f1;
-    --primary-foreground: #0d0d0d;
-    --secondary: #1f1f1f;
-    --secondary-foreground: var(--foreground);
-    --muted: #171717;
-    --muted-foreground: #999999;
-    --accent: rgb(255 255 255 / 6%);
-    --accent-foreground: var(--foreground);
-    --destructive: #f2b8b5;
-    --border: rgb(255 255 255 / 8%);
-    --input: rgb(255 255 255 / 13%);
-    --ring: #f1f1f1;
-    --chart-1: #f1f1f1;
-    --chart-2: #c4c4c4;
-    --chart-3: #969696;
-    --chart-4: #6a6a6a;
-    --chart-5: #3e3e3e;
-    --sidebar-primary-foreground: #0d0d0d;
-    --sidebar-accent: rgb(255 255 255 / 6%);
-    --sidebar-border: rgb(255 255 255 / 8%);
-    --sidebar-ring: #f1f1f1;
-
-    --highlight: inset 0 1px 0 rgb(255 255 255 / 7%);
-    --elev-1: var(--highlight), 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 60%);
-    --elev-2: var(--highlight), 0 0 0 1px rgb(255 255 255 / 6%), 0 16px 40px -16px rgb(0 0 0 / 90%);
-    --elev-3: var(--highlight), 0 0 0 1px rgb(255 255 255 / 5%), 0 32px 64px -40px rgb(0 0 0);
-    --sunken: inset 0 0 0 1px rgb(255 255 255 / 8%), inset 0 1px 2px rgb(0 0 0 / 50%);
-    --ink-fill: linear-gradient(180deg, #ffffff, #d4d4d4);
-    --ink-edge: inset 0 1px 0 #ffffff, inset 0 0 0 1px rgb(0 0 0 / 12%), 0 3px 3px -3px rgb(0 0 0 / 80%);
-    --title-fill: linear-gradient(180deg, var(--foreground) 35%, rgb(241 241 241 / 45%));
-    --grid-line: rgb(255 255 255 / 3.5%);
-    --grain-opacity: 0.08;
-    --grain-blend: overlay;
-}
-
-/* Ink action surface: a near-black (light) or near-white (dark) fill lit from above.
-   Its edge is inset and its drop shadow falls straight down, so containers that clip
-   (the composer, scroll areas) never cut either. */
-@utility material-ink {
-    background-color: var(--primary);
-    background-image: var(--ink-fill);
-    color: var(--primary-foreground);
-    box-shadow: var(--ink-edge);
-}
-
-/* Large headings: ink fading toward the baseline. */
-@utility text-title {
-    background-image: var(--title-fill);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-/* Fine grid that fades out from the top centre of its box. */
-@utility material-grid {
-    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: -1px -1px;
-    mask-image: radial-gradient(ellipse 60% 100% at 50% 0%, #000, transparent 75%);
+    /* Same hue as --brand, lifted so it stays legible on stone-950. */
+    --brand: #5b8fd9;
+    --user-msg: oklch(0.268 0.007 34.298);
+    --background: oklch(0.147 0.004 49.25);
+    --foreground: oklch(0.985 0.001 106.423);
+    --card: oklch(0.147 0.004 49.25);
+    --card-foreground: oklch(0.985 0.001 106.423);
+    --popover: oklch(0.216 0.006 56.043);
+    --popover-foreground: oklch(0.985 0.001 106.423);
+    --primary: oklch(0.985 0.001 106.423);
+    --primary-foreground: oklch(0.216 0.006 56.043);
+    --secondary: oklch(0.216 0.006 56.043);
+    --secondary-foreground: oklch(0.985 0.001 106.423);
+    --muted: oklch(0.216 0.006 56.043);
+    --muted-foreground: oklch(0.985 0.001 106.423 / 85%);
+    --accent: oklch(0.268 0.007 34.298);
+    --accent-foreground: oklch(0.985 0.001 106.423);
+    --destructive: #e5374f;
+    --border: oklch(0.268 0.007 34.298);
+    --input: oklch(0.374 0.01 67.558);
+    --ring: oklch(0.985 0.001 106.423);
+    --chart-1: var(--brand);
+    --chart-2: oklch(0.985 0.001 106.423);
+    --chart-3: oklch(0.709 0.01 56.259);
+    --chart-4: oklch(0.553 0.013 58.071);
+    --chart-5: oklch(0.374 0.01 67.558);
+    --sidebar: oklch(0.216 0.006 56.043);
+    --sidebar-foreground: oklch(0.985 0.001 106.423);
+    --sidebar-primary: oklch(0.985 0.001 106.423);
+    --sidebar-primary-foreground: oklch(0.216 0.006 56.043);
+    --sidebar-accent: oklch(0.268 0.007 34.298);
+    --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
+    --sidebar-border: oklch(0.268 0.007 34.298);
+    --sidebar-ring: oklch(0.985 0.001 106.423);
 }
 
 @layer base {
@@ -222,21 +163,10 @@
     text-wrap: pretty;
     }
   ::selection {
-    background: color-mix(in oklab, var(--foreground) 16%, transparent);
-    }
-  /* Film grain over the whole window: a tiled monochrome noise, blended so it only adds texture. */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 2147483647;
-    pointer-events: none;
-    opacity: var(--grain-opacity);
-    mix-blend-mode: var(--grain-blend);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background: color-mix(in oklab, var(--brand) 20%, transparent);
     }
 
-  /* Scrollbars: thin, no track; the thumb is ink at low opacity and firms up on hover.
+  /* Scrollbars: thin, square, no track; the thumb is ink at low opacity and firms up on hover.
      Kept in the base layer so utilities such as scrollbar-none still win. */
   * {
     --scrollbar-thumb: color-mix(in oklab, var(--foreground) 18%, transparent);
@@ -265,7 +195,7 @@
     }
     ::-webkit-scrollbar-thumb {
         border: 3px solid transparent;
-        border-radius: 8px;
+        border-radius: 0;
         background: var(--scrollbar-thumb) padding-box;
     }
     ::-webkit-scrollbar-thumb:hover {
@@ -401,7 +331,7 @@ code {
 /* Inline code sits at the text's size, on a flat tint, without a pill shape. */
 .markdown-body [data-streamdown="inline-code"] {
     font-size: 0.9em;
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-sm);
     padding: 0.1em 0.35em;
 }
 
@@ -456,18 +386,12 @@ code {
 
 .markdown-body [data-streamdown="code-block"] {
     gap: 0;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background: var(--muted);
-    /* Edge and highlight stay inside the box: Streamdown's wrappers clip anything drawn outside it. */
-    box-shadow: var(--highlight);
-    outline: 1px solid var(--border);
-    outline-offset: -1px;
-    overflow: hidden;
 }
 
 .markdown-body [data-streamdown="code-block-header"] {
     padding-inline: 0.75rem;
-    box-shadow: inset 0 -1px 0 var(--border);
 }
 
 .markdown-body [data-streamdown="code-block-header"] > span {
@@ -639,10 +563,9 @@ code {
 
     [data-slot="genui"] :is(.openui-card-card, .openui-card-sunk) {
         padding: 24px;
-        border: 0;
-        border-radius: var(--radius-xl);
-        background: var(--card);
-        box-shadow: var(--elev-1);
+        border: 1px solid var(--genui-line);
+        border-top: 2px solid var(--genui-ink);
+        background: var(--openui-foreground);
     }
 
     [data-slot="genui"] .openui-card-clear {
@@ -796,10 +719,9 @@ code {
 
     /* Library popovers render in portals outside the message container. */
     .openui-select-content {
-        border: 0;
-        border-radius: var(--radius-lg);
-        background: var(--popover);
-        box-shadow: var(--elev-2);
+        border: 1px solid var(--genui-line);
+        background: var(--background);
+        box-shadow: none;
     }
 
     .openui-select-item {

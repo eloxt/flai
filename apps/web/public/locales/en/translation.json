@@ -319,8 +319,6 @@
         "modelId": "Embedding model ID",
         "modelPlaceholder": "text-embedding-3-small",
         "modelHelp": "The model must output 1024 dimensions or accept a dimensions setting. Saving sends a test request. Changing the model re-embeds all messages in the background.",
-        "baseUrl": "Base URL",
-        "baseUrlHelp": "Optional. Overrides the provider's base URL, for example to use a separate embedding server; the provider's API key is still sent.",
         "off": "Turn off",
         "turnedOff": "Semantic search turned off"
       },

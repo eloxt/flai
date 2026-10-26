@@ -70,6 +70,8 @@ const DAY = 24 * 3600 * 1000
 const FADE_ON_COLLAPSE =
   "transition-[opacity,visibility] duration-200 group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:invisible group-data-[collapsible=icon]:opacity-0 motion-reduce:transition-none"
 const TITLE_FADE = "transition-opacity duration-200 ease-out starting:opacity-0"
+// The rail takes the page background once collapsed.
+const RAIL_BACKGROUND = "transition-colors group-data-[collapsible=icon]:bg-background motion-reduce:transition-none"
 const GROUPS = ["today", "yesterday", "previous7Days", "previous30Days", "older"] as const
 
 function groupByDate(items: ConversationItem[]) {
@@ -121,8 +123,8 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
+      <Sidebar collapsible="icon">
+        <SidebarHeader className={RAIL_BACKGROUND}>
           <div className="flex h-8 items-center gap-2 overflow-hidden">
             {/* Expanded: the logo is static and the collapse button sits on the right (desktop only).
                 Collapsed: the logo itself is the expand button and shows the panel icon on hover. */}
@@ -133,7 +135,7 @@ export function AppSidebar() {
               <FlaiMark className="group-hover/brand:hidden" />
               <PanelLeftIcon className="hidden group-hover/brand:block" />
             </Button>
-            <span className={cn("min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-title", FADE_ON_COLLAPSE)}>FlaiChat</span>
+            <span className={cn("min-w-0 flex-1 truncate text-base font-normal tracking-tight", FADE_ON_COLLAPSE)}>FlaiChat</span>
             {!isMobile && (
               <Button variant="ghost" size="icon" className={cn("shrink-0", FADE_ON_COLLAPSE)} aria-label={t("components.sidebar.toggle")} onClick={toggleSidebar}>
                 <PanelLeftIcon />
@@ -162,7 +164,7 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent onScroll={onScroll}>
+        <SidebarContent onScroll={onScroll} className={RAIL_BACKGROUND}>
           {favourites.length > 0 && (
             <Collapsible defaultOpen>
               <SidebarGroup className={FADE_ON_COLLAPSE}>
@@ -215,7 +217,7 @@ export function AppSidebar() {
           )}
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className={RAIL_BACKGROUND}>
           <UserMenu onSettings={() => setSettingsOpen(true)} onAdmin={() => setAdminOpen(true)} />
         </SidebarFooter>
       </Sidebar>
@@ -303,9 +305,9 @@ function UserMenu({ onSettings, onAdmin }: { onSettings: () => void; onAdmin: ()
   const logout = useAuthStore((s) => s.logout)
   const identity = (
     <>
-      <Avatar className="size-8 rounded-md after:rounded-md">
-        {user?.avatar && <AvatarImage className="rounded-md" src={user.avatar} alt={user.username} />}
-        <AvatarFallback className="rounded-md bg-primary text-primary-foreground material-ink">{initials(user?.username)}</AvatarFallback>
+      <Avatar className="size-8 rounded-none">
+        {user?.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
+        <AvatarFallback className="rounded-none">{initials(user?.username)}</AvatarFallback>
       </Avatar>
       <span className="grid flex-1 text-left text-sm leading-tight">
         <span className="truncate font-medium">{user?.username}</span>

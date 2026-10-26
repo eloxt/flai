@@ -99,7 +99,7 @@ export const messageChunks = pgTable(
     // Denormalized so vector search can filter without joining first.
     userId: text('user_id').notNull(),
     conversationId: text('conversation_id').notNull(),
-    /** `providerId:modelId[@baseUrl]` of the embedding; rows from another model are ignored and replaced. */
+    /** `providerId:modelId` of the embedding; rows from another model are ignored and replaced. */
     model: text('model').notNull(),
     text: text('text').notNull(),
     embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }).notNull(),

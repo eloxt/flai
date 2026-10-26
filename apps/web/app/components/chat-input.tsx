@@ -60,13 +60,11 @@ interface Pending {
 
 const EMPTY: FileRecord[] = []
 /** Toolbar menus read like the toggles beside them: quiet (45%) when unset, full-strength when set. */
-const TOOL_TRIGGER = "text-muted-foreground hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground"
-const TOOL_TRIGGER_ON = "bg-accent text-foreground shadow-[inset_0_0_0_1px_var(--input)]"
+const TOOL_TRIGGER = "text-foreground/45 hover:bg-foreground/5 hover:text-foreground/45 aria-expanded:bg-foreground/5 aria-expanded:text-foreground/45"
+const TOOL_TRIGGER_ON = "text-foreground hover:text-foreground aria-expanded:text-foreground"
 /** Send and stop swap on every message, so the incoming icon settles in fast and nothing animates out. */
 const ICON_ENTER = "transition-[opacity,scale] duration-120 ease-out starting:scale-85 starting:opacity-0 motion-reduce:transition-[opacity]"
 /** Bar and full input swap by animating their row height (0fr ↔ 1fr) while crossfading. */
-// The swap panels clip (they collapse to zero height), so focus rings are drawn inside.
-const RING_INSIDE = "focus-visible:ring-inset"
 const SWAP = "grid min-w-0 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 
 export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = false, onStop, contextUsage, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
@@ -140,7 +138,7 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
 
   return (
     <div
-      className="relative flex w-full min-w-0 flex-col rounded-xl bg-card p-1.5 shadow-lg"
+      className="relative flex w-full min-w-0 flex-col rounded-sm border bg-muted transition-colors focus-within:border-foreground/30 motion-reduce:transition-none"
       onDragEnter={(e) => {
         e.preventDefault()
         if (!canAttach) return
@@ -156,17 +154,17 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
       onDrop={onDrop}
     >
       {dragging && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-foreground/30 bg-card/95 text-sm transition-opacity duration-150 ease-out starting:opacity-0">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed border-brand bg-background/90 text-sm transition-opacity duration-150 ease-out starting:opacity-0">
           <PaperclipIcon className="size-5" />
           <span className="text-base font-normal">{t("common.dropFilesHere")}</span>
           <span className="text-xs text-muted-foreground">{t("common.allowedFileTypes")}</span>
         </div>
       )}
       <div className={cn(SWAP, collapsed ? "grid-rows-[1fr]" : "grid-rows-[0fr] opacity-0")} inert={!collapsed}>
-        <div className="flex min-h-0 min-w-0 items-center gap-2 overflow-hidden rounded-lg pr-0.5">
+        <div className="flex min-h-0 min-w-0 items-center gap-2 overflow-hidden rounded-sm bg-background pr-1.5">
           <button
             type="button"
-            className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 text-left text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:text-[15px]"
+            className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-sm pl-4 text-left text-base outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-[15px]"
             onClick={() => {
               focusOnExpand.current = true
               onExpand?.()
@@ -181,7 +179,7 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
             )}
           </button>
           {streaming && (
-            <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 shrink-0 rounded-lg", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+            <InputGroupButton variant="destructive" size="icon-sm" className="shrink-0 rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
               <SquareIcon />
             </InputGroupButton>
           )}
@@ -189,9 +187,9 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
       </div>
       <div className={cn(SWAP, collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr]")} inert={collapsed}>
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-          <InputGroup className="h-auto flex-col rounded-none border-0 bg-transparent shadow-none dark:bg-transparent has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
+          <InputGroup className="h-auto flex-col rounded-none border-0 border-b bg-background shadow-none dark:bg-background has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
             {(files.length > 0 || pending.length > 0) && (
-              <AttachmentGroup className="w-full px-1.5 pt-1.5">
+              <AttachmentGroup className="w-full px-3 pt-3">
                 {files.map((file) => (
                   <Attachment key={file.id} size="sm" state="done">
                     <AttachmentMedia variant={file.mediaType.startsWith("image/") ? "image" : "icon"}>
@@ -245,9 +243,9 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
                   void upload(images)
                 }
               }}
-              className="w-full resize-none bg-transparent px-2.5 pt-2 pb-1 text-base outline-none placeholder:text-muted-foreground md:text-[15px]"
+              className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-base outline-none md:text-[15px]"
             />
-            <InputGroupAddon align="block-end" className="gap-1 px-0 pb-0">
+            <InputGroupAddon align="block-end" className="gap-2 px-3 pb-3">
               <input
                 ref={fileInput}
                 type="file"
@@ -259,20 +257,20 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
                 }}
               />
               {canAttach && (
-                <InputGroupButton size="icon-sm" className={cn("size-9 rounded-lg text-muted-foreground", RING_INSIDE)} aria-label={t("common.attachment")} onClick={() => fileInput.current?.click()}>
+                <InputGroupButton size="icon-sm" aria-label={t("common.attachment")} onClick={() => fileInput.current?.click()}>
                   <PaperclipIcon />
                 </InputGroupButton>
               )}
               <div className="ml-auto flex items-center gap-2">
                 {streaming ? (
-                  <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 rounded-lg", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+                  <InputGroupButton variant="destructive" size="icon-sm" className="rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
                     <SquareIcon className={ICON_ENTER} />
                   </InputGroupButton>
                 ) : (
                   <InputGroupButton
                     variant="default"
                     size="icon-sm"
-                    className={cn("size-9 rounded-lg", RING_INSIDE)}
+                    className="rounded-sm"
                     aria-label={t("common.send")}
                     disabled={pending.length > 0 || (!text.trim() && files.length === 0)}
                     onClick={() => void submit()}
@@ -286,7 +284,7 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
           <div className="flex min-w-0 items-center gap-2">
             <ToolBar />
             {contextUsage !== undefined && (
-              <div className="ml-auto shrink-0 px-2 pt-1">
+              <div className="ml-auto shrink-0 px-3 py-2">
                 <ContextUsageRing percentage={contextUsage} />
               </div>
             )}
@@ -347,7 +345,7 @@ function ToolBar() {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden p-1 text-muted-foreground">
+    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2 py-1 text-muted-foreground">
       {hasMcp && (
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(TOOL_TRIGGER, mcpTools.length > 0 && TOOL_TRIGGER_ON)} />}>
@@ -427,7 +425,7 @@ function ContextUsageRing({ percentage }: { percentage: number }) {
   const stroke = 3
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  const color = percentage >= 90 ? "var(--destructive)" : percentage >= 70 ? "var(--muted-foreground)" : "var(--foreground)"
+  const color = percentage >= 90 ? "var(--destructive)" : percentage >= 70 ? "var(--brand)" : "var(--foreground)"
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums" />}>

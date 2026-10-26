@@ -295,12 +295,6 @@ suite('API integration', () => {
 
     const narrow = await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'narrow' } })
     expect(narrow.status).toBe(400)
-    // The override replaces the provider's URL: nothing listens here, so the test request fails.
-    const elsewhere = await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed', baseUrl: 'http://127.0.0.1:9/v1' } })
-    expect(elsewhere.status).toBe(400)
-    const override = await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed', baseUrl: llmUrl } })
-    expect(override.data.baseUrl).toBe(llmUrl)
-    await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { baseUrl: '' } })
     expect((await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed' } })).status).toBe(200)
 
     const pets = (await call('/conversations', { token: alice, body: {} })).data.id
