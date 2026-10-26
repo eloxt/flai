@@ -119,12 +119,16 @@
     --elev-1: var(--highlight), 0 0 0 1px rgb(0 0 0 / 7%), 0 1px 2px rgb(0 0 0 / 5%);
     --elev-2: var(--highlight), 0 0 0 1px rgb(0 0 0 / 6%), 0 2px 4px -2px rgb(0 0 0 / 6%), 0 16px 40px -16px rgb(0 0 0 / 16%);
     --elev-3: var(--highlight), 0 0 0 1px rgb(0 0 0 / 5%), 0 1px 1px rgb(0 0 0 / 3%), 0 32px 64px -40px rgb(0 0 0 / 22%);
-    --sunken: inset 0 0 0 1px rgb(0 0 0 / 9%), inset 0 1px 2px rgb(0 0 0 / 4%);
+    --sunken-edge: rgb(0 0 0 / 9%);
+    --sunken: inset 0 0 0 1px var(--sunken-edge), inset 0 1px 2px rgb(0 0 0 / 4%);
     /* A raised surface drawn entirely inside its box, for places that clip (message rows use
        content-visibility, which clips like overflow). */
     --edge-inside: var(--highlight), inset 0 0 0 1px var(--border);
+    /* A bordered control lifted like the sidebar's active row: top highlight and a soft drop. */
+    --lift: var(--highlight), 0 1px 2px rgb(0 0 0 / 5%);
     --ink-fill: linear-gradient(180deg, #3b3b3b, #111111);
-    --ink-edge: inset 0 1px 0 rgb(255 255 255 / 24%), inset 0 0 0 1px #0a0a0a, 0 3px 3px -3px rgb(0 0 0 / 40%);
+    --ink-edge: inset 0 1px 0 rgb(255 255 255 / 22%), 0 3px 3px -3px rgb(0 0 0 / 40%);
+    --ink-border: #000000;
     --title-fill: linear-gradient(180deg, var(--foreground) 35%, rgb(17 17 17 / 50%));
     --grid-line: rgb(0 0 0 / 4.5%);
     --grain-opacity: 0.06;
@@ -170,9 +174,13 @@
     --elev-1: var(--highlight), 0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 60%);
     --elev-2: var(--highlight), 0 0 0 1px rgb(255 255 255 / 6%), 0 16px 40px -16px rgb(0 0 0 / 90%);
     --elev-3: var(--highlight), 0 0 0 1px rgb(255 255 255 / 5%), 0 32px 64px -40px rgb(0 0 0);
-    --sunken: inset 0 0 0 1px rgb(255 255 255 / 8%), inset 0 1px 2px rgb(0 0 0 / 50%);
+    --sunken-edge: rgb(255 255 255 / 8%);
+    --sunken: inset 0 0 0 1px var(--sunken-edge), inset 0 1px 2px rgb(0 0 0 / 50%);
+    --lift: var(--highlight), 0 1px 2px rgb(0 0 0 / 60%);
     --ink-fill: linear-gradient(180deg, #ffffff, #d4d4d4);
-    --ink-edge: inset 0 1px 0 #ffffff, inset 0 0 0 1px rgb(0 0 0 / 12%), 0 3px 3px -3px rgb(0 0 0 / 80%);
+    --ink-edge: inset 0 1px 0 #ffffff, 0 3px 3px -3px rgb(0 0 0 / 80%);
+    /* Light ink on a dark ground is defined by its own fill; the border just carries the fill. */
+    --ink-border: transparent;
     --title-fill: linear-gradient(180deg, var(--foreground) 35%, rgb(241 241 241 / 45%));
     --grid-line: rgb(255 255 255 / 3.5%);
     --grain-opacity: 0.08;
@@ -180,11 +188,14 @@
 }
 
 /* Ink action surface: a near-black (light) or near-white (dark) fill lit from above.
-   Its edge is inset and its drop shadow falls straight down, so containers that clip
-   (the composer, scroll areas) never cut either. */
+   The element's own border is the edge, with the fill running underneath it, so there is
+   one crisp edge and no fringe; the drop shadow falls straight down, so containers that
+   clip (the composer, scroll areas) never cut it. */
 @utility material-ink {
+    border-color: var(--ink-border);
     background-color: var(--primary);
     background-image: var(--ink-fill);
+    background-clip: border-box;
     color: var(--primary-foreground);
     box-shadow: var(--ink-edge);
 }
@@ -768,6 +779,7 @@ code {
 
     /* Primary and destructive actions are ink, lit from above, like the app's primary button. */
     [data-slot="genui"] :is(.openui-button-base-primary, .openui-button-base-destructive-primary) {
+        border: 1px solid var(--ink-border);
         background-color: var(--primary);
         background-image: var(--ink-fill);
         color: var(--primary-foreground);
@@ -881,6 +893,43 @@ code {
         box-shadow: none;
         color: var(--muted-foreground);
         touch-action: manipulation;
+    }
+
+    /* Scroll arrows cap the ends of the track: the cover continues the track's surface and
+       edge, and the arrow is a raised tab-sized button inside it. */
+    [data-slot="genui"] :is(.openui-tabs-scroll-button-container-left, .openui-tabs-scroll-button-container-right) {
+        padding: 3px;
+        background: var(--muted);
+    }
+
+    [data-slot="genui"] .openui-tabs-scroll-button-container-left {
+        padding-right: 6px;
+        border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+        box-shadow: inset 1px 0 0 var(--sunken-edge), inset 0 1px 0 var(--sunken-edge), inset 0 -1px 0 var(--sunken-edge);
+    }
+
+    [data-slot="genui"] .openui-tabs-scroll-button-container-right {
+        padding-left: 6px;
+        border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+        box-shadow: inset -1px 0 0 var(--sunken-edge), inset 0 1px 0 var(--sunken-edge), inset 0 -1px 0 var(--sunken-edge);
+    }
+
+    [data-slot="genui"] .openui-tabs-scroll-button.openui-icon-button {
+        width: 32px;
+        height: 32px;
+        min-width: 0;
+        min-height: 0;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        outline: 0;
+        background: var(--card);
+        box-shadow: var(--lift);
+        color: var(--foreground);
+    }
+
+    [data-slot="genui"] .openui-tabs-scroll-button.openui-icon-button:hover:not(:disabled) {
+        opacity: 1;
+        background: var(--muted);
     }
 
     [data-slot="genui"] .openui-tabs-list .openui-tabs-trigger:hover {

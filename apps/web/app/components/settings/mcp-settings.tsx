@@ -66,7 +66,7 @@ export function McpSettings() {
       {servers === null ? (
         <Skeleton className="h-28 w-full" />
       ) : servers.length === 0 ? (
-        <Empty className="border">
+        <Empty className="bg-muted shadow-(--sunken)">
           <EmptyHeader>
             <EmptyTitle>{t("common.empty.noItems")}</EmptyTitle>
             <EmptyDescription>{t("pages.settings.mcp.emptyHint")}</EmptyDescription>

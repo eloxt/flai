@@ -74,7 +74,7 @@ export default function SharePage() {
       </main>
       {share && (
         <footer className="border-t">
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-8 text-xs tracking-wide text-muted-foreground uppercase tabular-nums md:px-8">
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-8 gap-y-2 px-4 py-8 text-xs text-muted-foreground tabular-nums md:px-8">
             <span>
               {t("pages.share.sharedOn")} {formatDateTime(share.createdAt)}
             </span>

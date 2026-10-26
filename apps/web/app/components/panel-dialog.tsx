@@ -18,6 +18,10 @@ interface PanelDialogProps {
   tabs: PanelTab[]
 }
 
+// Rail tabs mirror the app sidebar's conversation rows: same size, hover and raised active state.
+const PANEL_TAB =
+  "h-8 flex-none justify-start gap-2 rounded-md border-0 p-2 font-normal text-sidebar-foreground after:hidden hover:bg-sidebar-accent data-active:bg-card data-active:text-sidebar-foreground data-active:shadow-xs! dark:text-sidebar-foreground dark:data-active:bg-card"
+
 /** Large settings-style dialog: tab list on the left (top on mobile), content on the right. */
 export function PanelDialog({ open, onOpenChange, title, tabs }: PanelDialogProps) {
   const isMobile = useIsMobile()
@@ -29,11 +33,11 @@ export function PanelDialog({ open, onOpenChange, title, tabs }: PanelDialogProp
           orientation={isMobile ? "horizontal" : "vertical"}
           className="flex min-h-0 flex-1 flex-col gap-0 md:flex-row"
         >
-          <div className="flex shrink-0 flex-col gap-4 border-b px-4 pt-6 pb-2 md:w-60 md:gap-8 md:border-r md:border-b-0 md:bg-muted md:px-4 md:py-8">
-            <DialogTitle className="pr-10 text-2xl font-light tracking-tight md:px-3 md:pr-0">{title}</DialogTitle>
-            <TabsList variant="line" className="-mx-4 group-data-horizontal/tabs:h-auto max-w-[calc(100%+2rem)] gap-0 overflow-x-auto px-4 md:mx-0 md:w-full md:max-w-full md:items-stretch md:overflow-visible md:gap-1 md:px-0">
+          <div className="flex shrink-0 flex-col gap-4 border-b px-4 pt-6 pb-2 md:w-60 md:gap-8 md:border-r md:border-b-0 md:bg-sidebar md:px-2 md:py-8">
+            <DialogTitle className="text-title pr-10 text-2xl font-light tracking-tight md:px-2 md:pr-0">{title}</DialogTitle>
+            <TabsList className="-mx-4 group-data-horizontal/tabs:h-auto max-w-[calc(100%+2rem)] gap-1 overflow-x-auto rounded-none bg-transparent px-4 py-1 md:mx-0 md:w-full md:max-w-full md:items-stretch md:overflow-visible md:p-0">
               {tabs.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id} className="h-10 flex-none justify-start gap-2 px-3 group-data-vertical/tabs:after:-left-2 group-data-vertical/tabs:after:right-auto">
+                <TabsTrigger key={tab.id} value={tab.id} className={PANEL_TAB}>
                   <tab.icon data-icon="inline-start" />
                   {tab.label}
                 </TabsTrigger>
@@ -70,7 +74,7 @@ export function PanelSection({ title, description, action, children }: { title: 
 /** Bordered, horizontally scrollable table with roomy cells, for lists inside panel tabs. */
 export function PanelTable({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-lg border [&_td]:px-4 [&_td]:py-3 [&_td]:tabular-nums [&_th]:h-11 [&_th]:px-4 [&_th]:text-xs [&_th]:font-normal [&_th]:tracking-wide [&_th]:text-muted-foreground [&_th]:uppercase">
+    <div className="overflow-x-auto rounded-lg bg-card shadow-(--edge-inside) [&_td]:px-4 [&_td]:py-3 [&_td]:tabular-nums [&_th]:h-11 [&_th]:px-4 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
       {children}
     </div>
   )

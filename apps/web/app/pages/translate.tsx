@@ -194,7 +194,7 @@ export default function TranslatePage() {
               <label
                 id="tr-source-label"
                 htmlFor="tr-source"
-                className="flex items-center gap-2 text-xs font-normal tracking-wide uppercase"
+                className="flex items-center gap-2 text-xs font-medium text-muted-foreground"
               >
                 {t("pages.translate.sourceText")}
               </label>
@@ -365,7 +365,7 @@ export default function TranslatePage() {
               <label
                 id="tr-output-label"
                 htmlFor="tr-output"
-                className="flex items-center gap-2 text-xs font-normal tracking-wide uppercase"
+                className="flex items-center gap-2 text-xs font-medium text-muted-foreground"
               >
                 {t("pages.translate.targetText")}
               </label>

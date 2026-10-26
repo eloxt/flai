@@ -186,7 +186,7 @@ function Shimmer({ children, className }: { children: React.ReactNode; className
 }
 
 const statusRow = "flex min-h-8 max-w-full min-w-0 items-center gap-2 rounded-sm px-1 text-xs text-foreground/70"
-const caption = "text-[11px] leading-4 tracking-wide uppercase text-foreground/40"
+const caption = "text-xs leading-4 text-muted-foreground"
 
 /** Status for a run of reasoning and tool calls; reasoning text is never shown, tool details expand. */
 function Activity({ parts, active }: { parts: FlaiPart[]; active: boolean }) {

@@ -112,7 +112,7 @@ export function WebSearchSettings() {
 function LoadFailed({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation()
   return (
-    <Empty className="border">
+    <Empty className="bg-muted shadow-(--sunken)">
       <EmptyHeader>
         <EmptyDescription>{t("pages.admin.systemConfig.unavailable")}</EmptyDescription>
       </EmptyHeader>

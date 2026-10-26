@@ -46,7 +46,7 @@ export function NotificationSettings() {
       {items === null ? (
         <Skeleton className="h-28 w-full" />
       ) : items.length === 0 ? (
-        <Empty className="border">
+        <Empty className="bg-muted shadow-(--sunken)">
           <EmptyHeader>
             <EmptyTitle>{t("common.empty.noItems")}</EmptyTitle>
           </EmptyHeader>

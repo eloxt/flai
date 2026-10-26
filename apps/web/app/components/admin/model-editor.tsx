@@ -49,7 +49,7 @@ export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
     <div className="flex flex-col gap-4">
       {models.length === 0 && <p className="text-sm text-muted-foreground">{t("pages.admin.providers.model.noModels")}</p>}
       {models.map((model, index) => (
-        <Collapsible key={index} defaultOpen={!model.id} className="rounded-lg border">
+        <Collapsible key={index} defaultOpen={!model.id} className="rounded-lg bg-card shadow-(--edge-inside)">
           <div className="flex items-center gap-1 pr-2">
             <CollapsibleTrigger className="group/model flex min-h-11 min-w-0 flex-1 items-center gap-2 px-4 py-2 text-left text-sm">
               <ChevronRightIcon className="size-4 shrink-0 transition-transform group-data-[panel-open]/model:rotate-90" />

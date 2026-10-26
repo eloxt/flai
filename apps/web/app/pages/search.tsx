@@ -146,7 +146,7 @@ export default function SearchPage() {
           <div
             role="status"
             aria-live="polite"
-            className="flex min-h-16 items-center text-xs tracking-wide text-muted-foreground uppercase tabular-nums"
+            className="flex min-h-16 items-center text-xs text-muted-foreground tabular-nums"
           >
             {!query
               ? t("pages.search.ready")
