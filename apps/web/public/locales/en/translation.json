@@ -263,6 +263,8 @@
         "language": "Language",
         "sidebarEmoji": "Show emojis in sidebar",
         "sidebarEmojiDescription": "Display conversation emojis in the sidebar list.",
+        "chatHistory": "Search past chats",
+        "chatHistoryDescription": "Let the assistant search and read your other chats to recall earlier context.",
         "updateSuccess": "Preferences updated",
         "updateError": "Failed to update preferences"
       },
@@ -646,6 +648,14 @@
       "imageSearch": {
         "running": "Finding images",
         "done": "Found images"
+      },
+      "searchChats": {
+        "running": "Searching past chats",
+        "done": "Searched past chats"
+      },
+      "readChat": {
+        "running": "Reading a past chat",
+        "done": "Read a past chat"
       },
       "askUser": {
         "running": "Asking you",

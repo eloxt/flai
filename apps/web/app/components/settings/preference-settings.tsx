@@ -1,7 +1,7 @@
 import type { Preferences } from "@flai/shared"
 import { useTranslation } from "react-i18next"
 import { PanelSection } from "~/components/panel-dialog"
-import { Field, FieldContent, FieldGroup, FieldLabel } from "~/components/ui/field"
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Switch } from "~/components/ui/switch"
 import { api } from "~/lib/api"
@@ -65,6 +65,17 @@ export function PreferenceSettings() {
             id="pref-emoji"
             checked={user?.preferences.sidebarShowEmoji ?? true}
             onCheckedChange={(checked) => void update({ sidebarShowEmoji: checked })}
+          />
+        </Field>
+        <Field orientation="horizontal" className="items-center py-4">
+          <FieldContent>
+            <FieldLabel htmlFor="pref-chat-history">{t("pages.settings.preference.chatHistory")}</FieldLabel>
+            <FieldDescription>{t("pages.settings.preference.chatHistoryDescription")}</FieldDescription>
+          </FieldContent>
+          <Switch
+            id="pref-chat-history"
+            checked={user?.preferences.chatHistory ?? true}
+            onCheckedChange={(checked) => void update({ chatHistory: checked })}
           />
         </Field>
       </FieldGroup>

@@ -258,6 +258,8 @@
         "language": "语言",
         "sidebarEmoji": "侧边栏显示 Emoji",
         "sidebarEmojiDescription": "在侧边栏列表中显示对话 Emoji。",
+        "chatHistory": "检索历史对话",
+        "chatHistoryDescription": "允许助手搜索和阅读你的其他对话，以回忆之前的内容。",
         "updateSuccess": "偏好已更新",
         "updateError": "更新偏好失败"
       },
@@ -641,6 +643,14 @@
       "imageSearch": {
         "running": "正在查找图片",
         "done": "查找了图片"
+      },
+      "searchChats": {
+        "running": "正在搜索历史对话",
+        "done": "搜索了历史对话"
+      },
+      "readChat": {
+        "running": "正在阅读历史对话",
+        "done": "阅读了历史对话"
       },
       "askUser": {
         "running": "正在向你提问",

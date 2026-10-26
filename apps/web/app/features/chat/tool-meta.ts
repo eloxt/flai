@@ -1,5 +1,14 @@
 import type { LucideIcon } from "lucide-react"
-import { FileTextIcon, ImageIcon, LinkIcon, MessageCircleQuestionIcon, SearchIcon, WrenchIcon } from "lucide-react"
+import {
+  FileTextIcon,
+  HistoryIcon,
+  ImageIcon,
+  LinkIcon,
+  MessageCircleQuestionIcon,
+  MessagesSquareIcon,
+  SearchIcon,
+  WrenchIcon,
+} from "lucide-react"
 
 interface ToolMeta {
   icon: LucideIcon
@@ -14,6 +23,8 @@ const BUILT_IN: Record<string, ToolMeta> = {
   web_fetch: { icon: FileTextIcon, key: "webFetch" },
   url_context: { icon: LinkIcon, key: "urlContext" },
   image_search: { icon: ImageIcon, key: "imageSearch" },
+  search_chats: { icon: HistoryIcon, key: "searchChats" },
+  read_chat: { icon: MessagesSquareIcon, key: "readChat" },
   ask_user: { icon: MessageCircleQuestionIcon, key: "askUser" },
 }
 
