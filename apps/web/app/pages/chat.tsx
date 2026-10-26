@@ -3,7 +3,7 @@ import { useParams } from "react-router"
 import { ChatInput } from "~/components/chat-input"
 import { MessageScrollerProvider } from "~/components/ui/message-scroller"
 import { closeConversation, openConversation, sendMessage, stopGeneration, useChatStore, useVisibleMessages } from "~/features/chat/chat-store"
-import { ChatThread } from "~/features/chat/components/chat-thread"
+import { ChatThread, type FooterState } from "~/features/chat/components/chat-thread"
 import { useConversationStore } from "~/store/conversation-store"
 import { useInputStore } from "~/store/input-store"
 import { useCurrentModel } from "~/store/model-store"
@@ -43,12 +43,12 @@ export default function ChatPage() {
 
   return (
     <MessageScrollerProvider autoScroll defaultScrollPosition="end">
-      <ChatThread key={conversationId} footer={<Composer conversationId={conversationId} />} />
+      <ChatThread key={conversationId} footer={(state) => <Composer conversationId={conversationId} {...state} />} />
     </MessageScrollerProvider>
   )
 }
 
-function Composer({ conversationId }: { conversationId: string }) {
+function Composer({ conversationId, collapsed, expand }: { conversationId: string } & FooterState) {
   const streaming = useChatStore((s) => s.streaming)
   const messages = useVisibleMessages()
   const contextLimit = useCurrentModel()?.model.limit?.context
@@ -64,6 +64,8 @@ function Composer({ conversationId }: { conversationId: string }) {
       stopping={streaming?.stopping}
       onStop={() => void stopGeneration()}
       contextUsage={contextUsage}
+      collapsed={collapsed}
+      onExpand={expand}
       onSubmit={({ text, files }) => sendMessage({ text, files })}
     />
   )

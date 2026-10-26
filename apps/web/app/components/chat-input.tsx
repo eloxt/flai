@@ -48,6 +48,9 @@ interface ChatInputProps {
   /** 0–100 share of the model's context window used by the conversation. */
   contextUsage?: number
   autoFocus?: boolean
+  /** Shrink to a one-line bar; clicking it calls onExpand. */
+  collapsed?: boolean
+  onExpand?: () => void
 }
 
 interface Pending {
@@ -61,8 +64,10 @@ const TOOL_TRIGGER = "text-foreground/45 hover:bg-foreground/5 hover:text-foregr
 const TOOL_TRIGGER_ON = "text-foreground hover:text-foreground aria-expanded:text-foreground"
 /** Send and stop swap on every message, so the incoming icon settles in fast and nothing animates out. */
 const ICON_ENTER = "transition-[opacity,scale] duration-120 ease-out starting:scale-85 starting:opacity-0 motion-reduce:transition-[opacity]"
+/** Bar and full input swap by animating their row height (0fr ↔ 1fr) while crossfading. */
+const SWAP = "grid min-w-0 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 
-export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = false, onStop, contextUsage, autoFocus }: ChatInputProps) {
+export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = false, onStop, contextUsage, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
   const { t } = useTranslation()
   const current = useCurrentModel()
   const model = current?.model
@@ -75,8 +80,16 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
   const dragDepth = useRef(0)
   const fileInput = useRef<HTMLInputElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const focusOnExpand = useRef(false)
 
   const canAttach = Boolean(model?.attachment)
+
+  useEffect(() => {
+    if (collapsed || !focusOnExpand.current) return
+    focusOnExpand.current = false
+    // The input is still growing out of a clipped row; don't let focus scroll it.
+    textarea.current?.focus({ preventScroll: true })
+  }, [collapsed])
 
   const upload = useCallback(
     async (list: File[]) => {
@@ -129,6 +142,7 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
       onDragEnter={(e) => {
         e.preventDefault()
         if (!canAttach) return
+        onExpand?.()
         dragDepth.current++
         setDragging(true)
       }}
@@ -146,107 +160,136 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
           <span className="text-xs text-muted-foreground">{t("common.allowedFileTypes")}</span>
         </div>
       )}
-      <InputGroup className="h-auto flex-col rounded-none border-0 border-b bg-background shadow-none dark:bg-background has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
-        {(files.length > 0 || pending.length > 0) && (
-          <AttachmentGroup className="w-full px-3 pt-3">
-            {files.map((file) => (
-              <Attachment key={file.id} size="sm" state="done">
-                <AttachmentMedia variant={file.mediaType.startsWith("image/") ? "image" : "icon"}>
-                  {file.mediaType.startsWith("image/") ? <img src={file.url} alt="" /> : <FileIcon />}
-                </AttachmentMedia>
-                <AttachmentContent>
-                  <AttachmentTitle className="max-w-36">{file.name}</AttachmentTitle>
-                </AttachmentContent>
-                <AttachmentActions>
-                  <AttachmentAction
-                    aria-label={t("common.actions.delete")}
-                    onClick={() => setAttachments(draftKey, files.filter((f) => f.id !== file.id))}
-                  >
-                    <XIcon />
-                  </AttachmentAction>
-                </AttachmentActions>
-              </Attachment>
-            ))}
-            {pending.map((p) => (
-              <Attachment key={p.id} size="sm" state="uploading">
-                <AttachmentMedia>
-                  <FileIcon />
-                </AttachmentMedia>
-                <AttachmentContent>
-                  <AttachmentTitle className="max-w-36">{p.name}</AttachmentTitle>
-                </AttachmentContent>
-              </Attachment>
-            ))}
-          </AttachmentGroup>
-        )}
-        <TextareaAutosize
-          ref={textarea}
-          data-slot="input-group-control"
-          placeholder={t("pages.chat.placeholder")}
-          value={text}
-          autoFocus={autoFocus}
-          minRows={2}
-          maxRows={7}
-          onChange={(e) => setDraft(draftKey, e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault()
-              void submit()
-            }
-          }}
-          onPaste={(e) => {
-            if (!canAttach) return
-            const images = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"))
-            if (images.length) {
-              e.preventDefault()
-              void upload(images)
-            }
-          }}
-          className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-base outline-none md:text-[15px]"
-        />
-        <InputGroupAddon align="block-end" className="gap-2 px-3 pb-3">
-          <input
-            ref={fileInput}
-            type="file"
-            multiple
-            hidden
-            onChange={(e) => {
-              void upload(Array.from(e.target.files ?? []))
-              e.target.value = ""
+      <div className={cn(SWAP, collapsed ? "grid-rows-[1fr]" : "grid-rows-[0fr] opacity-0")} inert={!collapsed}>
+        <div className="flex min-h-0 min-w-0 items-center gap-2 overflow-hidden rounded-sm bg-background pr-1.5">
+          <button
+            type="button"
+            className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-sm pl-4 text-left text-base outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-[15px]"
+            onClick={() => {
+              focusOnExpand.current = true
+              onExpand?.()
             }}
-          />
-          {canAttach && (
-            <InputGroupButton size="icon-sm" aria-label={t("common.attachment")} onClick={() => fileInput.current?.click()}>
-              <PaperclipIcon />
+          >
+            <span className={cn("truncate", !text && "text-muted-foreground")}>{text.split("\n")[0] || t("pages.chat.placeholder")}</span>
+            {(files.length > 0 || pending.length > 0) && (
+              <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                <PaperclipIcon className="size-3.5" />
+                {files.length + pending.length}
+              </span>
+            )}
+          </button>
+          {streaming && (
+            <InputGroupButton variant="destructive" size="icon-sm" className="shrink-0 rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+              <SquareIcon />
             </InputGroupButton>
           )}
-          <div className="ml-auto flex items-center gap-2">
-            {streaming ? (
-              <InputGroupButton variant="destructive" size="icon-sm" className="rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
-                <SquareIcon className={ICON_ENTER} />
-              </InputGroupButton>
-            ) : (
-              <InputGroupButton
-                variant="default"
-                size="icon-sm"
-                className="rounded-sm"
-                aria-label={t("common.send")}
-                disabled={pending.length > 0 || (!text.trim() && files.length === 0)}
-                onClick={() => void submit()}
-              >
-                <ArrowUpIcon className={ICON_ENTER} />
-              </InputGroupButton>
+        </div>
+      </div>
+      <div className={cn(SWAP, collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr]")} inert={collapsed}>
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <InputGroup className="h-auto flex-col rounded-none border-0 border-b bg-background shadow-none dark:bg-background has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
+            {(files.length > 0 || pending.length > 0) && (
+              <AttachmentGroup className="w-full px-3 pt-3">
+                {files.map((file) => (
+                  <Attachment key={file.id} size="sm" state="done">
+                    <AttachmentMedia variant={file.mediaType.startsWith("image/") ? "image" : "icon"}>
+                      {file.mediaType.startsWith("image/") ? <img src={file.url} alt="" /> : <FileIcon />}
+                    </AttachmentMedia>
+                    <AttachmentContent>
+                      <AttachmentTitle className="max-w-36">{file.name}</AttachmentTitle>
+                    </AttachmentContent>
+                    <AttachmentActions>
+                      <AttachmentAction
+                        aria-label={t("common.actions.delete")}
+                        onClick={() => setAttachments(draftKey, files.filter((f) => f.id !== file.id))}
+                      >
+                        <XIcon />
+                      </AttachmentAction>
+                    </AttachmentActions>
+                  </Attachment>
+                ))}
+                {pending.map((p) => (
+                  <Attachment key={p.id} size="sm" state="uploading">
+                    <AttachmentMedia>
+                      <FileIcon />
+                    </AttachmentMedia>
+                    <AttachmentContent>
+                      <AttachmentTitle className="max-w-36">{p.name}</AttachmentTitle>
+                    </AttachmentContent>
+                  </Attachment>
+                ))}
+              </AttachmentGroup>
+            )}
+            <TextareaAutosize
+              ref={textarea}
+              data-slot="input-group-control"
+              placeholder={t("pages.chat.placeholder")}
+              value={text}
+              autoFocus={autoFocus}
+              minRows={2}
+              maxRows={7}
+              onChange={(e) => setDraft(draftKey, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault()
+                  void submit()
+                }
+              }}
+              onPaste={(e) => {
+                if (!canAttach) return
+                const images = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"))
+                if (images.length) {
+                  e.preventDefault()
+                  void upload(images)
+                }
+              }}
+              className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-base outline-none md:text-[15px]"
+            />
+            <InputGroupAddon align="block-end" className="gap-2 px-3 pb-3">
+              <input
+                ref={fileInput}
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => {
+                  void upload(Array.from(e.target.files ?? []))
+                  e.target.value = ""
+                }}
+              />
+              {canAttach && (
+                <InputGroupButton size="icon-sm" aria-label={t("common.attachment")} onClick={() => fileInput.current?.click()}>
+                  <PaperclipIcon />
+                </InputGroupButton>
+              )}
+              <div className="ml-auto flex items-center gap-2">
+                {streaming ? (
+                  <InputGroupButton variant="destructive" size="icon-sm" className="rounded-sm" aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+                    <SquareIcon className={ICON_ENTER} />
+                  </InputGroupButton>
+                ) : (
+                  <InputGroupButton
+                    variant="default"
+                    size="icon-sm"
+                    className="rounded-sm"
+                    aria-label={t("common.send")}
+                    disabled={pending.length > 0 || (!text.trim() && files.length === 0)}
+                    onClick={() => void submit()}
+                  >
+                    <ArrowUpIcon className={ICON_ENTER} />
+                  </InputGroupButton>
+                )}
+              </div>
+            </InputGroupAddon>
+          </InputGroup>
+          <div className="flex min-w-0 items-center gap-2">
+            <ToolBar />
+            {contextUsage !== undefined && (
+              <div className="ml-auto shrink-0 px-3 py-2">
+                <ContextUsageRing percentage={contextUsage} />
+              </div>
             )}
           </div>
-        </InputGroupAddon>
-      </InputGroup>
-      <div className="flex min-w-0 items-center gap-2">
-        <ToolBar />
-        {contextUsage !== undefined && (
-          <div className="ml-auto shrink-0 px-3 py-2">
-            <ContextUsageRing percentage={contextUsage} />
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
