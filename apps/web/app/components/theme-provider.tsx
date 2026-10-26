@@ -38,6 +38,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement
     root.classList.toggle("dark", resolved === "dark")
     root.style.colorScheme = resolved
+    // The browser bar follows the applied theme, not just the system one, so a chosen theme matches too.
+    const background = getComputedStyle(root).getPropertyValue("--background").trim()
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute("content", background))
   }, [resolved])
 
   const setTheme = (next: Theme) => {

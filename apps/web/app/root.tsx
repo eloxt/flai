@@ -20,8 +20,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="color-scheme" content="light dark" />
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafaf9" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0a09" />
+        {/* The content sheet's --background; ThemeProvider keeps these in step with a chosen theme. */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f9f9" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111111" />
         <title>FlaiChat</title>
         {/* Apply the stored theme before first paint to avoid a flash. */}
         <script
