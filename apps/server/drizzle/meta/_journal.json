@@ -22,6 +22,13 @@
       "when": 1792120346253,
       "tag": "0002_provider_order",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792999724007,
+      "tag": "0003_message_chunks",
+      "breakpoints": true
     }
   ]
 }

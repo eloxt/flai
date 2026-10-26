@@ -10,7 +10,9 @@ import {
   pgTable,
   text,
   timestamp,
+  primaryKey,
   uniqueIndex,
+  vector,
 } from 'drizzle-orm/pg-core'
 
 const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' })
@@ -80,6 +82,32 @@ export const messages = pgTable(
     index('message_conversation_idx').on(t.conversationId),
     index('message_parent_idx').on(t.parentId),
     index('message_tsv_idx').using('gin', t.tsv),
+  ],
+)
+
+/** Embedding dimensions; configured models must output (or be truncated to) this many. */
+export const EMBEDDING_DIMENSIONS = 1024
+
+/** Embedded slices of a message's search text, for semantic search over a user's chats. */
+export const messageChunks = pgTable(
+  'message_chunk',
+  {
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id),
+    index: integer('index').notNull(),
+    // Denormalized so vector search can filter without joining first.
+    userId: text('user_id').notNull(),
+    conversationId: text('conversation_id').notNull(),
+    /** `providerId:modelId` of the embedding; rows from another model are ignored and replaced. */
+    model: text('model').notNull(),
+    text: text('text').notNull(),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.messageId, t.index] }),
+    index('message_chunk_user_idx').on(t.userId),
+    index('message_chunk_embedding_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
   ],
 )
 

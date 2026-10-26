@@ -317,6 +317,11 @@ export const settingSchemas = {
     modelId: z.string().default(''),
     prompt: longText.default(''),
   }),
+  /** Embedding model for semantic search over past chats; empty means keyword search only. */
+  embedding: z.object({
+    providerId: z.string().default(''),
+    modelId: z.string().trim().max(200).default(''),
+  }),
   error_alert: z.object({
     barkUrl: z
       .string()

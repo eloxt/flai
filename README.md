@@ -6,7 +6,7 @@ The previous Go implementation is preserved on the [`go` branch](https://github.
 
 | Layer | Stack |
 |---|---|
-| Backend | Node 22, [Hono](https://hono.dev), [Mastra](https://mastra.ai) agents, AI SDK providers (OpenAI Responses, OpenAI-compatible, Gemini), Drizzle + PostgreSQL (zhparser full-text search), S3-compatible storage |
+| Backend | Node 22, [Hono](https://hono.dev), [Mastra](https://mastra.ai) agents, AI SDK providers (OpenAI Responses, OpenAI-compatible, Gemini), Drizzle + PostgreSQL (zhparser full-text search, pgvector semantic search), S3-compatible storage |
 | Frontend | React 19, React Router (SPA mode), [Base UI](https://base-ui.com) via shadcn `base-nova`, Tailwind v4, Zustand, Streamdown, React Flow |
 | Generative UI | [OpenUI](https://www.openui.com) (`@openuidev/react-lang` + `@openuidev/react-ui`), enabled per model by an administrator |
 
@@ -14,14 +14,14 @@ The previous Go implementation is preserved on the [`go` branch](https://github.
 apps/server     API (/api/v1), chat generation, MCP, migrations, legacy import script
 apps/web        Single-page app (served by the API server in production)
 packages/shared Zod schemas & API types, model config, exported OpenUI library specification
-docker/         PostgreSQL image with zhparser
+docker/         PostgreSQL image with zhparser and pgvector
 ```
 
 ## Development
 
 ```bash
 cp .env.example .env              # set JWT_SECRET (≥32 chars) and S3_* for uploads
-docker compose up -d db           # PostgreSQL 17 + zhparser on :55432
+docker compose up -d db           # PostgreSQL 17 + zhparser + pgvector on :55432
 docker compose up -d valkey       # optional: set REDIS_URL=redis://127.0.0.1:56379 for resumable replies
 pnpm install
 pnpm --filter @flai/server db:migrate
@@ -54,7 +54,9 @@ docker build -t flai .
 docker run -p 8000:8000 --env-file .env flai   # runs pending migrations, then serves API + web
 ```
 
-The database must have the `zhparser` extension available (see `docker/postgres/Dockerfile`); the first migration creates the extension and the `zhcfg` text search configuration.
+The database must have the `zhparser` and `vector` (pgvector ≥ 0.8) extensions available (see `docker/postgres/Dockerfile`); migrations create the extensions and the `zhcfg` text search configuration. Existing databases need the image rebuilt (`docker compose build db && docker compose up -d db`) before migrating.
+
+Semantic search over past chats is optional: pick an embedding model under Admin Settings → Semantic search. The server then embeds messages in the background, including existing ones; the model must produce 1024-dimensional vectors.
 
 ## Migrating from the Go version
 

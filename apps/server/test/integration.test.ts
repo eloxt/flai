@@ -30,6 +30,13 @@ suite('API integration', () => {
       let raw = ''
       for await (const c of req) raw += c
       const body = JSON.parse(raw || '{}')
+      if (req.url?.endsWith('/embeddings')) {
+        // Texts about cats point one way and everything else another; "narrow" models return too few dimensions.
+        const size = body.model === 'narrow' ? 8 : body.dimensions
+        const vector = (text: string) => Array.from({ length: size }, (_, i) => (i === (/猫|cat/i.test(text) ? 0 : 1) ? 1 : 0.01))
+        res.writeHead(200, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ object: 'list', model: body.model, data: body.input.map((text: string, index: number) => ({ object: 'embedding', index, embedding: vector(text) })) }))
+      }
       const last = JSON.stringify(body.messages?.at(-1)?.content ?? '')
       if (!body.stream) {
         res.writeHead(200, { 'content-type': 'application/json' })
@@ -278,6 +285,36 @@ suite('API integration', () => {
     const bobs = createChatHistoryTools({ userId: await userId(bob), conversationId: 'none' })
     expect((await run(bobs.search_chats, { query: '世界' })).chats).toEqual([])
     expect(await run(bobs.read_chat, { id: conversationId })).toEqual({ error: 'Chat not found' })
+  })
+
+  it('finds past chats by meaning once an embedding model is configured', async () => {
+    const { noopObserve } = await import('@mastra/core/tools')
+    const { createChatHistoryTools } = await import('../src/llm/chat-history')
+    const { indexPendingMessages } = await import('../src/llm/embedding-index')
+    const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
+
+    const narrow = await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'narrow' } })
+    expect(narrow.status).toBe(400)
+    expect((await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed' } })).status).toBe(200)
+
+    const pets = (await call('/conversations', { token: alice, body: {} })).data.id
+    await call(`/conversations/${pets}/messages`, {
+      token: alice,
+      body: { message: { id: crypto.randomUUID(), parentId: null, text: '我家的猫叫团子', fileIds: [] }, assistantId: crypto.randomUUID(), model: { providerId, modelId: 'm1' } },
+    })
+    while (await indexPendingMessages());
+
+    const userId = (await call('/me', { token: alice })).data.id
+    const tools = createChatHistoryTools({ userId, conversationId: 'none' })
+    // No keyword overlap with the Chinese message: only the vector search can find it.
+    const found = await run(tools.search_chats, { query: 'my cat' })
+    expect(found.chats[0]).toMatchObject({ id: pets })
+    expect(found.chats[0].snippet).toContain('团子')
+    const bobId = (await call('/me', { token: bob })).data.id
+    expect((await run(createChatHistoryTools({ userId: bobId, conversationId: 'none' }).search_chats, { query: 'my cat' })).chats).toEqual([])
+
+    await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId: '', modelId: '' } })
+    expect((await run(tools.search_chats, { query: 'my cat' })).chats).toEqual([])
   })
 
   it('shares a branch snapshot publicly until it expires', async () => {

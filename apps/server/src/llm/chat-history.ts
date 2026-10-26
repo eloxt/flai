@@ -5,6 +5,7 @@ import { db, schema } from '../db'
 import { highlight } from '../lib/highlight'
 import { loadPath } from '../services/conversations'
 import { searchMessages } from '../services/search'
+import { getEmbedder } from './embedding'
 
 export const searchChatsInputSchema = z.object({
   query: z.string().trim().max(200).optional()
@@ -41,7 +42,9 @@ export function createChatHistoryTools({ userId, conversationId }: { userId: str
     description: [
       'Search the user’s other conversations with you by keyword, or list the most recent ones when no query is given.',
       'Use it when the user refers to something discussed before, or when earlier context would clearly help.',
-      'Matching is by words, not meaning: if nothing is found, retry with synonyms or other key terms in the user’s language.',
+      getEmbedder()
+        ? 'Matching combines keywords and meaning; results are ranked by relevance, so skip ones that do not fit.'
+        : 'Matching is by words, not meaning: if nothing is found, retry with synonyms or other key terms in the user’s language.',
       'Then call read_chat with an id to read that chat.',
       UNTRUSTED,
     ].join(' '),
@@ -70,7 +73,7 @@ export function createChatHistoryTools({ userId, conversationId }: { userId: str
 }
 
 async function searchChats(userId: string, currentId: string, query: string): Promise<ChatSummary[]> {
-  const { rows, terms } = await searchMessages(userId, query, { excludeConversationId: currentId, limit: MAX_RESULTS })
+  const { rows, terms } = await searchMessages(userId, query, { excludeConversationId: currentId, limit: MAX_RESULTS, semantic: true })
   return rows.map((r) => ({
     id: r.conversation_id,
     title: r.title,

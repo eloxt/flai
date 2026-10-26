@@ -21,7 +21,9 @@ import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toConversation, toUser } from '../lib/serialize'
-import { maskKey, type ProviderRow, reloadProviders, resolveModel } from '../services/providers'
+import { embedWith } from '../llm/embedding'
+import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
+import { findProvider, maskKey, type ProviderRow, reloadProviders, resolveModel } from '../services/providers'
 import { getSetting, updateSetting } from '../services/settings'
 import { findUserByEmail } from '../services/users'
 import { adminNotificationRoutes } from './notifications'
@@ -198,6 +200,21 @@ const settingRoutes = new Hono<AppEnv>()
     if (key === 'title_generation') {
       const merged = { ...getSetting('title_generation'), ...input } as ReturnType<typeof getSetting<'title_generation'>>
       if (merged.providerId || merged.modelId) resolveModel(merged.providerId, merged.modelId)
+    }
+    if (key === 'embedding') {
+      const merged = { ...getSetting('embedding'), ...input } as ReturnType<typeof getSetting<'embedding'>>
+      if (merged.providerId || merged.modelId) {
+        const provider = findProvider(merged.providerId)
+        if (!provider) throw notFound('Provider')
+        if (!merged.modelId) throw badRequest('Model is required')
+        // Fail now rather than in the background indexer.
+        await embedWith(provider, merged.modelId, ['test'], AbortSignal.timeout(30_000)).catch((error: unknown) => {
+          throw badRequest(error instanceof Error ? error.message : String(error))
+        })
+      }
+      const value = await updateSetting('embedding', merged)
+      nudgeEmbeddingIndexer()
+      return c.json(value)
     }
     return c.json(await updateSetting(key, input))
   })

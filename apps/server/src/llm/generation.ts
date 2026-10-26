@@ -10,6 +10,7 @@ import { touchConversation } from '../services/conversations'
 import type { ProviderRow } from '../services/providers'
 import { chatContext, chatInstructions, getChatAgent } from './agent'
 import { createChatHistoryTools } from './chat-history'
+import { nudgeEmbeddingIndexer } from './embedding-index'
 import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
 import { buildMcpToolset } from './mcp'
@@ -280,6 +281,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       })
       await touchConversation(input.conversationId, tx)
     })
+    nudgeEmbeddingIndexer()
     if (failure) throw failure
     emit({ type: 'message-metadata', messageMetadata: metadata })
     emit({ type: 'finish', finishReason: 'stop', messageMetadata: metadata })
