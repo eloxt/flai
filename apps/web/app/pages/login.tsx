@@ -38,7 +38,7 @@ export default function Login() {
   return (
     <form onSubmit={submit}>
       <FieldGroup>
-        <h1 className="text-3xl leading-tight font-light tracking-tight text-balance md:text-4xl">{t("pages.login.welcome")}</h1>
+        <h1 className="text-title py-1 text-3xl leading-tight font-light tracking-tight text-balance md:text-4xl">{t("pages.login.welcome")}</h1>
         <Field>
           <FieldLabel htmlFor="email">{t("pages.login.email")}</FieldLabel>
           <Input

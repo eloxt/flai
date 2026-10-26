@@ -146,8 +146,8 @@ function UserBody({ parts }: { parts: FlaiPart[] }) {
       {files.length > 0 && <Attachments files={files} align="end" />}
       {text && (
         <Bubble align="end" variant="muted" className="max-w-full">
-          {/* User turns sit on a stone surface; hierarchy comes from tone, not a second hue. */}
-          <BubbleContent className="rounded-sm bg-user-msg! text-[15px] whitespace-pre-wrap">{text}</BubbleContent>
+          {/* User turns sit on a raised surface; its edge is a border, since message rows clip anything outside the box. */}
+          <BubbleContent className="rounded-xl border-border bg-user-msg! px-4 py-2.5 text-[15px] whitespace-pre-wrap shadow-(--highlight)">{text}</BubbleContent>
         </Bubble>
       )}
     </div>
@@ -155,7 +155,7 @@ function UserBody({ parts }: { parts: FlaiPart[] }) {
 }
 
 function GenuiCode({ code }: { code: string }) {
-  return <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{code}</pre>
+  return <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs outline-1 -outline-offset-1 outline-border">{code}</pre>
 }
 
 function AssistantText({ text, streaming, onSend }: { text: string; streaming: boolean; onSend?: (text: string) => void }) {
@@ -312,7 +312,7 @@ function ToolData({ label, failed = false, children }: { label: string; failed?:
       <h4 className={cn(caption, failed && "text-destructive")}>{label}</h4>
       <pre
         className={cn(
-          "max-h-60 overflow-auto rounded-sm p-2 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap",
+          "max-h-60 overflow-auto rounded-lg p-2 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap",
           failed ? "bg-destructive/5 text-destructive" : "bg-muted/60 text-foreground/70"
         )}
       >

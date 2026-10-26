@@ -53,8 +53,8 @@ function MediaCardView({
         <div
           className={
             horizontal
-              ? "relative grid w-1/3 max-w-[200px] shrink-0 place-items-center overflow-hidden bg-(--genui-surface)"
-              : "relative grid place-items-center overflow-hidden bg-(--genui-surface)"
+              ? "relative grid w-1/3 max-w-[200px] shrink-0 place-items-center overflow-hidden rounded-lg bg-muted outline-1 -outline-offset-1 outline-border"
+              : "relative grid place-items-center overflow-hidden rounded-lg bg-muted outline-1 -outline-offset-1 outline-border"
           }
           style={{ aspectRatio: ratio }}
         >
@@ -73,9 +73,9 @@ function MediaCardView({
           ) : null}
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <p className="text-[20px] leading-tight font-normal">{title}</p>
+          <p className="text-[18px] leading-tight font-medium">{title}</p>
           {text ? (
-            <p className="text-sm leading-relaxed whitespace-pre-line opacity-70">
+            <p className="text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
               {text}
             </p>
           ) : null}
@@ -84,7 +84,7 @@ function MediaCardView({
               {labels.map((tag, i) => (
                 <li
                   key={`${tag}-${i}`}
-                  className="border border-(--genui-line) px-2 py-0.5 text-xs"
+                  className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                 >
                   {tag}
                 </li>

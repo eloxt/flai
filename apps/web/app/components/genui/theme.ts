@@ -26,10 +26,18 @@ export const genuiTheme = createTheme({
               ),
       ])
   ),
+  // The app's three radius tiers: small elements, controls, panels.
   ...Object.fromEntries(
     Object.keys(defaultLightTheme)
       .filter((key) => key.startsWith("radius") && key !== "radiusFull")
-      .map((key) => [key, "0px"])
+      .map((key) => [
+        key,
+        /(xs|S|M)$/.test(key)
+          ? "var(--radius-sm)"
+          : /(L|Xl)$/.test(key)
+            ? "var(--radius-lg)"
+            : "var(--radius-xl)",
+      ])
   ),
   ...Object.fromEntries(
     Object.keys(defaultLightTheme)
@@ -38,8 +46,8 @@ export const genuiTheme = createTheme({
   ),
 
   background: "var(--background)",
-  foreground: "var(--genui-surface)",
-  popoverBackground: "var(--background)",
+  foreground: "var(--card)",
+  popoverBackground: "var(--popover)",
   sunkLight: "var(--genui-surface)",
   sunk: "var(--genui-surface)",
   sunkDeep: "var(--genui-line)",
@@ -55,27 +63,28 @@ export const genuiTheme = createTheme({
   textNeutralPrimary: "var(--genui-ink)",
   textNeutralSecondary: "color-mix(in srgb, var(--genui-ink) 70%, transparent)",
   textNeutralTertiary: "color-mix(in srgb, var(--genui-ink) 40%, transparent)",
-  textNeutralLink: "var(--brand)",
-  textBrand: "var(--brand)",
-  textWhite: "#fafaf9",
-  textBlack: "#1c1917",
+  textNeutralLink: "var(--foreground)",
+  textBrand: "var(--foreground)",
+  textWhite: "#fafafa",
+  textBlack: "#111111",
   textAccentPrimary: "var(--genui-on-accent)",
   textAccentSecondary: "var(--genui-on-accent)",
   textAccentTertiary: "var(--genui-on-accent)",
-  interactiveAccentDefault: "var(--brand)",
+  // Actions are ink, like the app's primary buttons.
+  interactiveAccentDefault: "var(--primary)",
   interactiveAccentHover:
-    "color-mix(in srgb, var(--brand) 60%, var(--genui-ink))",
+    "color-mix(in srgb, var(--primary) 85%, var(--background))",
   interactiveAccentPressed:
-    "color-mix(in srgb, var(--brand) 60%, var(--genui-ink))",
+    "color-mix(in srgb, var(--primary) 85%, var(--background))",
   interactiveAccentDisabled:
-    "color-mix(in srgb, var(--brand) 20%, transparent)",
+    "color-mix(in srgb, var(--primary) 20%, transparent)",
   borderDefault: "var(--genui-line)",
-  borderInteractive: "color-mix(in srgb, var(--genui-ink) 40%, transparent)",
-  borderInteractiveEmphasis: "var(--genui-ink)",
-  borderInteractiveSelected: "var(--brand)",
-  borderAccent: "var(--brand)",
-  borderAccentEmphasis: "var(--brand)",
-  borderAccentSelected: "var(--brand)",
+  borderInteractive: "var(--input)",
+  borderInteractiveEmphasis: "var(--foreground)",
+  borderInteractiveSelected: "var(--foreground)",
+  borderAccent: "var(--foreground)",
+  borderAccentEmphasis: "var(--foreground)",
+  borderAccentSelected: "var(--foreground)",
 
   // Status keeps its icon and message; neutral tones avoid a second accent.
   ...Object.fromEntries(
@@ -144,10 +153,10 @@ export const genuiTheme = createTheme({
   space2xl: "48px",
   space3xl: "64px",
   defaultChartPalette: [
-    "color-mix(in srgb, var(--brand) 20%, var(--background))",
-    "var(--brand)",
-    "var(--genui-ink)",
-    "color-mix(in srgb, var(--genui-ink) 70%, var(--background))",
-    "color-mix(in srgb, var(--genui-ink) 40%, var(--background))",
+    "var(--chart-1)",
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--chart-5)",
   ],
 })

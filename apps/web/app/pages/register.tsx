@@ -37,7 +37,7 @@ export default function Register() {
   return (
     <form onSubmit={submit}>
       <FieldGroup>
-        <h1 className="text-3xl leading-tight font-light tracking-tight text-balance md:text-4xl">{t("pages.register.title")}</h1>
+        <h1 className="text-title py-1 text-3xl leading-tight font-light tracking-tight text-balance md:text-4xl">{t("pages.register.title")}</h1>
         <Field>
           <FieldLabel htmlFor="email">{t("pages.register.email")}</FieldLabel>
           <Input id="email" type="email" autoComplete="email" required value={form.email} onChange={update("email")} placeholder={t("pages.register.placeholder.email")} />

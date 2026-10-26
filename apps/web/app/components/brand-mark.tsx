@@ -6,7 +6,7 @@ export function BrandMark({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2 font-normal tracking-tight", className)}>
       <FlaiMark className="size-5" />
-      <span className="truncate">FlaiChat</span>
+      <span className="truncate font-semibold text-title">FlaiChat</span>
     </span>
   )
 }
