@@ -1,9 +1,9 @@
-import { BellIcon, FileTextIcon, GlobeIcon, ServerIcon, SirenIcon, SparklesIcon, UsersIcon } from "lucide-react"
+import { BellIcon, BrainIcon, FileTextIcon, GlobeIcon, ServerIcon, SirenIcon, SparklesIcon, UsersIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { PanelDialog } from "~/components/panel-dialog"
 import { NotificationSettings } from "./notification-settings"
 import { ProviderManagement } from "./provider-management"
-import { ErrorAlertSettings, SystemPromptSettings, TitleGenerationSettings, WebSearchSettings } from "./system-settings"
+import { EmbeddingSettings, ErrorAlertSettings, SystemPromptSettings, TitleGenerationSettings, WebSearchSettings } from "./system-settings"
 import { UserManagement } from "./user-management"
 
 export function AdminDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -19,6 +19,7 @@ export function AdminDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         { id: "webSearch", label: t("pages.admin.webSearch.title"), icon: GlobeIcon, render: () => <WebSearchSettings /> },
         { id: "systemPrompt", label: t("pages.admin.systemConfig.systemPrompt"), icon: FileTextIcon, render: () => <SystemPromptSettings /> },
         { id: "title", label: t("pages.admin.systemConfig.titleGeneration"), icon: SparklesIcon, render: () => <TitleGenerationSettings /> },
+        { id: "embedding", label: t("pages.admin.embedding.title"), icon: BrainIcon, render: () => <EmbeddingSettings /> },
         { id: "errorAlert", label: t("pages.admin.tabs.errorAlert"), icon: SirenIcon, render: () => <ErrorAlertSettings /> },
         { id: "notification", label: t("pages.admin.tabs.notification"), icon: BellIcon, render: () => <NotificationSettings /> },
       ]}

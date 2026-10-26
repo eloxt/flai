@@ -308,6 +308,15 @@
       }
     },
     "admin": {
+      "embedding": {
+        "title": "语义检索",
+        "description": "配置向量模型后，助手可以按语义而不仅是关键词查找历史对话。不配置时只使用关键词检索。",
+        "modelId": "向量模型 ID",
+        "modelPlaceholder": "text-embedding-3-small",
+        "modelHelp": "模型需输出 1024 维向量，或支持设置维度。保存时会发送一次测试请求。更换模型后，所有消息会在后台重新生成向量。",
+        "off": "关闭",
+        "turnedOff": "语义检索已关闭"
+      },
       "systemConfig": {
         "systemPrompt": "系统提示词",
         "titleGeneration": "标题生成",

@@ -313,6 +313,15 @@
       }
     },
     "admin": {
+      "embedding": {
+        "title": "Semantic search",
+        "description": "An embedding model lets the assistant find past chats by meaning, not only by keywords. Leave it unset for keyword search only.",
+        "modelId": "Embedding model ID",
+        "modelPlaceholder": "text-embedding-3-small",
+        "modelHelp": "The model must output 1024 dimensions or accept a dimensions setting. Saving sends a test request. Changing the model re-embeds all messages in the background.",
+        "off": "Turn off",
+        "turnedOff": "Semantic search turned off"
+      },
       "systemConfig": {
         "systemPrompt": "System prompts",
         "titleGeneration": "Title generation",

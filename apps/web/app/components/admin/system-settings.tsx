@@ -189,7 +189,7 @@ export function TitleGenerationSettings() {
                 <Select value={value.providerId || null} onValueChange={(v) => setValue({ ...value, providerId: String(v ?? ""), modelId: "" })}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("pages.admin.systemConfig.selectProvider")}>
-                      {(v: string) => providers.find((p) => p.id === v)?.name ?? v}
+                      {(v: string | null) => (v ? (providers.find((p) => p.id === v)?.name ?? v) : t("pages.admin.systemConfig.selectProvider"))}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -230,6 +230,78 @@ export function TitleGenerationSettings() {
               {saving && <Spinner data-icon="inline-start" />}
               {t("common.actions.save")}
             </Button>
+          </FieldGroup>
+        </form>
+      )}
+    </PanelSection>
+  )
+}
+
+export function EmbeddingSettings() {
+  const { t } = useTranslation()
+  const { value, setValue, failed, saving, load, save } = useSetting("embedding")
+  const [providers, setProviders] = useState<AdminProvider[]>([])
+  useEffect(() => {
+    api<AdminProvider[]>("/admin/providers").then((list) => setProviders(list.filter((p) => p.isActive))).catch(() => {})
+  }, [])
+  if (failed) return <LoadFailed onRetry={load} />
+  const p = "pages.admin.embedding"
+  return (
+    <PanelSection title={t(`${p}.title`)} description={t(`${p}.description`)}>
+      {!value ? (
+        <Skeleton className="h-48 w-full" />
+      ) : (
+        <form
+          className="max-w-xl"
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault()
+            void save(value, t("pages.admin.systemConfig.saved"))
+          }}
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel>{t("pages.admin.systemConfig.provider")}</FieldLabel>
+              <Select value={value.providerId || null} disabled={saving} onValueChange={(v) => setValue({ ...value, providerId: String(v ?? "") })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("pages.admin.systemConfig.selectProvider")}>
+                    {(v: string | null) => (v ? (providers.find((provider) => provider.id === v)?.name ?? v) : t("pages.admin.systemConfig.selectProvider"))}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        {provider.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="embedding-model">{t(`${p}.modelId`)}</FieldLabel>
+              <Input
+                id="embedding-model"
+                spellCheck={false}
+                required={Boolean(value.providerId)}
+                disabled={saving}
+                placeholder={t(`${p}.modelPlaceholder`)}
+                value={value.modelId}
+                onChange={(e) => setValue({ ...value, modelId: e.target.value })}
+              />
+              <FieldDescription>{t(`${p}.modelHelp`)}</FieldDescription>
+            </Field>
+            <div className="mt-2 flex gap-2">
+              <Button type="submit" disabled={saving}>
+                {saving && <Spinner data-icon="inline-start" />}
+                {t("common.actions.save")}
+              </Button>
+              {(value.providerId || value.modelId) && (
+                <Button type="button" variant="outline" disabled={saving} onClick={() => void save({ providerId: "", modelId: "" }, t(`${p}.turnedOff`))}>
+                  {t(`${p}.off`)}
+                </Button>
+              )}
+            </div>
           </FieldGroup>
         </form>
       )}
