@@ -1,11 +1,11 @@
 import { createTool } from '@mastra/core/tools'
-import { and, desc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull, isNull, ne, type SQL, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, schema } from '../db'
 import { highlight } from '../lib/highlight'
 import { isoDay } from '../lib/text'
-import { loadPath } from '../services/conversations'
-import { searchChats as searchUserChats } from '../services/search'
+import { latestPath } from '../services/conversations'
+import { searchChats } from '../services/search'
 import { getEmbedder } from './embedding'
 import type { QueryEmbedding } from './memory-retrieval'
 
@@ -62,7 +62,7 @@ export function createChatHistoryTools({ userId, conversationId }: { userId: str
     inputSchema: searchChatsInputSchema,
     execute: async (input) => {
       const { query } = searchChatsInputSchema.parse(input)
-      return { chats: query ? await searchChats(userId, conversationId, query) : await recentChats(userId, conversationId) }
+      return { chats: query ? await matchingChats(userId, conversationId, query) : await recentChats(userId, conversationId) }
     },
   })
 
@@ -83,8 +83,8 @@ export function createChatHistoryTools({ userId, conversationId }: { userId: str
   return { search_chats, read_chat }
 }
 
-async function searchChats(userId: string, currentId: string, query: string): Promise<ChatSummary[]> {
-  const { rows, terms } = await searchUserChats(userId, query, { excludeConversationId: currentId, limit: MAX_RESULTS })
+async function matchingChats(userId: string, currentId: string, query: string): Promise<ChatSummary[]> {
+  const { rows, terms } = await searchChats(userId, query, { excludeConversationId: currentId, limit: MAX_RESULTS })
   return rows.map((r) => ({
     id: r.conversation_id,
     title: r.title,
@@ -117,14 +117,19 @@ async function recentChats(userId: string, currentId: string): Promise<ChatSumma
   }))
 }
 
-/** Summaries of the user's most recently active other chats, newest first. */
-export async function recentSummaries(userId: string, currentId: string): Promise<ChatSummary[]> {
+/** The user's live, summarized chats matching `filter`, most recently active first. */
+async function summarizedChats(userId: string, filter: SQL, limit?: number): Promise<ChatSummary[]> {
   const c = schema.conversations
-  const rows = await db.select({ id: c.id, title: c.title, updatedAt: c.updatedAt, summary: c.summary }).from(c)
-    .where(and(eq(c.userId, userId), ne(c.id, currentId), isNull(c.deletedAt), isNotNull(c.summary)))
+  const query = db.select({ id: c.id, title: c.title, updatedAt: c.updatedAt, summary: c.summary }).from(c)
+    .where(and(eq(c.userId, userId), isNull(c.deletedAt), isNotNull(c.summary), filter))
     .orderBy(desc(c.updatedAt))
-    .limit(RECENT_SUMMARIES)
+  const rows = limit === undefined ? await query : await query.limit(limit)
   return rows.map((r) => ({ id: r.id, title: r.title, date: isoDay(r.updatedAt), summary: r.summary!, snippet: '' }))
+}
+
+/** Summaries of the user's most recently active other chats, newest first. */
+export function recentSummaries(userId: string, currentId: string): Promise<ChatSummary[]> {
+  return summarizedChats(userId, ne(schema.conversations.id, currentId), RECENT_SUMMARIES)
 }
 
 /** Summarized chats of the user, other than `exclude`, whose summaries are closest to the query. */
@@ -143,14 +148,11 @@ async function nearestSummaryIds(userId: string, query: QueryEmbedding, exclude:
   return result.rows.map((r) => r.id)
 }
 
+/** Summaries of the chats `ids`, in that order. */
 async function summariesOf(userId: string, ids: string[]): Promise<ChatSummary[]> {
   if (ids.length === 0) return []
-  const c = schema.conversations
-  const rows = await db.select({ id: c.id, title: c.title, updatedAt: c.updatedAt, summary: c.summary }).from(c)
-    .where(and(eq(c.userId, userId), inArray(c.id, ids), isNull(c.deletedAt), isNotNull(c.summary)))
-  return rows
-    .toSorted((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
-    .map((r) => ({ id: r.id, title: r.title, date: isoDay(r.updatedAt), summary: r.summary!, snippet: '' }))
+  const rows = await summarizedChats(userId, inArray(schema.conversations.id, ids))
+  return rows.toSorted((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
 }
 
 export interface PastChats {
@@ -206,18 +208,12 @@ export function pastChatsPrompt({ recent, related }: PastChats): string | undefi
 
 async function readChat(userId: string, currentId: string, id: string) {
   const c = schema.conversations
-  const m = schema.messages
   const conversation = id === currentId ? undefined : await db.query.conversations.findFirst({
     where: and(eq(c.id, id), eq(c.userId, userId), isNull(c.deletedAt)),
   })
   if (!conversation) return { error: 'Chat not found' }
 
-  // Read the branch the user saw last: the path ending at the newest message.
-  const [leaf] = await db.select({ id: m.id }).from(m)
-    .where(and(eq(m.conversationId, id), isNull(m.deletedAt)))
-    .orderBy(desc(m.createdAt), desc(m.id))
-    .limit(1)
-  const path = leaf ? await loadPath(id, leaf.id) : []
+  const path = await latestPath(id)
 
   const messages: { role: string; text: string }[] = []
   let budget = MAX_READ_CHARS

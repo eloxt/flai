@@ -126,6 +126,19 @@ suite('API integration', () => {
     expect((await call('/admin/users', { token: alice })).status).toBe(403)
   })
 
+  it('reports a taken email as a conflict when registering, creating or editing users', async () => {
+    const body = { email: ' Alice@Example.com', username: 'alice2', password: 'password123' }
+    const registered = await call('/auth/register', { body })
+    expect(registered.status).toBe(409)
+    expect(registered.data.error.message).toBe('Email is already registered')
+    expect((await call('/admin/users', { token: admin, body })).status).toBe(409)
+    const carol = await call('/admin/users', { token: admin, body: { ...body, email: 'carol@example.com' } })
+    expect(carol.status).toBe(201)
+    const renamed = await call(`/admin/users/${carol.data.id}`, { token: admin, method: 'PATCH', body: { email: 'bobby@example.com' } })
+    expect(renamed.status).toBe(409)
+    expect((await call(`/admin/users/${carol.data.id}`, { token: admin, method: 'PATCH', body: { email: 'carol@example.com' } })).status).toBe(200)
+  })
+
   it('lets admins configure providers', async () => {
     const res = await call('/admin/providers', {
       token: admin,

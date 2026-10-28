@@ -5,18 +5,18 @@ import {
   type SearchHit,
   updateConversationSchema,
 } from '@flai/shared'
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db, schema } from '../db'
-import { afterCursor, decodeCursor, paginate } from '../lib/cursor'
+import { decodeCursor } from '../lib/cursor'
 import { highlight } from '../lib/highlight'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toConversation, toMessage } from '../lib/serialize'
 import { generateTitle } from '../llm/title'
 import { activeGeneration, cancelConversationGeneration } from '../llm/generation'
-import { deleteMessage, getConversation, listMessages } from '../services/conversations'
+import { deleteMessage, getConversation, listConversations, listMessages } from '../services/conversations'
 import { searchMessages } from '../services/search'
 
 const c_ = schema.conversations
@@ -25,23 +25,7 @@ export const conversationRoutes = new Hono<AppEnv>()
   .get('/conversations', async (c) => {
     const user = c.get('user')
     const q = query(c, listConversationsQuerySchema)
-    const cursor = decodeCursor(q.cursor)
-    // Favourites are listed by recent activity; the main list by creation time.
-    const sortCol = q.favourite ? c_.updatedAt : c_.createdAt
-    const rows = await db
-      .select()
-      .from(c_)
-      .where(
-        and(
-          eq(c_.userId, user.id),
-          isNull(c_.deletedAt),
-          q.favourite === undefined ? undefined : eq(c_.favourite, q.favourite),
-          afterCursor(sortCol, c_.id, cursor),
-        ),
-      )
-      .orderBy(desc(sortCol), desc(c_.id))
-      .limit(q.limit + 1)
-    const page = paginate(rows, q.limit, (r) => [q.favourite ? r.updatedAt : r.createdAt, r.id])
+    const page = await listConversations(user.id, { favourite: q.favourite, cursor: decodeCursor(q.cursor), limit: q.limit })
     return c.json({ items: page.items.map(toConversation), nextCursor: page.nextCursor })
   })
   .post('/conversations', async (c) => {

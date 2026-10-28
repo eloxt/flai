@@ -1,5 +1,6 @@
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { db, schema, type Tx } from '../db'
+import { afterCursor, type Cursor, paginate } from '../lib/cursor'
 import { notFound } from '../lib/errors'
 import type { UserRow } from '../lib/hono'
 
@@ -49,6 +50,42 @@ export async function loadPath(conversationId: string, leafId: string, tx: Tx | 
     where: (m, { inArray }) => inArray(m.id, [...order.keys()]),
   })
   return rows.sort((a, b) => order.get(b.id)! - order.get(a.id)!)
+}
+
+/** The branch the user saw last: root→leaf through the newest message; empty for an empty chat. */
+export async function latestPath(conversationId: string): Promise<MessageRow[]> {
+  const m = schema.messages
+  const [leaf] = await db.select({ id: m.id }).from(m)
+    .where(and(eq(m.conversationId, conversationId), isNull(m.deletedAt)))
+    .orderBy(desc(m.createdAt), desc(m.id))
+    .limit(1)
+  return leaf ? loadPath(conversationId, leaf.id) : []
+}
+
+/**
+ * One page of a user's live conversations, newest first. Favourites are listed by recent
+ * activity; otherwise by creation time.
+ */
+export async function listConversations(
+  userId: string,
+  { favourite, cursor, limit }: { favourite?: boolean; cursor?: Cursor; limit: number },
+) {
+  const c = schema.conversations
+  const sortCol = favourite ? c.updatedAt : c.createdAt
+  const rows = await db
+    .select()
+    .from(c)
+    .where(
+      and(
+        eq(c.userId, userId),
+        isNull(c.deletedAt),
+        favourite === undefined ? undefined : eq(c.favourite, favourite),
+        afterCursor(sortCol, c.id, cursor),
+      ),
+    )
+    .orderBy(desc(sortCol), desc(c.id))
+    .limit(limit + 1)
+  return paginate(rows, limit, (r) => [favourite ? r.updatedAt : r.createdAt, r.id])
 }
 
 export async function touchConversation(id: string, tx: Tx | typeof db = db): Promise<void> {

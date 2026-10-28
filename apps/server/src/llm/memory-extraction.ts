@@ -1,10 +1,10 @@
 import { memoryContentSchema, textOf } from '@flai/shared'
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
 import { clip, escapeXml } from '../lib/text'
-import { loadPath, type MessageRow } from '../services/conversations'
+import { latestPath, type MessageRow } from '../services/conversations'
 import { createMemory, deleteMemory, findMemoryIds, listMemories, type MemoryRow, updateMemory } from '../services/memories'
 import { backgroundModel, generateStructured } from './background-model'
 import { type Embedder, getEmbedder } from './embedding'
@@ -136,15 +136,6 @@ export async function claimIdleConversations(limit = BATCH, idleMs = IDLE_MS): P
     RETURNING id, user_id, summary, extracted_at, updated_at::text AS activity
   `)
   return result.rows.map((r) => ({ ...r, extracted_at: r.extracted_at && new Date(r.extracted_at) }))
-}
-
-async function latestPath(conversationId: string): Promise<MessageRow[]> {
-  const m = schema.messages
-  const [leaf] = await db.select({ id: m.id }).from(m)
-    .where(and(eq(m.conversationId, conversationId), isNull(m.deletedAt)))
-    .orderBy(desc(m.createdAt), desc(m.id))
-    .limit(1)
-  return leaf ? loadPath(conversationId, leaf.id) : []
 }
 
 type Operation =

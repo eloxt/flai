@@ -1,16 +1,13 @@
 import { noopObserve } from '@mastra/core/tools'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ conversation: vi.fn(), leaf: vi.fn(), path: vi.fn() }))
+const mocks = vi.hoisted(() => ({ conversation: vi.fn(), path: vi.fn() }))
 
 vi.mock('../src/db', async () => ({
   schema: await import('../src/db/schema'),
-  db: {
-    query: { conversations: { findFirst: mocks.conversation } },
-    select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: mocks.leaf }) }) }) }),
-  },
+  db: { query: { conversations: { findFirst: mocks.conversation } } },
 }))
-vi.mock('../src/services/conversations', () => ({ loadPath: mocks.path }))
+vi.mock('../src/services/conversations', () => ({ latestPath: mocks.path }))
 
 import { createChatHistoryTools } from '../src/llm/chat-history'
 
@@ -21,7 +18,6 @@ const row = (role: string, searchText: string) => ({ role, searchText })
 beforeEach(() => {
   vi.resetAllMocks()
   mocks.conversation.mockResolvedValue({ id: 'past', title: 'Trip', updatedAt: new Date('2026-10-01T08:00:00Z') })
-  mocks.leaf.mockResolvedValue([{ id: 'a2' }])
 })
 
 describe('read_chat tool', () => {
@@ -41,7 +37,7 @@ describe('read_chat tool', () => {
       title: 'Trip', date: '2026-10-01',
       messages: [{ role: 'user', text: 'Plan a trip to Kyoto' }, { role: 'assistant', text: 'Here is a plan' }],
     })
-    expect(mocks.path).toHaveBeenCalledWith('past', 'a2')
+    expect(mocks.path).toHaveBeenCalledWith('past')
   })
 
   it('keeps the most recent turns of a long chat', async () => {

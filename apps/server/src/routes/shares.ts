@@ -122,19 +122,20 @@ function snapshotHasUrl(messages: MessageRecord[], url: string): boolean {
   }))
 }
 
+/** A share anyone with the link may view: not deleted and not expired. */
+async function publicShare(id: string): Promise<ShareRow> {
+  const row = await db.query.shares.findFirst({ where: and(eq(schema.shares.id, id), isNull(schema.shares.deletedAt)) })
+  if (!row || isExpired(row)) throw notFound('Share')
+  return row
+}
+
 export const publicShareRoutes = new Hono().get('/shares/:id/images', async (c) => {
   const { url } = query(c, imageProxyQuerySchema)
-  const row = await db.query.shares.findFirst({
-    where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),
-  })
-  if (!row || isExpired(row)) throw notFound('Share')
+  const row = await publicShare(c.req.param('id'))
   if (!snapshotHasUrl(row.messages as MessageRecord[], url)) throw notFound('Image')
   return proxyImage(url, c.req.raw.signal)
 }).get('/shares/:id', async (c) => {
-  const row = await db.query.shares.findFirst({
-    where: and(eq(schema.shares.id, c.req.param('id')), isNull(schema.shares.deletedAt)),
-  })
-  if (!row || isExpired(row)) throw notFound('Share')
+  const row = await publicShare(c.req.param('id'))
   const result: PublicShare = {
     id: row.id,
     title: row.conversation.title,

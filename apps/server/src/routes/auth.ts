@@ -3,34 +3,22 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { hashPassword, issueTokens, tokenMatchesUser, verifyPassword, verifyToken } from '../lib/auth'
-import { isUniqueViolation } from '../lib/db-errors'
 import { AppError } from '../lib/errors'
 import { body } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toUser } from '../lib/serialize'
-import { findUserByEmail } from '../services/users'
+import { findUserByEmail, withUniqueEmail } from '../services/users'
 
 export const authRoutes = new Hono()
   .post('/register', async (c) => {
     const input = await body(c, registerSchema)
-    if (await findUserByEmail(input.email)) throw new AppError('CONFLICT', 'Email is already registered')
-    try {
-      // New accounts wait for an administrator to activate them.
-      const [user] = await db
-        .insert(schema.users)
-        .values({
-          id: newId(),
-          email: input.email,
-          username: input.username,
-          passwordHash: await hashPassword(input.password),
-          isActive: false,
-        })
-        .returning()
-      return c.json({ user: toUser(user!) }, 201)
-    } catch (error) {
-      if (isUniqueViolation(error)) throw new AppError('CONFLICT', 'Email is already registered')
-      throw error
-    }
+    const passwordHash = await hashPassword(input.password)
+    // New accounts wait for an administrator to activate them.
+    const [user] = await withUniqueEmail(() => db
+      .insert(schema.users)
+      .values({ id: newId(), email: input.email, username: input.username, passwordHash, isActive: false })
+      .returning())
+    return c.json({ user: toUser(user!) }, 201)
   })
   .post('/login', async (c) => {
     const input = await body(c, loginSchema)

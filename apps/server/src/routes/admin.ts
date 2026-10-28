@@ -15,9 +15,8 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { db, schema } from '../db'
 import { hashPassword } from '../lib/auth'
-import { afterCursor, decodeCursor, paginate } from '../lib/cursor'
-import { isUniqueViolation } from '../lib/db-errors'
-import { AppError, badRequest, notFound } from '../lib/errors'
+import { decodeCursor } from '../lib/cursor'
+import { badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toConversation, toUser } from '../lib/serialize'
@@ -25,8 +24,9 @@ import { embedWith } from '../llm/embedding'
 import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
 import { verifyTypeSafe } from '../llm/topic-check'
 import { findProvider, maskKey, type ProviderRow, reloadProviders, resolveModel } from '../services/providers'
+import { listConversations } from '../services/conversations'
 import { getSetting, updateSetting } from '../services/settings'
-import { findUserByEmail } from '../services/users'
+import { withUniqueEmail } from '../services/users'
 import { adminNotificationRoutes } from './notifications'
 
 const toAdminProvider = (p: ProviderRow): AdminProvider => ({
@@ -57,10 +57,6 @@ async function liveProvider(id: string) {
   return row
 }
 
-async function ensureEmailFree(email: string, exceptId?: string) {
-  if (await findUserByEmail(email, { exceptId })) throw new AppError('CONFLICT', 'Email is already registered')
-}
-
 function isSettingKey(key: string): key is SettingKey {
   return (SETTING_KEYS as string[]).includes(key)
 }
@@ -72,28 +68,19 @@ const userRoutes = new Hono<AppEnv>()
   })
   .post('/', async (c) => {
     const input = await body(c, adminCreateUserSchema)
-    await ensureEmailFree(input.email)
     const { password, ...rest } = input
-    try {
-      const [row] = await db
-        .insert(u)
-        .values({ id: newId(), ...rest, passwordHash: await hashPassword(password) })
-        .returning()
-      return c.json(toUser(row!), 201)
-    } catch (error) {
-      if (isUniqueViolation(error)) throw new AppError('CONFLICT', 'Email is already registered')
-      throw error
-    }
+    const passwordHash = await hashPassword(password)
+    const [row] = await withUniqueEmail(() => db.insert(u).values({ id: newId(), ...rest, passwordHash }).returning())
+    return c.json(toUser(row!), 201)
   })
   .get('/:id', async (c) => c.json(toUser(await liveUser(c.req.param('id')))))
   .patch('/:id', async (c) => {
     const target = await liveUser(c.req.param('id'))
     const input = await body(c, adminUpdateUserSchema)
-    if (input.email) await ensureEmailFree(input.email, target.id)
     const { password, ...rest } = input
     const patch: Partial<typeof u.$inferInsert> = { ...rest }
     if (password) patch.passwordHash = await hashPassword(password)
-    const [row] = await db.update(u).set(patch).where(eq(u.id, target.id)).returning()
+    const [row] = await withUniqueEmail(() => db.update(u).set(patch).where(eq(u.id, target.id)).returning())
     return c.json(toUser(row!))
   })
   .delete('/:id', async (c) => {
@@ -105,21 +92,7 @@ const userRoutes = new Hono<AppEnv>()
   .get('/:id/conversations', async (c) => {
     const target = await liveUser(c.req.param('id'))
     const q = query(c, pageQuerySchema)
-    const cursor = decodeCursor(q.cursor)
-    const cv = schema.conversations
-    const rows = await db
-      .select()
-      .from(cv)
-      .where(
-        and(
-          eq(cv.userId, target.id),
-          isNull(cv.deletedAt),
-          afterCursor(cv.createdAt, cv.id, cursor),
-        ),
-      )
-      .orderBy(desc(cv.createdAt), desc(cv.id))
-      .limit(q.limit + 1)
-    const page = paginate(rows, q.limit, (r) => [r.createdAt, r.id])
+    const page = await listConversations(target.id, { cursor: decodeCursor(q.cursor), limit: q.limit })
     return c.json({ items: page.items.map(toConversation), nextCursor: page.nextCursor })
   })
 
