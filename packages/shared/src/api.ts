@@ -347,6 +347,11 @@ export const settingSchemas = {
     modelId: z.string().default(''),
     prompt: longText.default(''),
   }),
+  /** Cheap model for background work (memory extraction, chat summaries); empty uses the title model. */
+  background_model: z.object({
+    providerId: z.string().default(''),
+    modelId: z.string().default(''),
+  }),
   /** Embedding model for semantic search over past chats; empty means keyword search only. */
   embedding: z.object({
     providerId: z.string().default(''),

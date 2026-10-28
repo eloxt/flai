@@ -26,6 +26,9 @@ const updatedAt = () =>
     .$onUpdate(() => new Date())
 const deletedAt = () => timestamp('deleted_at', { withTimezone: true })
 
+/** Embedding dimensions; configured models must output (or be truncated to) this many. */
+export const EMBEDDING_DIMENSIONS = 1024
+
 export const users = pgTable(
   'user',
   {
@@ -54,11 +57,21 @@ export const conversations = pgTable(
     title: text('title').notNull().default(''),
     icon: text('icon'),
     favourite: boolean('favourite').notNull().default(false),
+    /** A few sentences on what the chat covers, kept up to date by the background memory job. */
+    summary: text('summary'),
+    summaryTsv: tsvector('summary_tsv').generatedAlwaysAs(sql`to_tsvector('zhcfg', coalesce(summary, ''))`),
+    /** Messages created up to this time have been summarized and mined for memories. */
+    extractedAt: timestamp('extracted_at', { withTimezone: true }),
+    /** Set while an instance processes the chat in the background, so others skip it. */
+    jobLeaseUntil: timestamp('job_lease_until', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: deletedAt(),
   },
-  (t) => [index('conversation_user_created_idx').on(t.userId, t.createdAt)],
+  (t) => [
+    index('conversation_user_created_idx').on(t.userId, t.createdAt),
+    index('conversation_summary_tsv_idx').using('gin', t.summaryTsv),
+  ],
 )
 
 export const messages = pgTable(
@@ -84,9 +97,6 @@ export const messages = pgTable(
     index('message_tsv_idx').using('gin', t.tsv),
   ],
 )
-
-/** Embedding dimensions; configured models must output (or be truncated to) this many. */
-export const EMBEDDING_DIMENSIONS = 1024
 
 /** Embedded slices of a message's search text, for semantic search over a user's chats. */
 export const messageChunks = pgTable(
@@ -215,4 +225,33 @@ export const userMemories = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index('user_memory_user_idx').on(t.userId, t.createdAt)],
+)
+
+/** Embedding of a memory's content, used to spot near-duplicates before saving another. */
+export const memoryEmbeddings = pgTable('memory_embedding', {
+  memoryId: text('memory_id')
+    .primaryKey()
+    .references(() => userMemories.id, { onDelete: 'cascade' }),
+  /** `providerId:modelId`; a row from another model, or for other text, is stale and replaced. */
+  model: text('model').notNull(),
+  text: text('text').notNull(),
+  embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+})
+
+/** Embedding of a conversation's summary, for semantic search over past chats. */
+export const summaryEmbeddings = pgTable(
+  'summary_embedding',
+  {
+    conversationId: text('conversation_id')
+      .primaryKey()
+      .references(() => conversations.id),
+    userId: text('user_id').notNull(),
+    model: text('model').notNull(),
+    text: text('text').notNull(),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+  },
+  (t) => [
+    index('summary_embedding_user_idx').on(t.userId),
+    index('summary_embedding_embedding_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+  ],
 )

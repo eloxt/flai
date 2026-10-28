@@ -65,6 +65,29 @@ export async function indexPendingMessages(abortSignal?: AbortSignal): Promise<n
   return ids.length
 }
 
+/** Embed one batch of chat summaries with no vector for the current model and text; returns how many. */
+export async function indexPendingSummaries(abortSignal?: AbortSignal): Promise<number> {
+  const embedder = getEmbedder()
+  if (!embedder) return 0
+  const pending = await db.execute<{ id: string; user_id: string; summary: string }>(sql`
+    SELECT cv.id, cv.user_id, cv.summary
+    FROM conversation cv
+    LEFT JOIN summary_embedding s ON s.conversation_id = cv.id AND s.model = ${embedder.key} AND s.text = cv.summary
+    WHERE cv.deleted_at IS NULL AND cv.summary ~ '\\S' AND s.conversation_id IS NULL
+    ORDER BY cv.updated_at DESC
+    LIMIT ${BATCH_MESSAGES}
+  `)
+  if (pending.rows.length === 0) return 0
+  const vectors = await embedder.embed(pending.rows.map((r) => r.summary), abortSignal)
+  const s = schema.summaryEmbeddings
+  for (const [i, r] of pending.rows.entries()) {
+    const values = { model: embedder.key, text: r.summary, embedding: vectors[i]! }
+    await db.insert(s).values({ conversationId: r.id, userId: r.user_id, ...values })
+      .onConflictDoUpdate({ target: s.conversationId, set: values })
+  }
+  return pending.rows.length
+}
+
 let timer: NodeJS.Timeout | undefined
 let running: Promise<void> | undefined
 let started = false
@@ -80,7 +103,11 @@ async function run(): Promise<void> {
     let delay = IDLE_MS
     try {
       // Keep going while there is a backlog, e.g. after enabling search or changing the model.
-      while ((await indexPendingMessages(AbortSignal.timeout(60_000))) === BATCH_MESSAGES);
+      for (let more = true; more;) {
+        const messages = await indexPendingMessages(AbortSignal.timeout(60_000))
+        const summaries = await indexPendingSummaries(AbortSignal.timeout(60_000))
+        more = messages === BATCH_MESSAGES || summaries === BATCH_MESSAGES
+      }
     } catch (error) {
       console.warn('failed to embed messages', error)
       delay = RETRY_MS
@@ -92,7 +119,7 @@ async function run(): Promise<void> {
   return running
 }
 
-/** Index new and backfilled messages in the background for as long as the server runs. */
+/** Index new and backfilled messages and summaries in the background for as long as the server runs. */
 export function startEmbeddingIndexer(): void {
   started = true
   schedule(NUDGE_MS)

@@ -223,8 +223,8 @@ const settingRoutes = new Hono<AppEnv>()
       return c.json({ ...value, apiKey: value.apiKey ? maskKey(value.apiKey) : '' })
     }
     const input = await body(c, settingSchemas[key].partial())
-    if (key === 'title_generation') {
-      const merged = { ...getSetting('title_generation'), ...input } as ReturnType<typeof getSetting<'title_generation'>>
+    if (key === 'title_generation' || key === 'background_model') {
+      const merged = { ...getSetting(key), ...input } as { providerId: string; modelId: string }
       if (merged.providerId || merged.modelId) resolveModel(merged.providerId, merged.modelId)
     }
     if (key === 'embedding') {
