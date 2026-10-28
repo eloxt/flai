@@ -13,12 +13,11 @@ const languages = [
   { value: "en", label: "English" },
 ]
 
-export function PreferenceSettings() {
-  const { t, i18n } = useTranslation()
+/** Patch the user's preferences optimistically, rolling back if the server rejects it. */
+export function useUpdatePreferences() {
   const user = useAuthStore((s) => s.user)
   const updateUser = useAuthStore((s) => s.updateUser)
-
-  const update = async (patch: Preferences) => {
+  return async (patch: Preferences) => {
     const previous = user?.preferences ?? {}
     updateUser({ preferences: { ...previous, ...patch } })
     try {
@@ -28,6 +27,12 @@ export function PreferenceSettings() {
       notify.error(error)
     }
   }
+}
+
+export function PreferenceSettings() {
+  const { t, i18n } = useTranslation()
+  const user = useAuthStore((s) => s.user)
+  const update = useUpdatePreferences()
 
   return (
     <PanelSection title={t("pages.settings.preference.title")} description={t("pages.settings.preference.description")}>

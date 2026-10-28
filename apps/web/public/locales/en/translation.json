@@ -233,6 +233,7 @@
         "account": "Account & Security",
         "mcp": "MCP Servers",
         "preference": "Preferences",
+        "memory": "Memory",
         "share": "Shared Links"
       },
       "account": {
@@ -300,6 +301,22 @@
         "emptyHint": "Connect a Streamable HTTP MCP server to give models extra tools.",
         "httpOnly": "Streamable HTTP endpoints only. The address must be publicly reachable.",
         "noTools": "No tools loaded yet. Use refresh to fetch them."
+      },
+      "memory": {
+        "title": "Memory",
+        "description": "Short facts the assistant remembers about you and uses in every chat.",
+        "use": "Use saved memories",
+        "useDescription": "Give the assistant your saved memories in every chat.",
+        "write": "Let the assistant save memories",
+        "writeDescription": "The assistant can save, update and delete memories when you share lasting facts or ask it to remember something.",
+        "clearAll": "Clear all",
+        "confirmClear": "Clear all memories?",
+        "confirmClearDescription": "The assistant will forget everything listed here. This cannot be undone.",
+        "content": "Memory",
+        "updatedAt": "Updated",
+        "editTitle": "Edit memory",
+        "empty": "No memories yet",
+        "emptyHint": "Tell the assistant “remember …” in a chat to save one."
       },
       "share": {
         "title": "Shared Links",
@@ -680,6 +697,18 @@
       "readChat": {
         "running": "Reading a past chat",
         "done": "Read a past chat"
+      },
+      "saveMemory": {
+        "running": "Saving memory",
+        "done": "Memory saved"
+      },
+      "updateMemory": {
+        "running": "Updating memory",
+        "done": "Memory updated"
+      },
+      "deleteMemory": {
+        "running": "Deleting memory",
+        "done": "Memory deleted"
       },
       "askUser": {
         "running": "Asking you",
