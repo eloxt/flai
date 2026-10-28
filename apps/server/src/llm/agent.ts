@@ -5,7 +5,7 @@ import { RequestContext } from '@mastra/core/request-context'
 import type { ModelConfig } from '@flai/shared'
 import type { MemoryRow } from '../services/memories'
 import { getSetting } from '../services/settings'
-import { type ChatSummary, recentChatsPrompt } from './chat-history'
+import { type PastChats, pastChatsPrompt } from './chat-history'
 import type { ResolvedModel } from './models'
 import { memoryPrompt } from './user-memory'
 
@@ -53,18 +53,18 @@ export interface ChatInstructionOptions {
   memories?: { rows: MemoryRow[]; partial: boolean; label?: (id: string) => string }
   /** Whether the memory tools are offered. */
   memoryWrite?: boolean
-  /** Summaries of the user's latest other chats; empty when chat history is off. */
-  recentChats?: ChatSummary[]
+  /** Summaries of the user's other chats; none when chat history is off. */
+  pastChats?: PastChats
   now?: Date
 }
 
-export function chatInstructions(model: ModelConfig, { chatHistory = false, memories, memoryWrite = false, recentChats = [], now = new Date() }: ChatInstructionOptions = {}): string {
+export function chatInstructions(model: ModelConfig, { chatHistory = false, memories, memoryWrite = false, pastChats, now = new Date() }: ChatInstructionOptions = {}): string {
   const base = getSetting('system_prompt').chat.replaceAll('{{currentDate}}', promptDate.format(now))
   return [
     base,
     // Right after the system prompt, and only changing when memories do, so the prefix caches well.
     memories && memoryPrompt(memories.rows, { partial: memories.partial, label: memories.label }),
-    recentChatsPrompt(recentChats),
+    pastChats && pastChatsPrompt(pastChats),
     model.toolCall && 'Use ask_user when you need clarification or a decision from the user. Ask in the user’s language, provide concise choices when helpful, and wait for the answer before continuing.',
     model.toolCall && chatHistory && 'Use search_chats and read_chat to recall the user’s earlier conversations when they refer to something discussed before or when past context would clearly help; don’t mention them otherwise.',
     model.toolCall && memoryWrite && 'Use save_memory when the user shares a lasting fact or preference about themselves or asks you to remember something; use update_memory or delete_memory, with ids from the saved memories, when one changes or the user asks you to forget it. Keep one fact per memory and say briefly what you saved.',

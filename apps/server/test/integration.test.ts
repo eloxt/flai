@@ -362,7 +362,7 @@ suite('API integration', () => {
 
   it('summarizes idle chats and picks up memories from what the user said', async () => {
     const { db, schema } = await import('../src/db')
-    const { eq, sql } = await import('drizzle-orm')
+    const { eq, inArray, sql } = await import('drizzle-orm')
     const { noopObserve } = await import('@mastra/core/tools')
     const { claimIdleConversations, processConversation } = await import('../src/llm/memory-extraction')
     const { indexPendingSummaries } = await import('../src/llm/embedding-index')
@@ -447,6 +447,23 @@ suite('API integration', () => {
     expect((await recentSummaries(userId, 'none')).map((c) => c.id)).toContain(chat)
     expect((await recentSummaries(userId, chat)).map((c) => c.id)).not.toContain(chat)
 
+    // A new chat gets the latest summaries, plus older ones related to its first message, kept for later turns.
+    const { loadPastChats } = await import('../src/llm/chat-history')
+    const { queryEmbedding } = await import('../src/llm/memory-retrieval')
+    const others = await db.insert(schema.conversations)
+      .values(['用户问了周末天气。', '用户在学做饭。'].map((summary) => ({ id: crypto.randomUUID(), userId, summary })))
+      .returning({ id: schema.conversations.id })
+    while (await indexPendingSummaries());
+    const fresh = (await call('/conversations', { token: alice, body: {} })).data.id as string
+    const past = (firstTurn: boolean, query: string) => loadPastChats(userId, fresh, { firstTurn, query, embedQuery: queryEmbedding(query) })
+    const first = await past(true, '我的猫最近不爱吃饭')
+    expect(first.recent.map((c) => c.id).toSorted()).toEqual(others.map((c) => c.id).toSorted())
+    expect(first.related.map((c) => c.id)).toEqual([chat])
+    expect((await past(false, '它是英短')).related.map((c) => c.id)).toEqual([chat])
+    // A first message too short to go by finds nothing.
+    expect((await past(true, '继续')).related).toEqual([])
+    await db.update(schema.conversations).set({ deletedAt: new Date() }).where(inArray(schema.conversations.id, [...others.map((c) => c.id), fresh]))
+
     await call('/me/memories', { token: alice, method: 'DELETE' })
     await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId: '', modelId: '' } })
   })
@@ -457,7 +474,7 @@ suite('API integration', () => {
     const { createMemoryTools } = await import('../src/llm/user-memory')
     const { createMemory } = await import('../src/services/memories')
     const { indexPendingMemories } = await import('../src/llm/embedding-index')
-    const { loadMemories } = await import('../src/llm/memory-retrieval')
+    const { loadMemories, queryEmbedding } = await import('../src/llm/memory-retrieval')
     const { claimUsers, consolidateUser } = await import('../src/llm/memory-consolidation')
     const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
     expect((await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed' } })).status).toBe(200)
@@ -480,7 +497,7 @@ suite('API integration', () => {
     for (let i = 0; i < 20; i++) await createMemory(userId, `fact ${i}`)
     await createMemory(userId, '养了一只猫')
     while (await indexPendingMemories());
-    const selection = await loadMemories(userId, '我的猫最近不爱吃饭')
+    const selection = await loadMemories(userId, queryEmbedding('我的猫最近不爱吃饭'))
     expect(selection.partial).toBe(true)
     expect(selection.core).toHaveLength(MAX_PINNED_MEMORIES)
     expect(selection.relevant.map((m) => m.content)).toContain('养了一只猫')

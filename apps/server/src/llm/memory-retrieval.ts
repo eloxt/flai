@@ -88,13 +88,32 @@ export async function findDuplicate(userId: string, content: string): Promise<st
   }
 }
 
-/** Non-core memories most similar to `query`; undefined when there's no embedding model or it fails. */
-async function relevantMemoryIds(userId: string, query: string): Promise<string[] | undefined> {
-  const embedder = getEmbedder()
-  if (!embedder || !query.trim()) return undefined
-  try {
+export interface QueryEmbedding {
+  /** The embedding model's key, as stored with each vector. */
+  key: string
+  vector: number[]
+}
+
+/**
+ * Embed the user's latest message at most once, on first use, for everyone ranking by it.
+ * Resolves to undefined without an embedding model or an empty message; rejects when embedding fails.
+ */
+export function queryEmbedding(query: string): () => Promise<QueryEmbedding | undefined> {
+  let pending: Promise<QueryEmbedding | undefined> | undefined
+  return () => (pending ??= (async () => {
+    const embedder = getEmbedder()
+    if (!embedder || !query.trim()) return undefined
     const [vector] = await embedder.embed([query.slice(0, MAX_QUERY_CHARS)], AbortSignal.timeout(QUERY_TIMEOUT_MS))
-    const nearest = await nearestMemories(userId, embedder.key, vector!, RELEVANT_COUNT, { unpinnedOnly: true })
+    return { key: embedder.key, vector: vector! }
+  })())
+}
+
+/** Non-core memories most similar to the query; undefined when there's no embedding model or it fails. */
+async function relevantMemoryIds(userId: string, embedQuery: () => Promise<QueryEmbedding | undefined>): Promise<string[] | undefined> {
+  try {
+    const query = await embedQuery()
+    if (!query) return undefined
+    const nearest = await nearestMemories(userId, query.key, query.vector, RELEVANT_COUNT, { unpinnedOnly: true })
     return nearest.map((r) => r.id)
   } catch (error) {
     console.warn('failed to rank memories; using recent ones', error)
@@ -102,11 +121,11 @@ async function relevantMemoryIds(userId: string, query: string): Promise<string[
   }
 }
 
-/** The memories for a reply to `query`, the user's latest message. */
-export async function loadMemories(userId: string, query: string): Promise<MemorySelection> {
+/** The memories for a reply to the user's latest message, embedded by `embedQuery` when needed. */
+export async function loadMemories(userId: string, embedQuery: () => Promise<QueryEmbedding | undefined>): Promise<MemorySelection> {
   const memories = await listMemories(userId)
   if (fitsInPrompt(memories)) return selectMemories(memories)
-  return selectMemories(memories, await relevantMemoryIds(userId, query))
+  return selectMemories(memories, await relevantMemoryIds(userId, embedQuery))
 }
 
 /**

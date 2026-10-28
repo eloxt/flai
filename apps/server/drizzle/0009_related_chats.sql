@@ -1,0 +1,1 @@
+ALTER TABLE "conversation" ADD COLUMN "related_chat_ids" text[];

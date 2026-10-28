@@ -9,11 +9,11 @@ import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
 import type { ProviderRow } from '../services/providers'
 import { chatContext, chatInstructions, getChatAgent } from './agent'
-import { createChatHistoryTools, recentSummaries } from './chat-history'
+import { createChatHistoryTools, loadPastChats } from './chat-history'
 import { nudgeEmbeddingIndexer } from './embedding-index'
 import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
-import { loadMemories, withContext } from './memory-retrieval'
+import { loadMemories, queryEmbedding, withContext } from './memory-retrieval'
 import { buildMcpToolset } from './mcp'
 import { buildModel } from './models'
 import { exaResponseSchema } from './exa'
@@ -193,9 +193,11 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     const scope = { userId: input.userId, conversationId: input.conversationId }
     const memoryWrite = model.toolCall && input.memory === 'write'
     const query = textOf(input.path.findLast((m) => m.role === 'user')?.parts ?? [])
-    const [selection, recentChats] = await Promise.all([
-      input.memory === 'off' ? undefined : loadMemories(input.userId, query),
-      input.chatHistory ? recentSummaries(input.userId, input.conversationId) : [],
+    const embedQuery = queryEmbedding(query)
+    const firstTurn = input.path.filter((m) => m.role === 'user').length === 1
+    const [selection, pastChats] = await Promise.all([
+      input.memory === 'off' ? undefined : loadMemories(input.userId, embedQuery),
+      input.chatHistory ? loadPastChats(input.userId, input.conversationId, { firstTurn, query, embedQuery }) : undefined,
     ])
     const shown = selection ? [...selection.core, ...selection.relevant] : []
     const label = memoryLabels(shown)
@@ -204,7 +206,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       ...(memoryWrite && createMemoryTools(scope)),
     }
     const instructions = chatInstructions(model, {
-      chatHistory, memoryWrite, recentChats,
+      chatHistory, memoryWrite, pastChats,
       memories: selection && { rows: selection.core, partial: selection.partial, label },
     })
     const stream = await getChatAgent().stream(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)) as never, {

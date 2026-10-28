@@ -64,6 +64,13 @@
       "when": 1793175703195,
       "tag": "0008_backfill_recent_chats",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793180930744,
+      "tag": "0009_related_chats",
+      "breakpoints": true
     }
   ]
 }
