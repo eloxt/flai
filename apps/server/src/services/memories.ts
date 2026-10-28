@@ -120,10 +120,10 @@ export async function clearMemories(userId: string): Promise<void> {
   })
 }
 
-type EventRow = typeof e.$inferSelect
+export type MemoryEventRow = typeof e.$inferSelect
 
 /** Whether undoing `event` still leaves the memory as it was before it, given its current state. */
-function canUndo(event: EventRow, latest: Map<string, string>, current: Map<string, string>): boolean {
+function canUndo(event: MemoryEventRow, latest: Map<string, string>, current: Map<string, string>): boolean {
   if (event.undoneAt || latest.get(event.memoryId) !== event.id) return false
   if (event.action === 'delete') return !current.has(event.memoryId)
   return current.get(event.memoryId) === event.after
@@ -145,25 +145,13 @@ async function undoState(tx: Db | Tx, userId: string, memoryIds: string[]) {
 }
 
 /** The assistant's recent changes to the user's memories, newest first. */
-export async function listMemoryEvents(userId: string): Promise<MemoryEvent[]> {
+export async function listMemoryEvents(userId: string): Promise<(MemoryEventRow & { undoable: boolean })[]> {
   const events = await db.select().from(e)
     .where(and(eq(e.userId, userId), gt(e.createdAt, since())))
     .orderBy(desc(e.createdAt), desc(e.id))
     .limit(100)
   const { latest, current } = await undoState(db, userId, events.map((ev) => ev.memoryId))
-  return events.map((ev) => ({
-    id: ev.id,
-    memoryId: ev.memoryId,
-    action: ev.action,
-    source: ev.source,
-    before: ev.before,
-    after: ev.after,
-    note: ev.note,
-    conversationId: ev.conversationId,
-    createdAt: ev.createdAt.toISOString(),
-    undoneAt: ev.undoneAt?.toISOString() ?? null,
-    undoable: canUndo(ev, latest, current),
-  }))
+  return events.map((ev) => ({ ...ev, undoable: canUndo(ev, latest, current) }))
 }
 
 /** Revert one automatic change: remove an added memory, restore an edited or deleted one. */

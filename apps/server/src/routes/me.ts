@@ -5,7 +5,7 @@ import { db, schema } from '../db'
 import { hashPassword, issueTokens, verifyPassword } from '../lib/auth'
 import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body } from '../lib/hono'
-import { toMemory, toUser } from '../lib/serialize'
+import { toMemory, toMemoryEvent, toUser } from '../lib/serialize'
 import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
 import { sendBark } from '../services/bark'
 import { clearMemories, deleteMemory, listMemories, listMemoryEvents, undoMemoryEvent, updateMemory } from '../services/memories'
@@ -54,7 +54,7 @@ export const meRoutes = new Hono<AppEnv>()
     await clearMemories(c.get('user').id)
     return c.body(null, 204)
   })
-  .get('/me/memory-events', async (c) => c.json(await listMemoryEvents(c.get('user').id)))
+  .get('/me/memory-events', async (c) => c.json((await listMemoryEvents(c.get('user').id)).map(toMemoryEvent)))
   .post('/me/memory-events/:id/undo', async (c) => {
     await undoMemoryEvent(c.get('user').id, c.req.param('id'))
     nudgeEmbeddingIndexer()

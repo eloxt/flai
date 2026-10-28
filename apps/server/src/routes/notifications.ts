@@ -1,18 +1,11 @@
-import { type Notification, notificationInputSchema } from '@flai/shared'
+import { notificationInputSchema } from '@flai/shared'
 import { desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { notFound } from '../lib/errors'
 import { type AppEnv, body } from '../lib/hono'
 import { newId } from '../lib/ids'
-
-const toNotification = (row: typeof schema.notifications.$inferSelect): Notification => ({
-  id: row.id,
-  title: row.title,
-  content: row.content,
-  level: row.level,
-  createdAt: row.createdAt.toISOString(),
-})
+import { toNotification } from '../lib/serialize'
 
 const list = async () =>
   (await db.select().from(schema.notifications).orderBy(desc(schema.notifications.createdAt))).map(toNotification)

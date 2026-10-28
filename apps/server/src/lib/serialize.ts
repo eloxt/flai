@@ -1,5 +1,19 @@
-import type { Conversation, FileRecord, McpServer, Memory, MessageRecord, User } from '@flai/shared'
+import type {
+  AdminProvider,
+  Conversation,
+  FileRecord,
+  McpServer,
+  Memory,
+  MemoryEvent,
+  MessageRecord,
+  Notification,
+  PublicShare,
+  Share,
+  User,
+} from '@flai/shared'
 import type { schema } from '../db'
+import type { MemoryEventRow } from '../services/memories'
+import { maskKey, type ProviderRow } from '../services/providers'
 import type { UserRow } from './hono'
 
 const iso = (d: Date) => d.toISOString()
@@ -64,5 +78,64 @@ export function toMemory(row: typeof schema.userMemories.$inferSelect): Memory {
     sourceConversationId: row.sourceConversationId,
     createdAt: iso(row.createdAt),
     updatedAt: iso(row.updatedAt),
+  }
+}
+
+export function toMemoryEvent(row: MemoryEventRow & { undoable: boolean }): MemoryEvent {
+  return {
+    id: row.id,
+    memoryId: row.memoryId,
+    action: row.action,
+    source: row.source,
+    before: row.before,
+    after: row.after,
+    note: row.note,
+    conversationId: row.conversationId,
+    createdAt: iso(row.createdAt),
+    undoneAt: row.undoneAt ? iso(row.undoneAt) : null,
+    undoable: row.undoable,
+  }
+}
+
+export function toAdminProvider(row: ProviderRow): AdminProvider {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    logo: row.logo,
+    models: row.models,
+    baseUrl: row.baseUrl,
+    apiKey: maskKey(row.apiKey),
+    isActive: row.isActive,
+    createdAt: iso(row.createdAt),
+    updatedAt: iso(row.updatedAt),
+  }
+}
+
+export function toNotification(row: typeof schema.notifications.$inferSelect): Notification {
+  return { id: row.id, title: row.title, content: row.content, level: row.level, createdAt: iso(row.createdAt) }
+}
+
+type ShareRow = typeof schema.shares.$inferSelect
+
+export function toShare(row: ShareRow): Share {
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    title: row.conversation.title,
+    icon: row.conversation.icon,
+    createdAt: iso(row.createdAt),
+    expiresAt: row.expiresAt ? iso(row.expiresAt) : null,
+  }
+}
+
+export function toPublicShare(row: ShareRow): PublicShare {
+  return {
+    id: row.id,
+    title: row.conversation.title,
+    icon: row.conversation.icon,
+    messages: row.messages as MessageRecord[],
+    createdAt: iso(row.createdAt),
+    expiresAt: row.expiresAt ? iso(row.expiresAt) : null,
   }
 }

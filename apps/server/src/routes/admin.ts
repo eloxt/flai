@@ -1,5 +1,4 @@
 import {
-  type AdminProvider,
   adminCreateUserSchema,
   adminUpdateUserSchema,
   pageQuerySchema,
@@ -19,28 +18,15 @@ import { decodeCursor } from '../lib/cursor'
 import { badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
-import { toConversation, toUser } from '../lib/serialize'
+import { toAdminProvider, toConversation, toUser } from '../lib/serialize'
 import { embedWith } from '../llm/embedding'
 import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
 import { verifyTypeSafe } from '../llm/topic-check'
-import { findProvider, maskKey, type ProviderRow, reloadProviders, resolveModel } from '../services/providers'
+import { findProvider, maskKey, reloadProviders, resolveModel } from '../services/providers'
 import { listConversations } from '../services/conversations'
 import { getSetting, updateSetting } from '../services/settings'
 import { withUniqueEmail } from '../services/users'
 import { adminNotificationRoutes } from './notifications'
-
-const toAdminProvider = (p: ProviderRow): AdminProvider => ({
-  id: p.id,
-  name: p.name,
-  type: p.type,
-  logo: p.logo,
-  models: p.models,
-  baseUrl: p.baseUrl,
-  apiKey: maskKey(p.apiKey),
-  isActive: p.isActive,
-  createdAt: p.createdAt.toISOString(),
-  updatedAt: p.updatedAt.toISOString(),
-})
 
 const u = schema.users
 const p = schema.providers

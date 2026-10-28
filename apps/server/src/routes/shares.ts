@@ -1,24 +1,15 @@
-import { createShareSchema, type MessageRecord, type PublicShare, type Share, updateShareSchema } from '@flai/shared'
+import { createShareSchema, type MessageRecord, updateShareSchema } from '@flai/shared'
 import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { notFound } from '../lib/errors'
 import { type AppEnv, body, query, type UserRow } from '../lib/hono'
 import { newId } from '../lib/ids'
-import { toMessage } from '../lib/serialize'
+import { toMessage, toPublicShare, toShare } from '../lib/serialize'
 import { getConversation, loadPath } from '../services/conversations'
 import { imageProxyQuerySchema, proxyImage } from '../services/image-proxy'
 
 type ShareRow = typeof schema.shares.$inferSelect
-
-const toShare = (row: ShareRow): Share => ({
-  id: row.id,
-  conversationId: row.conversationId,
-  title: row.conversation.title,
-  icon: row.conversation.icon,
-  createdAt: row.createdAt.toISOString(),
-  expiresAt: row.expiresAt?.toISOString() ?? null,
-})
 
 const isExpired = (row: ShareRow) => row.expiresAt !== null && row.expiresAt.getTime() <= Date.now()
 
@@ -136,13 +127,5 @@ export const publicShareRoutes = new Hono().get('/shares/:id/images', async (c) 
   return proxyImage(url, c.req.raw.signal)
 }).get('/shares/:id', async (c) => {
   const row = await publicShare(c.req.param('id'))
-  const result: PublicShare = {
-    id: row.id,
-    title: row.conversation.title,
-    icon: row.conversation.icon,
-    messages: row.messages as MessageRecord[],
-    createdAt: row.createdAt.toISOString(),
-    expiresAt: row.expiresAt?.toISOString() ?? null,
-  }
-  return c.json(result)
+  return c.json(toPublicShare(row))
 })
