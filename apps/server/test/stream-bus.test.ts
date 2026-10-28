@@ -51,6 +51,15 @@ for (const [name, make] of variants) {
       expect(rest.map((e) => (e.chunk as { delta: string }).delta)).toEqual(['b', 'c'])
     })
 
+    it('refuses to open a reply id it already knows', async () => {
+      expect(await open('a6', 'conv-6')).toBe(true)
+      expect(await bus.open({ assistantId: 'a6', userId: 'u2', conversationId: 'conv-other', parentId: 'p2' })).toBe(false)
+      expect(await bus.info('a6')).toMatchObject({ userId: 'u1', conversationId: 'conv-6' })
+      expect(await bus.active('conv-other')).toBeNull()
+      await bus.close('a6')
+      expect(await open('a6', 'conv-6')).toBe(false)
+    })
+
     it('tracks the active reply per conversation until it closes', async () => {
       await open('a3', 'conv-3')
       expect(await bus.active('conv-3')).toMatchObject({ assistantId: 'a3', parentId: 'p1', done: false })

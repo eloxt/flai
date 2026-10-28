@@ -32,6 +32,10 @@ import { getConversation, loadPath, touchConversation } from '../services/conver
 import { ownedFiles } from '../services/files'
 import { resolveModel } from '../services/providers'
 
+/**
+ * Reject a reply id that is taken, before anything is written. `startGeneration` claims the
+ * id atomically later; this only spares a request that is bound to fail its side effects.
+ */
 async function assertNewAssistantId(id: string) {
   if (
     await db.query.messages.findFirst({ where: eq(schema.messages.id, id), columns: { id: true } }) ||

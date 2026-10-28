@@ -59,6 +59,12 @@ function abortLocal(assistantId: string, reason: StopReason) {
   if (generation && !generation.controller.signal.aborted) generation.controller.abort(reason)
 }
 
+/** Stop a reply wherever it runs: directly when this process owns it, otherwise through the bus. */
+async function requestStop(assistantId: string, reason: CancelReason) {
+  abortLocal(assistantId, reason)
+  if (!running.has(assistantId)) await generationBus().requestCancel(assistantId, reason)
+}
+
 let listening: Promise<void> | undefined
 function listenForCancels(): Promise<void> {
   listening ??= generationBus()
@@ -74,23 +80,18 @@ export type CancelResult = 'requested' | 'finished' | 'not-found'
 
 /** Ask the reply to stop, wherever it is running. Stopping a finished reply is a no-op. */
 export async function cancelGeneration(assistantId: string, userId: string, reason: CancelReason = 'user'): Promise<CancelResult> {
-  const bus = generationBus()
-  const info = await bus.info(assistantId)
+  const info = await generationBus().info(assistantId)
   if (!info || info.userId !== userId) return 'not-found'
   if (info.done) return 'finished'
-  // Fast path when we own it; otherwise the owner hears about it through the bus.
-  abortLocal(assistantId, reason)
-  if (!running.has(assistantId)) await bus.requestCancel(assistantId, reason)
+  await requestStop(assistantId, reason)
   return 'requested'
 }
 
 /** Stop the conversation's in-flight reply, e.g. because the conversation or its branch is deleted. */
 export async function cancelConversationGeneration(conversationId: string, options: { parentIds?: string[] } = {}): Promise<void> {
-  const bus = generationBus()
-  const info = await bus.active(conversationId)
+  const info = await generationBus().active(conversationId)
   if (!info || (options.parentIds && !options.parentIds.includes(info.parentId))) return
-  abortLocal(info.assistantId, 'discard')
-  if (!running.has(info.assistantId)) await bus.requestCancel(info.assistantId, 'discard')
+  await requestStop(info.assistantId, 'discard')
 }
 
 export async function activeGeneration(conversationId: string): Promise<{ assistantId: string; parentId: string } | null> {
@@ -128,16 +129,14 @@ export interface StartGenerationInput {
 export async function startGeneration(input: StartGenerationInput): Promise<void> {
   if (shuttingDown) throw new AppError('UNAVAILABLE', 'The server is restarting, please retry in a moment')
   const bus = generationBus()
-  if (running.has(input.assistantId) || (await bus.info(input.assistantId))) {
-    throw new AppError('CONFLICT', 'A reply with this id is already being generated')
-  }
   await listenForCancels()
-  await bus.open({
+  const opened = await bus.open({
     assistantId: input.assistantId,
     userId: input.userId,
     conversationId: input.conversationId,
     parentId: input.path.at(-1)!.id,
   })
+  if (!opened) throw new AppError('CONFLICT', 'A reply with this id is already being generated')
   const generation: Generation = { assistantId: input.assistantId, controller: new AbortController(), done: Promise.resolve() }
   running.set(input.assistantId, generation)
   bus.append(input.assistantId, { type: 'start', messageId: input.assistantId })

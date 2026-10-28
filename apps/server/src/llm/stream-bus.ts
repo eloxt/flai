@@ -30,7 +30,8 @@ export type CancelReason = 'user' | 'discard'
  * Redis everything stays in this process.
  */
 export interface GenerationBus {
-  open(info: Omit<GenerationInfo, 'done'>): Promise<void>
+  /** Registers a new reply; false (and nothing changes) when the id is already known. */
+  open(info: Omit<GenerationInfo, 'done'>): Promise<boolean>
   /** Ordered, fire-and-forget. */
   append(assistantId: string, chunk: Chunk): void
   /** Marks the end of the stream; readers stop after the last chunk. */
@@ -78,8 +79,10 @@ class MemoryBus implements GenerationBus {
   private cancelHandler: ((assistantId: string, reason: CancelReason) => void) | undefined
 
   async open(info: Omit<GenerationInfo, 'done'>) {
+    if (this.generations.has(info.assistantId)) return false
     this.generations.set(info.assistantId, { info: { ...info, done: false }, entries: [], waiters: new Set(), cancel: null })
     this.activeByConversation.set(info.conversationId, info.assistantId)
+    return true
   }
 
   append(assistantId: string, chunk: Chunk) {
@@ -154,6 +157,13 @@ class MemoryBus implements GenerationBus {
 
 // ---------------------------------------------------------------- Redis Streams
 
+/** Registers a reply unless its meta key already exists; returns 1 when registered. */
+const OPEN_IF_NEW = `if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+redis.call('HSET', KEYS[1], 'userId', ARGV[1], 'conversationId', ARGV[2], 'parentId', ARGV[3], 'done', '0')
+redis.call('PEXPIRE', KEYS[1], ARGV[4])
+redis.call('SET', KEYS[2], ARGV[5], 'PX', ARGV[4])
+return 1`
+
 /** Deletes a key only if it still holds the given value. */
 const DELETE_IF_EQUALS = `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0`
 
@@ -180,17 +190,11 @@ class RedisBus implements GenerationBus {
   }
 
   async open(info: Omit<GenerationInfo, 'done'>) {
-    await this.client
-      .multi()
-      .hset(this.metaKey(info.assistantId), {
-        userId: info.userId,
-        conversationId: info.conversationId,
-        parentId: info.parentId,
-        done: '0',
-      })
-      .pexpire(this.metaKey(info.assistantId), LEASE_MS)
-      .set(this.activeKey(info.conversationId), info.assistantId, 'PX', LEASE_MS)
-      .exec()
+    const opened = await this.client.eval(
+      OPEN_IF_NEW, 2, this.metaKey(info.assistantId), this.activeKey(info.conversationId),
+      info.userId, info.conversationId, info.parentId, LEASE_MS, info.assistantId,
+    )
+    return opened === 1
   }
 
   append(assistantId: string, chunk: Chunk) {
