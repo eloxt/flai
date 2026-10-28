@@ -1,5 +1,5 @@
 import { MAX_MEMORIES, MAX_PINNED_MEMORIES, type MemoryEvent, type MemoryEventSource } from '@flai/shared'
-import { and, asc, count, desc, eq, gt, inArray, isNull, like } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, isNull, like, lt } from 'drizzle-orm'
 import { db, type Db, schema, type Tx } from '../db'
 import { AppError, notFound } from '../lib/errors'
 import { newId } from '../lib/ids'
@@ -11,6 +11,7 @@ export type MemoryRow = typeof m.$inferSelect
 
 /** How long automatic changes stay listed for review and undo. */
 const EVENT_DAYS = 30
+const since = () => new Date(Date.now() - EVENT_DAYS * 86_400_000)
 
 /** A write the assistant makes on the user's behalf is logged; the user's own edits are not. */
 export interface WriteOptions {
@@ -107,6 +108,11 @@ export async function deleteMemory(userId: string, id: string, options: WriteOpt
   return true
 }
 
+/** Forget automatic changes once they are past review. */
+export async function pruneMemoryEvents(): Promise<void> {
+  await db.delete(e).where(lt(e.createdAt, since()))
+}
+
 export async function clearMemories(userId: string): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.delete(m).where(eq(m.userId, userId))
@@ -122,8 +128,6 @@ function canUndo(event: EventRow, latest: Map<string, string>, current: Map<stri
   if (event.action === 'delete') return !current.has(event.memoryId)
   return current.get(event.memoryId) === event.after
 }
-
-const since = () => new Date(Date.now() - EVENT_DAYS * 86_400_000)
 
 /** The latest live event and current content of each memory. */
 async function undoState(tx: Db | Tx, userId: string, memoryIds: string[]) {

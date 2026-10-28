@@ -2,6 +2,7 @@ import { memoryContentSchema, type Preferences } from '@flai/shared'
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
 import { AppError } from '../lib/errors'
+import { isoDay } from '../lib/text'
 import { createMemory, deleteMemory, findMemoryIds, type MemoryRow, updateMemory } from '../services/memories'
 import { nudgeEmbeddingIndexer } from './embedding-index'
 import { findDuplicate } from './memory-retrieval'
@@ -25,7 +26,6 @@ const RULES = [
 /** Leading characters of the UUID shown to the model; plenty to tell 100 memories apart. */
 const SHORT_ID_LENGTH = 8
 
-const day = (d: Date) => d.toISOString().slice(0, 10)
 export const shortId = (id: string) => id.slice(0, SHORT_ID_LENGTH)
 const view = (row: MemoryRow) => ({ id: shortId(row.id), content: row.content, ...(row.pinned && { pinned: true }) })
 
@@ -37,7 +37,7 @@ export function memoryLabels(memories: MemoryRow[]): (id: string) => string {
 }
 
 const lines = (memories: MemoryRow[], label: (id: string) => string) =>
-  memories.map((m) => `- [${label(m.id)}] (${day(m.updatedAt)}) ${m.content}`)
+  memories.map((m) => `- [${label(m.id)}] (${isoDay(m.updatedAt)}) ${m.content}`)
 
 /**
  * The memories for the system prompt as one stable block, or nothing when there are none.

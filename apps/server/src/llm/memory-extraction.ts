@@ -3,6 +3,7 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
+import { clip, escapeXml } from '../lib/text'
 import { loadPath, type MessageRow } from '../services/conversations'
 import { createMemory, deleteMemory, findMemoryIds, listMemories, type MemoryRow, updateMemory } from '../services/memories'
 import { backgroundModel, generateStructured } from './background-model'
@@ -68,9 +69,6 @@ const normalize = (text: string) => text.toLowerCase().replace(/[\s\p{P}\p{S}]+/
 export function userStatements(turns: Turn[]): string {
   return turns.filter((t) => t.role === 'user').map((t) => normalize(t.text.replace(QUOTED, '\n'))).join('\n')
 }
-
-const escapeXml = (s: string) => s.replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[ch]!)
-const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 export interface Turn {
   id: string

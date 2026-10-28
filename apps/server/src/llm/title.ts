@@ -3,6 +3,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
+import { escapeXml } from '../lib/text'
 import { resolveModel } from '../services/providers'
 import { getSetting } from '../services/settings'
 import { chatContext, getChatAgent } from './agent'
@@ -16,8 +17,6 @@ const titleSchema = z.object({
   icon: z.string().describe('A single emoji that represents the conversation'),
   title: z.string().describe('A short title for the conversation'),
 })
-
-const escapeXml = (s: string) => s.replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[ch]!)
 
 /** Generate `{ title, icon }` for a conversation from `content` or its first message. */
 export async function generateTitle(conversationId: string, content?: string): Promise<{ title: string; icon: string }> {

@@ -1,6 +1,7 @@
 import { type SettingValue, textOf } from '@flai/shared'
 import { z } from 'zod'
 import { AppError } from '../lib/errors'
+import { clip } from '../lib/text'
 import type { MessageRow } from '../services/conversations'
 import { getSetting } from '../services/settings'
 
@@ -42,8 +43,6 @@ export async function verifyTypeSafe(connection: Connection, model: string): Pro
   if (!result.success) throw new AppError('UPSTREAM', 'TypeSafe returned an invalid response')
   if (!result.data.models.some((m) => m.name === model)) throw new AppError('BAD_REQUEST', `TypeSafe model not found: ${model}`)
 }
-
-const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
 /** Probability that `text` starts a topic unrelated to the conversation ending at `path`. */
 export async function topicShift(settings: SettingValue<'topic_check'>, title: string, path: MessageRow[], text: string): Promise<number> {
