@@ -1,5 +1,5 @@
 import { MAX_MEMORIES } from '@flai/shared'
-import { and, asc, count, eq } from 'drizzle-orm'
+import { and, asc, count, eq, like } from 'drizzle-orm'
 import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
 import { newId } from '../lib/ids'
@@ -26,6 +26,16 @@ export async function createMemory(userId: string, content: string, sourceConver
     const [row] = await tx.insert(m).values({ id: newId(), userId, content, sourceConversationId }).returning()
     return row!
   })
+}
+
+/** Ids of the user's memories starting with `prefix`, at most two: enough to tell a match from an ambiguous one. */
+export async function findMemoryIds(userId: string, prefix: string): Promise<string[]> {
+  // Ids are UUIDs, so anything else (including LIKE wildcards) can't match.
+  if (!/^[0-9a-f-]+$/i.test(prefix)) return []
+  const rows = await db.select({ id: m.id }).from(m)
+    .where(and(eq(m.userId, userId), like(m.id, `${prefix.toLowerCase()}%`)))
+    .limit(2)
+  return rows.map((r) => r.id)
 }
 
 export async function updateMemory(userId: string, id: string, content: string): Promise<MemoryRow | undefined> {

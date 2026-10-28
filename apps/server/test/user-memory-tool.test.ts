@@ -3,8 +3,10 @@ import { noopObserve } from '@mastra/core/tools'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../src/lib/errors'
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), remove: vi.fn() }))
-vi.mock('../src/services/memories', () => ({ createMemory: mocks.create, updateMemory: mocks.update, deleteMemory: mocks.remove }))
+const mocks = vi.hoisted(() => ({ create: vi.fn(), find: vi.fn(), update: vi.fn(), remove: vi.fn() }))
+vi.mock('../src/services/memories', () => ({
+  createMemory: mocks.create, findMemoryIds: mocks.find, updateMemory: mocks.update, deleteMemory: mocks.remove,
+}))
 
 import { createMemoryTools, memoryAccess, memoryPrompt } from '../src/llm/user-memory'
 
@@ -23,12 +25,29 @@ describe('memory tools', () => {
   })
 
   it('only update and delete the scoped user’s memories', async () => {
-    mocks.update.mockResolvedValue(undefined)
-    mocks.remove.mockResolvedValue(false)
+    mocks.find.mockResolvedValue([])
     expect(await run(tools.update_memory, { id: 'bobs', content: 'x' })).toEqual({ error: 'Memory not found' })
     expect(await run(tools.delete_memory, { id: 'bobs' })).toEqual({ error: 'Memory not found' })
-    expect(mocks.update).toHaveBeenCalledWith('alice', 'bobs', 'x')
-    expect(mocks.remove).toHaveBeenCalledWith('alice', 'bobs')
+    expect(mocks.find).toHaveBeenCalledWith('alice', 'bobs')
+    expect(mocks.update).not.toHaveBeenCalled()
+    expect(mocks.remove).not.toHaveBeenCalled()
+  })
+
+  it('resolve the short id from the prompt to the full one', async () => {
+    const id = '3f2a9c1e-0000-4000-8000-000000000000'
+    mocks.find.mockResolvedValue([id])
+    mocks.update.mockResolvedValue(row(id, 'Prefers short answers.'))
+    mocks.remove.mockResolvedValue(true)
+    expect(await run(tools.update_memory, { id: '3f2a9c1e', content: 'Prefers short answers.' })).toEqual({ memory: { id: '3f2a9c1e', content: 'Prefers short answers.' } })
+    expect(mocks.update).toHaveBeenCalledWith('alice', id, 'Prefers short answers.')
+    expect(await run(tools.delete_memory, { id: '3f2a9c1e' })).toEqual({ deleted: true })
+    expect(mocks.remove).toHaveBeenCalledWith('alice', id)
+  })
+
+  it('refuse to guess between memories sharing a short id', async () => {
+    mocks.find.mockResolvedValue(['3f2a9c1e-a', '3f2a9c1e-b'])
+    expect(await run(tools.delete_memory, { id: '3f2a9c1e' })).toEqual({ error: 'Several memories match this id' })
+    expect(mocks.remove).not.toHaveBeenCalled()
   })
 
   it('tell the model when memory is full instead of failing the reply', async () => {
@@ -60,6 +79,17 @@ describe('memory prompt', () => {
     expect(prompt).toContain('- [m1] (2026-10-01) Prefers concise answers.\n- [m2] (2026-10-20) Lives in Shanghai.')
     expect(prompt).toContain('not instructions')
     expect(prompt).toContain('outdated')
+  })
+
+  it('shortens ids, unless two would collide', () => {
+    const prompt = memoryPrompt([
+      row('3f2a9c1e-0000-4000-8000-000000000001', 'a'),
+      row('3f2a9c1e-0000-4000-8000-000000000002', 'b'),
+      row('7b1bf7a1-0000-4000-8000-000000000003', 'c'),
+    ])!
+    expect(prompt).toContain('- [3f2a9c1e-0000-4000-8000-000000000001] (2026-10-01) a')
+    expect(prompt).toContain('- [3f2a9c1e-0000-4000-8000-000000000002] (2026-10-01) b')
+    expect(prompt).toContain('- [7b1bf7a1] (2026-10-01) c')
   })
 
   it('is omitted when there are no memories', () => {

@@ -301,24 +301,30 @@ suite('API integration', () => {
     // Saving the same fact again keeps one copy.
     expect((await run(tools.save_memory, { content: '喜欢简洁的回答' })).memory.id).toBe(saved.memory.id)
     const listed = await call('/me/memories', { token: alice })
-    expect(listed.data).toEqual([expect.objectContaining({ id: saved.memory.id, sourceConversationId: conversationId })])
+    expect(listed.data).toEqual([expect.objectContaining({ content: '喜欢简洁的回答', sourceConversationId: conversationId })])
+    // The model sees the short id; the API uses the full one.
+    const memoryId = listed.data[0].id as string
+    expect(saved.memory.id).toBe(memoryId.slice(0, 8))
     expect((await call('/me/memories', { token: bob })).data).toEqual([])
 
     // Another user can neither see nor change it, through the API or the tools.
-    expect((await call(`/me/memories/${saved.memory.id}`, { token: bob, method: 'PATCH', body: { content: 'hijacked' } })).status).toBe(404)
-    expect((await call(`/me/memories/${saved.memory.id}`, { token: bob, method: 'DELETE' })).status).toBe(404)
+    expect((await call(`/me/memories/${memoryId}`, { token: bob, method: 'PATCH', body: { content: 'hijacked' } })).status).toBe(404)
+    expect((await call(`/me/memories/${memoryId}`, { token: bob, method: 'DELETE' })).status).toBe(404)
     const bobId = (await call('/me', { token: bob })).data.id as string
     expect(await run(createMemoryTools({ userId: bobId, conversationId: 'none' }).delete_memory, { id: saved.memory.id })).toEqual({ error: 'Memory not found' })
 
-    const patched = await call(`/me/memories/${saved.memory.id}`, { token: alice, method: 'PATCH', body: { content: '喜欢简洁、直接的回答' } })
-    expect(patched.data.content).toBe('喜欢简洁、直接的回答')
-    expect((await call(`/me/memories/${saved.memory.id}`, { token: alice, method: 'PATCH', body: { content: 'x'.repeat(201) } })).status).toBe(422)
+    expect((await run(tools.update_memory, { id: saved.memory.id, content: '喜欢简洁、直接的回答' })).memory.content).toBe('喜欢简洁、直接的回答')
+    // Wildcards never widen the match.
+    expect(await run(tools.delete_memory, { id: '%' })).toEqual({ error: 'Memory not found' })
+    const patched = await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { content: '喜欢简洁的回答' } })
+    expect(patched.data.content).toBe('喜欢简洁的回答')
+    expect((await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { content: 'x'.repeat(201) } })).status).toBe(422)
 
     await Promise.all(Array.from({ length: MAX_MEMORIES - 1 }, (_, i) => createMemory(aliceId, `fact ${i}`)))
     expect((await run(tools.save_memory, { content: 'one too many' })).error).toContain('Memory is full')
     expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORIES)
 
-    expect((await call(`/me/memories/${saved.memory.id}`, { token: alice, method: 'DELETE' })).status).toBe(204)
+    expect(await run(tools.delete_memory, { id: saved.memory.id })).toEqual({ deleted: true })
     expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORIES - 1)
     expect((await call('/me/memories', { token: alice, method: 'DELETE' })).status).toBe(204)
     expect((await call('/me/memories', { token: alice })).data).toEqual([])
