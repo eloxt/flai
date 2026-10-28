@@ -7,18 +7,18 @@ import { db, schema } from '../db'
 import { AppError, errorMessage } from '../lib/errors'
 import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
-import { listMemories } from '../services/memories'
 import type { ProviderRow } from '../services/providers'
 import { chatContext, chatInstructions, getChatAgent } from './agent'
 import { createChatHistoryTools, recentSummaries } from './chat-history'
 import { nudgeEmbeddingIndexer } from './embedding-index'
 import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
+import { loadMemories, withContext } from './memory-retrieval'
 import { buildMcpToolset } from './mcp'
 import { buildModel } from './models'
 import { exaResponseSchema } from './exa'
 import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './stream-bus'
-import { createMemoryTools, type MemoryAccess } from './user-memory'
+import { createMemoryTools, type MemoryAccess, memoryLabels, relevantMemoriesPrompt } from './user-memory'
 
 const GENERATION_TIMEOUT_MS = 20 * 60 * 1000
 const MAX_STEPS = 10
@@ -192,16 +192,23 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     const chatHistory = model.toolCall && input.chatHistory
     const scope = { userId: input.userId, conversationId: input.conversationId }
     const memoryWrite = model.toolCall && input.memory === 'write'
-    const [memories, recentChats] = await Promise.all([
-      input.memory === 'off' ? [] : listMemories(input.userId),
+    const query = textOf(input.path.findLast((m) => m.role === 'user')?.parts ?? [])
+    const [selection, recentChats] = await Promise.all([
+      input.memory === 'off' ? undefined : loadMemories(input.userId, query),
       input.chatHistory ? recentSummaries(input.userId, input.conversationId) : [],
     ])
+    const shown = selection ? [...selection.core, ...selection.relevant] : []
+    const label = memoryLabels(shown)
     const memory = {
       ...(chatHistory && createChatHistoryTools(scope)),
       ...(memoryWrite && createMemoryTools(scope)),
     }
-    const stream = await getChatAgent().stream(messages as never, {
-      requestContext: chatContext({ model: resolved.model, instructions: chatInstructions(model, { chatHistory, memories, memoryWrite, recentChats }) }),
+    const instructions = chatInstructions(model, {
+      chatHistory, memoryWrite, recentChats,
+      memories: selection && { rows: selection.core, partial: selection.partial, label },
+    })
+    const stream = await getChatAgent().stream(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)) as never, {
+      requestContext: chatContext({ model: resolved.model, instructions }),
       providerOptions: resolved.providerOptions as never,
       toolsets: { builtin: resolved.tools, memory, mcp: model.toolCall ? mcp.tools : {} },
       // The browser supplies the answer; the existing message store preserves it across restarts.

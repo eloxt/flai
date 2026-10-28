@@ -396,12 +396,12 @@ suite('API integration', () => {
       return {
         summary: '用户聊了自己养猫的事。',
         memories: [
-          { action: 'add', id: null, content: '养了一只猫', evidence: '我养了一只猫' },
-          { action: 'add', id: null, content: 'x'.repeat(300), evidence: '我养了一只猫' },
-          { action: 'delete', id: 'deadbeef', content: null, evidence: '我养了一只猫' },
+          { action: 'add', id: null, content: '养了一只猫', evidence: '我养了一只猫', pinned: null },
+          { action: 'add', id: null, content: 'x'.repeat(300), evidence: '我养了一只猫', pinned: null },
+          { action: 'delete', id: 'deadbeef', content: null, evidence: '我养了一只猫', pinned: null },
           // Words the user quoted for translation, and words they never said, are not evidence.
-          { action: 'add', id: null, content: '住在东京的牙医', evidence: '我是一名住在东京的牙医' },
-          { action: 'add', id: null, content: '是百万富翁', evidence: 'the user is a millionaire' },
+          { action: 'add', id: null, content: '住在东京的牙医', evidence: '我是一名住在东京的牙医', pinned: null },
+          { action: 'add', id: null, content: '是百万富翁', evidence: 'the user is a millionaire', pinned: null },
         ],
       }
     })
@@ -420,7 +420,7 @@ suite('API integration', () => {
     await touch()
     await processConversation((await claim())!, async (input) => {
       inputs.push(input)
-      return { summary: '用户聊了自己黏人的猫。', memories: [{ action: 'add', id: null, content: '养了一只黏人的猫', evidence: '我的猫很黏人' }] }
+      return { summary: '用户聊了自己黏人的猫。', memories: [{ action: 'add', id: null, content: '养了一只黏人的猫', evidence: '我的猫很黏人', pinned: null }] }
     })
     expect(inputs[1]).toContain('<previous_summary>用户聊了自己养猫的事。</previous_summary>')
     expect(inputs[1]).toContain('<user>我的猫很黏人</user>')
@@ -433,7 +433,7 @@ suite('API integration', () => {
     await touch()
     await processConversation((await claim())!, async (input) => {
       inputs.push(input)
-      return { summary: '用户聊了猫和自己住在上海。', memories: [{ action: 'add', id: null, content: '住在上海', evidence: '我住在上海' }] }
+      return { summary: '用户聊了猫和自己住在上海。', memories: [{ action: 'add', id: null, content: '住在上海', evidence: '我住在上海', pinned: null }] }
     })
     expect(inputs[2]).not.toContain('<existing_memories>')
     expect(await memories()).toHaveLength(1)
@@ -448,6 +448,92 @@ suite('API integration', () => {
     expect((await recentSummaries(userId, chat)).map((c) => c.id)).not.toContain(chat)
 
     await call('/me/memories', { token: alice, method: 'DELETE' })
+    await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId: '', modelId: '' } })
+  })
+
+  it('retrieves relevant memories, consolidates them and lets the user undo automatic changes', async () => {
+    const { noopObserve } = await import('@mastra/core/tools')
+    const { MAX_PINNED_MEMORIES } = await import('@flai/shared')
+    const { createMemoryTools } = await import('../src/llm/user-memory')
+    const { createMemory } = await import('../src/services/memories')
+    const { indexPendingMemories } = await import('../src/llm/embedding-index')
+    const { loadMemories } = await import('../src/llm/memory-retrieval')
+    const { claimUsers, consolidateUser } = await import('../src/llm/memory-consolidation')
+    const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
+    expect((await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed' } })).status).toBe(200)
+    const userId = (await call('/me', { token: alice })).data.id as string
+    const tools = createMemoryTools({ userId, conversationId })
+    const memories = async () => (await call('/me/memories', { token: alice })).data as { id: string; content: string; pinned: boolean }[]
+    const byContent = async (content: string) => (await memories()).find((m) => m.content === content)!
+    const events = async () => (await call('/me/memory-events', { token: alice })).data as any[]
+
+    // The assistant's saves are logged; pinning is capped.
+    const saved = await run(tools.save_memory, { content: '是后端工程师', pinned: true })
+    expect(saved.memory).toMatchObject({ content: '是后端工程师', pinned: true })
+    expect(await events()).toEqual([expect.objectContaining({ action: 'add', source: 'agent', after: '是后端工程师', undoable: true })])
+    for (let i = 1; i < MAX_PINNED_MEMORIES; i++) await createMemory(userId, `core ${i}`, { pinned: true })
+    expect((await createMemory(userId, 'core over the limit', { pinned: true })).pinned).toBe(false)
+    const unpinned = await byContent('core over the limit')
+    expect((await call(`/me/memories/${unpinned.id}`, { token: alice, method: 'PATCH', body: { pinned: true } })).status).toBe(409)
+
+    // Past the prompt limit: pinned ones always, plus those nearest to the message.
+    for (let i = 0; i < 20; i++) await createMemory(userId, `fact ${i}`)
+    await createMemory(userId, '养了一只猫')
+    while (await indexPendingMemories());
+    const selection = await loadMemories(userId, '我的猫最近不爱吃饭')
+    expect(selection.partial).toBe(true)
+    expect(selection.core).toHaveLength(MAX_PINNED_MEMORIES)
+    expect(selection.relevant.map((m) => m.content)).toContain('养了一只猫')
+    expect(selection.relevant.every((m) => !m.pinned)).toBe(true)
+
+    // Undo reverts an addition, a deletion, and an edit unless the user changed it since.
+    const added = (await events()).find((e) => e.after === '是后端工程师')
+    expect((await call(`/me/memory-events/${added.id}/undo`, { token: alice, method: 'POST' })).status).toBe(204)
+    expect(await byContent('是后端工程师')).toBeUndefined()
+    expect((await call(`/me/memory-events/${added.id}/undo`, { token: alice, method: 'POST' })).status).toBe(409)
+
+    const fact1 = await byContent('fact 1')
+    expect(await run(tools.delete_memory, { id: fact1.id.slice(0, 8) })).toEqual({ deleted: true })
+    const removed = (await events()).find((e) => e.action === 'delete')
+    expect(removed).toMatchObject({ before: 'fact 1', undoable: true })
+    await call(`/me/memory-events/${removed.id}/undo`, { token: alice, method: 'POST' })
+    expect((await byContent('fact 1')).id).toBe(fact1.id)
+
+    const fact0 = await byContent('fact 0')
+    await run(tools.update_memory, { id: fact0.id.slice(0, 8), content: 'fact zero' })
+    await call(`/me/memories/${fact0.id}`, { token: alice, method: 'PATCH', body: { content: 'fact zero, edited' } })
+    expect((await events()).find((e) => e.action === 'update')).toMatchObject({ before: 'fact 0', after: 'fact zero', undoable: false })
+    // Deleting a memory yourself forgets its history too.
+    await call(`/me/memories/${fact0.id}`, { token: alice, method: 'DELETE' })
+    expect((await events()).filter((e) => e.memoryId === fact0.id)).toEqual([])
+
+    // A consolidation pass merges duplicates, logs why, and isn't due again until things change.
+    expect(await claimUsers(10)).toEqual([userId])
+    const inputs: string[] = []
+    const changes = await consolidateUser(userId, async (input) => {
+      inputs.push(input)
+      const label = (content: string) => input.split('\n').find((l) => l.endsWith(` ${content}`))!.match(/\[([^\]]+)\]/)![1]!
+      return {
+        changes: [
+          { action: 'update', id: label('fact 3'), content: 'fact 3 and 4', reason: '合并重复' },
+          { action: 'delete', id: label('fact 4'), content: null, reason: '合并重复' },
+        ],
+      }
+    })
+    expect(inputs[0]).toContain('(pinned)')
+    expect(changes).toHaveLength(2)
+    expect(await byContent('fact 3 and 4')).toBeDefined()
+    expect(await byContent('fact 4')).toBeUndefined()
+    const tidied = (await events()).filter((e) => e.source === 'consolidation')
+    expect(tidied).toHaveLength(2)
+    expect(tidied).toEqual(expect.arrayContaining([
+      expect.objectContaining({ action: 'delete', before: 'fact 4', note: '合并重复', undoable: true }),
+      expect.objectContaining({ action: 'update', before: 'fact 3', after: 'fact 3 and 4', undoable: true }),
+    ]))
+    expect(await claimUsers(10)).toEqual([])
+
+    await call('/me/memories', { token: alice, method: 'DELETE' })
+    expect(await events()).toEqual([])
     await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId: '', modelId: '' } })
   })
 

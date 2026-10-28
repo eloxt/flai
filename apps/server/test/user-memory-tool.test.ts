@@ -3,17 +3,20 @@ import { noopObserve } from '@mastra/core/tools'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../src/lib/errors'
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), find: vi.fn(), update: vi.fn(), remove: vi.fn() }))
+const mocks = vi.hoisted(() => ({ create: vi.fn(), find: vi.fn(), update: vi.fn(), remove: vi.fn(), duplicate: vi.fn() }))
 vi.mock('../src/services/memories', () => ({
   createMemory: mocks.create, findMemoryIds: mocks.find, updateMemory: mocks.update, deleteMemory: mocks.remove,
 }))
+vi.mock('../src/llm/memory-retrieval', () => ({ findDuplicate: mocks.duplicate }))
+vi.mock('../src/llm/embedding-index', () => ({ nudgeEmbeddingIndexer: vi.fn() }))
 
 import { createMemoryTools, memoryAccess, memoryPrompt } from '../src/llm/user-memory'
 
 const tools = createMemoryTools({ userId: 'alice', conversationId: 'c1' })
 const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
 const row = (id: string, content: string, updatedAt = '2026-10-01T08:00:00Z') =>
-  ({ id, userId: 'alice', content, sourceConversationId: null, createdAt: new Date(updatedAt), updatedAt: new Date(updatedAt) })
+  ({ id, userId: 'alice', content, pinned: false, sourceConversationId: null, createdAt: new Date(updatedAt), updatedAt: new Date(updatedAt) })
+const log = { source: 'agent', conversationId: 'c1' }
 
 beforeEach(() => vi.resetAllMocks())
 
@@ -21,7 +24,22 @@ describe('memory tools', () => {
   it('save for the scoped user and record the chat it came from', async () => {
     mocks.create.mockResolvedValue(row('m1', 'Prefers concise answers.'))
     expect(await run(tools.save_memory, { content: '  Prefers concise answers. ' })).toEqual({ memory: { id: 'm1', content: 'Prefers concise answers.' } })
-    expect(mocks.create).toHaveBeenCalledWith('alice', 'Prefers concise answers.', 'c1')
+    expect(mocks.create).toHaveBeenCalledWith('alice', 'Prefers concise answers.', { ...log, pinned: undefined })
+  })
+
+  it('update the memory a new one restates instead of adding another', async () => {
+    mocks.duplicate.mockResolvedValue('m1-full')
+    mocks.update.mockResolvedValue(row('m1-full', 'Prefers short answers.'))
+    expect(await run(tools.save_memory, { content: 'Prefers short answers.' })).toMatchObject({ memory: { id: 'm1-full', content: 'Prefers short answers.' }, note: expect.any(String) })
+    expect(mocks.update).toHaveBeenCalledWith('alice', 'm1-full', { content: 'Prefers short answers.' }, log)
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
+
+  it('pin core memories, saving unpinned once the limit is reached', async () => {
+    mocks.create.mockResolvedValue(row('m1', 'Is a backend engineer.'))
+    const result = await run(tools.save_memory, { content: 'Is a backend engineer.', pinned: true })
+    expect(mocks.create).toHaveBeenCalledWith('alice', 'Is a backend engineer.', { ...log, pinned: true })
+    expect(result.note).toContain('pinned limit')
   })
 
   it('only update and delete the scoped user’s memories', async () => {
@@ -39,9 +57,9 @@ describe('memory tools', () => {
     mocks.update.mockResolvedValue(row(id, 'Prefers short answers.'))
     mocks.remove.mockResolvedValue(true)
     expect(await run(tools.update_memory, { id: '3f2a9c1e', content: 'Prefers short answers.' })).toEqual({ memory: { id: '3f2a9c1e', content: 'Prefers short answers.' } })
-    expect(mocks.update).toHaveBeenCalledWith('alice', id, 'Prefers short answers.')
+    expect(mocks.update).toHaveBeenCalledWith('alice', id, { content: 'Prefers short answers.', pinned: undefined }, log)
     expect(await run(tools.delete_memory, { id: '3f2a9c1e' })).toEqual({ deleted: true })
-    expect(mocks.remove).toHaveBeenCalledWith('alice', id)
+    expect(mocks.remove).toHaveBeenCalledWith('alice', id, log)
   })
 
   it('refuse to guess between memories sharing a short id', async () => {

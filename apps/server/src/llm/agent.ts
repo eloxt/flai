@@ -49,8 +49,8 @@ export function getGenuiPrompt(): string {
 
 export interface ChatInstructionOptions {
   chatHistory?: boolean
-  /** The user's saved memories, oldest first; empty when memory is off. */
-  memories?: MemoryRow[]
+  /** The memories for the system prompt, oldest first, and whether others were left out; none when memory is off. */
+  memories?: { rows: MemoryRow[]; partial: boolean; label?: (id: string) => string }
   /** Whether the memory tools are offered. */
   memoryWrite?: boolean
   /** Summaries of the user's latest other chats; empty when chat history is off. */
@@ -58,12 +58,12 @@ export interface ChatInstructionOptions {
   now?: Date
 }
 
-export function chatInstructions(model: ModelConfig, { chatHistory = false, memories = [], memoryWrite = false, recentChats = [], now = new Date() }: ChatInstructionOptions = {}): string {
+export function chatInstructions(model: ModelConfig, { chatHistory = false, memories, memoryWrite = false, recentChats = [], now = new Date() }: ChatInstructionOptions = {}): string {
   const base = getSetting('system_prompt').chat.replaceAll('{{currentDate}}', promptDate.format(now))
   return [
     base,
     // Right after the system prompt, and only changing when memories do, so the prefix caches well.
-    memoryPrompt(memories),
+    memories && memoryPrompt(memories.rows, { partial: memories.partial, label: memories.label }),
     recentChatsPrompt(recentChats),
     model.toolCall && 'Use ask_user when you need clarification or a decision from the user. Ask in the user’s language, provide concise choices when helpful, and wait for the answer before continuing.',
     model.toolCall && chatHistory && 'Use search_chats and read_chat to recall the user’s earlier conversations when they refer to something discussed before or when past context would clearly help; don’t mention them otherwise.',

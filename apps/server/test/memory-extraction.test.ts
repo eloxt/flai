@@ -72,13 +72,13 @@ describe('memory operations', () => {
 
   it('keep only changes backed by the user’s own words', async () => {
     const ops = await planOperations('alice', [
-      { action: 'add', id: null, content: 'Lives in Lisbon', evidence: 'i live in lisbon' },
-      { action: 'add', id: null, content: '住在东京的牙医', evidence: '我是一名住在东京的牙医' },
-      { action: 'add', id: null, content: 'Is a pilot', evidence: 'I am a pilot' },
-      { action: 'add', id: null, content: 'Is a night owl', evidence: 'You are clearly a night owl.' },
-      { action: 'add', id: null, content: 'Is rich', evidence: '' },
+      { action: 'add', id: null, content: 'Lives in Lisbon', evidence: 'i live in lisbon', pinned: null },
+      { action: 'add', id: null, content: '住在东京的牙医', evidence: '我是一名住在东京的牙医', pinned: null },
+      { action: 'add', id: null, content: 'Is a pilot', evidence: 'I am a pilot', pinned: null },
+      { action: 'add', id: null, content: 'Is a night owl', evidence: 'You are clearly a night owl.', pinned: null },
+      { action: 'add', id: null, content: 'Is rich', evidence: '', pinned: null },
     ], said, null)
-    expect(ops).toEqual([{ action: 'add', content: 'Lives in Lisbon' }])
+    expect(ops).toEqual([{ action: 'add', content: 'Lives in Lisbon', pinned: false }])
   })
 
   it('drop invalid changes and unknown or ambiguous ids, resolving the rest', async () => {
@@ -86,16 +86,16 @@ describe('memory operations', () => {
       ({ '3f2a9c1e': ['3f2a9c1e-full'], 'ambiguous': ['a-1', 'a-2'] })[id] ?? [])
     const evidence = 'I only drink green tea now'
     const ops = await planOperations('alice', [
-      { action: 'add', id: null, content: ' Lives in Lisbon ', evidence: 'I live in Lisbon' },
-      { action: 'add', id: null, content: 'x'.repeat(201), evidence },
-      { action: 'add', id: null, content: null, evidence },
-      { action: 'update', id: '3f2a9c1e', content: 'Prefers green tea', evidence },
-      { action: 'update', id: 'ambiguous', content: 'x', evidence },
-      { action: 'delete', id: 'missing', content: null, evidence: 'forget the coffee thing' },
-      { action: 'delete', id: '3f2a9c1e', content: null, evidence: 'forget the coffee thing' },
+      { action: 'add', id: null, content: ' Lives in Lisbon ', evidence: 'I live in Lisbon', pinned: null },
+      { action: 'add', id: null, content: 'x'.repeat(201), evidence, pinned: null },
+      { action: 'add', id: null, content: null, evidence, pinned: null },
+      { action: 'update', id: '3f2a9c1e', content: 'Prefers green tea', evidence, pinned: null },
+      { action: 'update', id: 'ambiguous', content: 'x', evidence, pinned: null },
+      { action: 'delete', id: 'missing', content: null, evidence: 'forget the coffee thing', pinned: null },
+      { action: 'delete', id: '3f2a9c1e', content: null, evidence: 'forget the coffee thing', pinned: null },
     ], said, null)
     expect(ops).toEqual([
-      { action: 'add', content: 'Lives in Lisbon' },
+      { action: 'add', content: 'Lives in Lisbon', pinned: false },
       { action: 'update', id: '3f2a9c1e-full', content: 'Prefers green tea' },
       { action: 'delete', id: '3f2a9c1e-full' },
     ])

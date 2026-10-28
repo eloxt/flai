@@ -6,8 +6,9 @@ import { hashPassword, issueTokens, verifyPassword } from '../lib/auth'
 import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body } from '../lib/hono'
 import { toMemory, toUser } from '../lib/serialize'
+import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
 import { sendBark } from '../services/bark'
-import { clearMemories, deleteMemory, listMemories, updateMemory } from '../services/memories'
+import { clearMemories, deleteMemory, listMemories, listMemoryEvents, undoMemoryEvent, updateMemory } from '../services/memories'
 import { getSetting } from '../services/settings'
 
 export const meRoutes = new Hono<AppEnv>()
@@ -40,7 +41,8 @@ export const meRoutes = new Hono<AppEnv>()
   .get('/me/memories', async (c) => c.json((await listMemories(c.get('user').id)).map(toMemory)))
   .patch('/me/memories/:id', async (c) => {
     const input = await body(c, updateMemorySchema)
-    const row = await updateMemory(c.get('user').id, c.req.param('id'), input.content)
+    const row = await updateMemory(c.get('user').id, c.req.param('id'), input)
+    nudgeEmbeddingIndexer()
     if (!row) throw notFound('Memory')
     return c.json(toMemory(row))
   })
@@ -50,6 +52,12 @@ export const meRoutes = new Hono<AppEnv>()
   })
   .delete('/me/memories', async (c) => {
     await clearMemories(c.get('user').id)
+    return c.body(null, 204)
+  })
+  .get('/me/memory-events', async (c) => c.json(await listMemoryEvents(c.get('user').id)))
+  .post('/me/memory-events/:id/undo', async (c) => {
+    await undoMemoryEvent(c.get('user').id, c.req.param('id'))
+    nudgeEmbeddingIndexer()
     return c.body(null, 204)
   })
   .put('/me/password', async (c) => {

@@ -219,6 +219,8 @@ export const userMemories = pgTable(
       .notNull()
       .references(() => users.id),
     content: text('content').notNull(),
+    /** Core memories are always in the prompt; the rest only when relevant, once there are many. */
+    pinned: boolean('pinned').notNull().default(false),
     /** The chat the assistant saved it from; null when the user wrote it. */
     sourceConversationId: text('source_conversation_id').references(() => conversations.id),
     createdAt: createdAt(),
@@ -255,3 +257,35 @@ export const summaryEmbeddings = pgTable(
     index('summary_embedding_embedding_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
   ],
 )
+
+/** Changes the assistant made to a user's memories, so the user can review and undo them. */
+export const memoryEvents = pgTable(
+  'memory_event',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    /** Not a foreign key: the memory may since have been deleted, or be restored by an undo. */
+    memoryId: text('memory_id').notNull(),
+    action: text('action', { enum: ['add', 'update', 'delete'] }).notNull(),
+    source: text('source', { enum: ['agent', 'extraction', 'consolidation'] }).notNull(),
+    before: text('before'),
+    after: text('after'),
+    conversationId: text('conversation_id'),
+    /** Why the change was made, when the model said. */
+    note: text('note'),
+    undoneAt: timestamp('undone_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('memory_event_user_idx').on(t.userId, t.createdAt), index('memory_event_memory_idx').on(t.memoryId)],
+)
+
+/** Per-user state of the background job that consolidates memories. */
+export const memoryJobs = pgTable('memory_job', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id),
+  consolidatedAt: timestamp('consolidated_at', { withTimezone: true }),
+  leaseUntil: timestamp('lease_until', { withTimezone: true }),
+})

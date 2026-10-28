@@ -50,6 +50,13 @@
       "when": 1793173283355,
       "tag": "0006_conversation_summary",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793174827666,
+      "tag": "0007_memory_retrieval",
+      "breakpoints": true
     }
   ]
 }

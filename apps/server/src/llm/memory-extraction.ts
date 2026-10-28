@@ -5,13 +5,11 @@ import { db, schema } from '../db'
 import { AppError } from '../lib/errors'
 import { loadPath, type MessageRow } from '../services/conversations'
 import { createMemory, deleteMemory, findMemoryIds, listMemories, type MemoryRow, updateMemory } from '../services/memories'
-import { resolveModel } from '../services/providers'
-import { getSetting } from '../services/settings'
-import { chatContext, getChatAgent } from './agent'
+import { backgroundModel, generateStructured } from './background-model'
 import { type Embedder, getEmbedder } from './embedding'
-import { nudgeEmbeddingIndexer } from './embedding-index'
-import { alertLlmError } from './error-alert'
-import { buildModel } from './models'
+import { indexPendingMemories, nudgeEmbeddingIndexer, saveMemoryEmbedding } from './embedding-index'
+import { runMemoryConsolidation } from './memory-consolidation'
+import { DUPLICATE_SIMILARITY, nearestMemories } from './memory-retrieval'
 import { memoryAccess, shortId } from './user-memory'
 
 /** A chat is processed once nothing has happened in it for this long. */
@@ -23,15 +21,12 @@ const LEASE_MS = 5 * 60_000
 /** A chat that failed is retried after this. */
 const RETRY_MS = 30 * 60_000
 const BATCH = 4
-const MODEL_TIMEOUT_MS = 2 * 60_000
 /** Conversation text read per run; longer backlogs continue on the next run. */
 const MAX_INPUT_CHARS = 16_000
 const MAX_USER_CHARS = 4000
 /** Replies only give the user's words context, so a little of each is enough. */
 const MAX_ASSISTANT_CHARS = 500
 const MAX_SUMMARY_CHARS = 800
-/** Cosine similarity at which a new memory is taken as a restatement of an existing one. */
-export const DUPLICATE_SIMILARITY = 0.9
 
 export const extractionSchema = z.object({
   summary: z.string().describe('2–3 sentences on what the whole conversation covers, in the conversation’s language.'),
@@ -40,6 +35,7 @@ export const extractionSchema = z.object({
     id: z.string().nullable().describe('For update and delete: the id of an existing memory. Null for add.'),
     content: z.string().nullable().describe('For add and update: the memory as one short phrase. Null for delete.'),
     evidence: z.string().describe('The exact words from a <user> turn that state this, copied verbatim.'),
+    pinned: z.boolean().nullable().describe('For add: true for a core fact (who the user is, or how they want answers).'),
   })).describe('Changes to the user’s memories; usually empty.'),
 })
 export type Extraction = z.infer<typeof extractionSchema>
@@ -57,6 +53,7 @@ Memories, only when <existing_memories> is given:
 - Never record sensitive data (health, sexuality, religion, politics, finances, credentials, ID numbers, exact addresses) unless the user explicitly asked to remember it.
 - Give each change the user's own words that state it as evidence, copied exactly; changes without such words are discarded.
 - Check the existing memories first. If a fact is already there, in any language or wording, do nothing. If it refines or contradicts one, update that id. Delete an id only when the user says it is no longer true. Otherwise add it.
+- Mark a new memory pinned only if it is core: who the user is, or how they want you to answer. Pinned memories are always at hand; others come up when relevant.
 - One fact per memory, as a short phrase about the user without "I" (under 200 characters), e.g. "在新加坡工作", "喜欢简洁的回答" or "Prefers concise answers."
 - Most conversations need no memory changes: return an empty list.
 
@@ -113,18 +110,6 @@ export function extractionInput({ summary, memories, turns }: { summary: string 
   ].join('\n\n')
 }
 
-/** The background model, falling back to the title model; null when neither is configured. */
-function backgroundModel() {
-  const own = getSetting('background_model')
-  const { providerId, modelId } = own.providerId && own.modelId ? own : getSetting('title_generation')
-  if (!providerId || !modelId) return null
-  try {
-    return resolveModel(providerId, modelId)
-  } catch {
-    return null
-  }
-}
-
 export type Claim = {
   id: string
   user_id: string
@@ -164,41 +149,9 @@ async function latestPath(conversationId: string): Promise<MessageRow[]> {
 }
 
 type Operation =
-  | { action: 'add'; content: string; vector?: number[] }
+  | { action: 'add'; content: string; pinned: boolean; vector?: number[] }
   | { action: 'update'; id: string; content: string }
   | { action: 'delete'; id: string }
-
-/** Embed the user's memories that have no vector for the current model and text. */
-async function refreshMemoryEmbeddings(userId: string, embedder: Embedder): Promise<void> {
-  const stale = await db.execute<{ id: string; content: string }>(sql`
-    SELECT um.id, um.content FROM user_memory um
-    LEFT JOIN memory_embedding e ON e.memory_id = um.id AND e.model = ${embedder.key} AND e.text = um.content
-    WHERE um.user_id = ${userId} AND e.memory_id IS NULL
-  `)
-  if (stale.rows.length === 0) return
-  const vectors = await embedder.embed(stale.rows.map((r) => r.content), AbortSignal.timeout(60_000))
-  for (const [i, r] of stale.rows.entries()) await saveMemoryEmbedding(r.id, embedder.key, r.content, vectors[i]!)
-}
-
-async function saveMemoryEmbedding(memoryId: string, model: string, text: string, embedding: number[], tx: Pick<typeof db, 'insert'> = db) {
-  const e = schema.memoryEmbeddings
-  await tx.insert(e).values({ memoryId, model, text, embedding })
-    .onConflictDoUpdate({ target: e.memoryId, set: { model, text, embedding } })
-}
-
-async function nearestMemory(userId: string, model: string, vector: number[]): Promise<{ id: string; similarity: number } | undefined> {
-  const qv = sql`${JSON.stringify(vector)}::vector`
-  const result = await db.execute<{ id: string; similarity: number }>(sql`
-    SELECT e.memory_id AS id, 1 - (e.embedding <=> ${qv}) AS similarity
-    FROM memory_embedding e
-    JOIN user_memory um ON um.id = e.memory_id
-    WHERE um.user_id = ${userId} AND e.model = ${model}
-    ORDER BY e.embedding <=> ${qv}
-    LIMIT 1
-  `)
-  const row = result.rows[0]
-  return row && { id: row.id, similarity: Number(row.similarity) }
-}
 
 /**
  * Validate the model's changes, resolve short ids, and turn near-duplicate adds into updates.
@@ -218,7 +171,7 @@ export async function planOperations(
     const content = change.action === 'delete' ? undefined : memoryContentSchema.safeParse(change.content ?? '').data
     if (change.action !== 'delete' && !content) continue
     if (change.action === 'add') {
-      ops.push({ action: 'add', content: content! })
+      ops.push({ action: 'add', content: content!, pinned: change.pinned === true })
       continue
     }
     const ids = change.id ? await findMemoryIds(userId, change.id.trim()) : []
@@ -228,12 +181,12 @@ export async function planOperations(
 
   const adds = ops.filter((op) => op.action === 'add')
   if (!embedder || adds.length === 0) return ops
-  await refreshMemoryEmbeddings(userId, embedder)
+  await indexPendingMemories({ userId })
   const vectors = await embedder.embed(adds.map((op) => op.content), AbortSignal.timeout(60_000))
   return Promise.all(ops.map(async (op) => {
     if (op.action !== 'add') return op
     const vector = vectors[adds.indexOf(op)]!
-    const nearest = await nearestMemory(userId, embedder.key, vector)
+    const [nearest] = await nearestMemories(userId, embedder.key, vector, 1)
     // Merge into the memory it restates, keeping the newer wording.
     if (nearest && nearest.similarity >= DUPLICATE_SIMILARITY) return { action: 'update' as const, id: nearest.id, content: op.content }
     return { ...op, vector }
@@ -265,11 +218,12 @@ export async function processConversation(claim: Claim, generate = generateExtra
   const embedderKey = getEmbedder()?.key
   await db.transaction(async (tx) => {
     for (const op of ops) {
-      if (op.action === 'update') await updateMemory(claim.user_id, op.id, op.content, tx)
-      else if (op.action === 'delete') await deleteMemory(claim.user_id, op.id, tx)
+      const log = { tx, source: 'extraction' as const, conversationId: claim.id }
+      if (op.action === 'update') await updateMemory(claim.user_id, op.id, { content: op.content }, log)
+      else if (op.action === 'delete') await deleteMemory(claim.user_id, op.id, log)
       else {
         try {
-          const row = await createMemory(claim.user_id, op.content, claim.id, tx)
+          const row = await createMemory(claim.user_id, op.content, { ...log, pinned: op.pinned })
           if (op.vector && embedderKey) await saveMemoryEmbedding(row.id, embedderKey, row.content, op.vector, tx)
         } catch (error) {
           // A full memory still takes updates and deletes; new facts wait until there is room.
@@ -282,27 +236,10 @@ export async function processConversation(claim: Claim, generate = generateExtra
       WHERE id = ${claim.id}
     `)
   })
-  if (summary !== claim.summary) nudgeEmbeddingIndexer()
+  if (summary !== claim.summary || ops.length > 0) nudgeEmbeddingIndexer()
 }
 
-async function generateExtraction(input: string): Promise<Extraction> {
-  const resolved = backgroundModel()
-  if (!resolved) throw new AppError('NOT_CONFIGURED', 'No background model is configured')
-  const { provider, model } = resolved
-  const built = buildModel({ provider, model, options: { thinking: model.thinkingLevels[0] } })
-  try {
-    const result = await getChatAgent().generate(input, {
-      requestContext: chatContext({ model: built.model, instructions: INSTRUCTIONS }),
-      providerOptions: built.providerOptions as never,
-      structuredOutput: { schema: extractionSchema },
-      abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
-    })
-    return extractionSchema.parse(result.object)
-  } catch (error) {
-    alertLlmError({ operation: 'memory', providerName: provider.name, modelId: model.id, apiKey: provider.apiKey }, error)
-    throw error
-  }
-}
+const generateExtraction = (input: string) => generateStructured('memory', INSTRUCTIONS, input, extractionSchema)
 
 /** Claim and process one batch; returns how many chats were claimed. */
 export async function runMemoryExtraction(): Promise<number> {
@@ -338,6 +275,12 @@ async function run(): Promise<void> {
       while (started && (await runMemoryExtraction()) === BATCH);
     } catch (error) {
       console.warn('memory extraction failed', error)
+    }
+    try {
+      // After extraction, so a pass sees the memories it just added.
+      if (started) await runMemoryConsolidation()
+    } catch (error) {
+      console.warn('memory consolidation failed', error)
     } finally {
       running = undefined
       if (started) schedule(POLL_MS)
@@ -346,7 +289,7 @@ async function run(): Promise<void> {
   return running
 }
 
-/** Summarize idle chats and update memories in the background for as long as the server runs. */
+/** Summarize idle chats, update memories and consolidate them in the background for as long as the server runs. */
 export function startMemoryExtraction(): void {
   started = true
   schedule(START_MS)

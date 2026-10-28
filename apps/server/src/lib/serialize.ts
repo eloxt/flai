@@ -60,6 +60,7 @@ export function toMemory(row: typeof schema.userMemories.$inferSelect): Memory {
   return {
     id: row.id,
     content: row.content,
+    pinned: row.pinned,
     sourceConversationId: row.sourceConversationId,
     createdAt: iso(row.createdAt),
     updatedAt: iso(row.updatedAt),

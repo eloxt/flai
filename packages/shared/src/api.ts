@@ -93,17 +93,41 @@ export const updatePreferencesSchema = z.record(z.string(), z.unknown())
 /** Most memories a user can keep; the assistant has to update or delete one to save more. */
 export const MAX_MEMORIES = 100
 export const MAX_MEMORY_LENGTH = 200
+/** Pinned (core) memories are always given to the assistant, so there can only be a few. */
+export const MAX_PINNED_MEMORIES = 20
 
 export interface Memory {
   id: string
   content: string
+  pinned: boolean
   sourceConversationId: string | null
   createdAt: string
   updatedAt: string
 }
 
 export const memoryContentSchema = z.string().trim().min(1).max(MAX_MEMORY_LENGTH)
-export const updateMemorySchema = z.object({ content: memoryContentSchema })
+export const updateMemorySchema = z
+  .object({ content: memoryContentSchema.optional(), pinned: z.boolean().optional() })
+  .refine((v) => v.content !== undefined || v.pinned !== undefined, 'Nothing to update')
+
+/** Who changed a memory on the user's behalf: the chat assistant, or a background job. */
+export type MemoryEventSource = 'agent' | 'extraction' | 'consolidation'
+
+/** A change the assistant made to a memory, which the user can review and undo. */
+export interface MemoryEvent {
+  id: string
+  memoryId: string
+  action: 'add' | 'update' | 'delete'
+  source: MemoryEventSource
+  before: string | null
+  after: string | null
+  note: string | null
+  conversationId: string | null
+  createdAt: string
+  undoneAt: string | null
+  /** Whether undoing still applies: it is the memory's latest change and nothing has changed it since. */
+  undoable: boolean
+}
 
 export const changePasswordSchema = z.object({ oldPassword: z.string().min(1), newPassword: password })
 export const feedbackSchema = z.object({ content: z.string().trim().min(1).max(2000) })
