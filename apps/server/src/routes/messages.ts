@@ -12,6 +12,8 @@ import {
   sendMessageSchema,
   textOf,
   toFilePart,
+  type TopicCheckResult,
+  topicCheckSchema,
 } from '@flai/shared'
 import { formatQuestionAnswer } from '@mastra/core/tools'
 import { and, eq, isNull } from 'drizzle-orm'
@@ -24,6 +26,7 @@ import { toMessage } from '../lib/serialize'
 import { cancelGeneration, startGeneration } from '../llm/generation'
 import { generationBus, isStreamPosition } from '../llm/stream-bus'
 import { resolveThinking } from '../llm/models'
+import { isOffTopic } from '../llm/topic-check'
 import { getConversation, loadPath, touchConversation } from '../services/conversations'
 import { ownedFiles } from '../services/files'
 import { resolveModel } from '../services/providers'
@@ -48,6 +51,14 @@ async function prepareReply(input: { assistantId: string; model: ModelRef; optio
 const samePartsJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 export const messageRoutes = new Hono<AppEnv>()
+  // Asked before sending so the user can move an unrelated question to a new chat.
+  .post('/conversations/:id/topic-check', async (c) => {
+    const conversation = await getConversation(c.get('user'), c.req.param('id'))
+    const input = await body(c, topicCheckSchema)
+    const path = await loadPath(conversation.id, input.parentId)
+    const result: TopicCheckResult = { offTopic: await isOffTopic(conversation.title, path, input.text) }
+    return c.json(result)
+  })
   .post('/conversations/:id/messages', async (c) => {
     const user = c.get('user')
     const conversation = await getConversation(user, c.req.param('id'))

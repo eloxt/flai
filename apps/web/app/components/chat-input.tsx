@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { InputGroup, InputGroupAddon, InputGroupButton } from "~/components/ui/input-group"
+import { Spinner } from "~/components/ui/spinner"
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
 import { api } from "~/lib/api"
@@ -42,6 +43,8 @@ interface ChatInputProps {
   draftKey: string
   /** Return false to keep the draft (e.g. nothing was sent). */
   onSubmit: (input: { text: string; files: FileRecord[] }) => Promise<boolean> | boolean
+  /** Runs before the draft is taken; return false to keep it unsent. */
+  confirm?: (input: { text: string; files: FileRecord[] }) => Promise<boolean> | boolean
   streaming?: boolean
   stopping?: boolean
   onStop?: () => void
@@ -69,7 +72,7 @@ const ICON_ENTER = "transition-[opacity,scale] duration-120 ease-out starting:sc
 const RING_INSIDE = "focus-visible:ring-inset"
 const SWAP = "grid min-w-0 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 
-export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = false, onStop, contextUsage, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
+export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stopping = false, onStop, contextUsage, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
   const { t } = useTranslation()
   const current = useCurrentModel()
   const model = current?.model
@@ -79,6 +82,7 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
   const setAttachments = useInputStore((s) => s.setAttachments)
   const [pending, setPending] = useState<Pending[]>([])
   const [dragging, setDragging] = useState(false)
+  const [checking, setChecking] = useState(false)
   const dragDepth = useRef(0)
   const fileInput = useRef<HTMLInputElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
@@ -117,9 +121,20 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
   )
 
   const submit = async () => {
-    if (streaming || pending.length > 0) return
+    if (streaming || checking || pending.length > 0) return
     if (!text.trim() && files.length === 0) return
     const sent = { text: text.trim(), files }
+    if (confirm) {
+      setChecking(true)
+      try {
+        if (!(await confirm(sent))) return
+      } finally {
+        setChecking(false)
+      }
+      // The draft stays editable while confirming; a changed draft is not what was confirmed.
+      const latest = useInputStore.getState()
+      if ((latest.drafts[draftKey] ?? "").trim() !== sent.text || (latest.attachments[draftKey] ?? EMPTY) !== files) return
+    }
     setDraft(draftKey, "")
     setAttachments(draftKey, [])
     const ok = await onSubmit(sent)
@@ -274,10 +289,10 @@ export function ChatInput({ draftKey, onSubmit, streaming = false, stopping = fa
                     size="icon-sm"
                     className={cn("size-9 rounded-lg", RING_INSIDE)}
                     aria-label={t("common.send")}
-                    disabled={pending.length > 0 || (!text.trim() && files.length === 0)}
+                    disabled={checking || pending.length > 0 || (!text.trim() && files.length === 0)}
                     onClick={() => void submit()}
                   >
-                    <ArrowUpIcon className={ICON_ENTER} />
+                    {checking ? <Spinner className={ICON_ENTER} /> : <ArrowUpIcon className={ICON_ENTER} />}
                   </InputGroupButton>
                 )}
               </div>

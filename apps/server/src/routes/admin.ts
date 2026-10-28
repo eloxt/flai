@@ -23,6 +23,7 @@ import { newId } from '../lib/ids'
 import { toConversation, toUser } from '../lib/serialize'
 import { embedWith } from '../llm/embedding'
 import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
+import { verifyTypeSafe } from '../llm/topic-check'
 import { findProvider, maskKey, type ProviderRow, reloadProviders, resolveModel } from '../services/providers'
 import { getSetting, updateSetting } from '../services/settings'
 import { findUserByEmail } from '../services/users'
@@ -178,6 +179,10 @@ const settingRoutes = new Hono<AppEnv>()
       const value = getSetting(key)
       return c.json({ ...value, exaApiKey: value.exaApiKey ? maskKey(value.exaApiKey) : '' })
     }
+    if (key === 'topic_check') {
+      const value = getSetting(key)
+      return c.json({ ...value, apiKey: value.apiKey ? maskKey(value.apiKey) : '' })
+    }
     return c.json(getSetting(key))
   })
   .put('/:key', async (c) => {
@@ -195,6 +200,26 @@ const settingRoutes = new Hono<AppEnv>()
       if (merged.provider === 'exa' && !merged.exaApiKey) throw badRequest('Exa API key is required when Exa search is selected')
       const value = await updateSetting(key, patch)
       return c.json({ ...value, exaApiKey: value.exaApiKey ? maskKey(value.exaApiKey) : '' })
+    }
+    if (key === 'topic_check') {
+      const shape = settingSchemas.topic_check.shape
+      const patch = await body(c, z.object({
+        enabled: shape.enabled.removeDefault().optional(),
+        apiKey: shape.apiKey.removeDefault().optional(),
+        model: shape.model.removeDefault().optional(),
+        threshold: shape.threshold.removeDefault().optional(),
+      }))
+      const current = getSetting(key)
+      if (current.apiKey && patch.apiKey === maskKey(current.apiKey)) delete patch.apiKey
+      const merged = { ...current, ...patch }
+      if (merged.enabled) {
+        if (!merged.apiKey) throw badRequest('TypeSafe API key is required to turn on topic checks')
+        if (merged.apiKey !== current.apiKey || merged.model !== current.model || !current.enabled) {
+          await verifyTypeSafe(merged.apiKey, merged.model)
+        }
+      }
+      const value = await updateSetting(key, patch)
+      return c.json({ ...value, apiKey: value.apiKey ? maskKey(value.apiKey) : '' })
     }
     const input = await body(c, settingSchemas[key].partial())
     if (key === 'title_generation') {

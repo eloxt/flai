@@ -142,7 +142,13 @@
       "streamInterrupted": "回复中断，请重试。",
       "navLabel": "会话导航",
       "navAttachmentOnly": "附件消息",
-      "navAttachments_other": "{{count}} 个附件"
+      "navAttachments_other": "{{count}} 个附件",
+      "topicShift": {
+        "title": "这似乎是一个新话题",
+        "description": "在新会话中提问，模型不会受当前上下文干扰。再次发送即留在当前会话。",
+        "newChat": "在新会话中提问",
+        "stay": "仍在此发送"
+      }
     },
     "search": {
       "title": "搜索聊天",
@@ -504,6 +510,14 @@
         "nativeHelp": "使用模型服务商自带的搜索能力，需在模型配置中启用原生联网搜索。",
         "exaHelp": "为所有支持工具调用的模型自动提供 web_search 和 web_fetch，包括 OpenAI 兼容模型。输入栏不再显示搜索和 URL Context 选项。",
         "keyHelp": "密钥保存在服务端，显示时会脱敏。保留脱敏值即可保留原密钥。可前往 dashboard.exa.ai 获取密钥，选择 Exa 前需先填写。"
+      },
+      "topicCheck": {
+        "title": "话题检测",
+        "description": "在已有会话中发送消息前，由 TypeSafe 决策模型判断消息是否与当前会话主题一致。不一致时，用户可以选择在新会话中提问，或坚持在当前会话提问。",
+        "enabled": "发送前检测话题变化",
+        "keyHelp": "密钥保存在服务端，显示时会脱敏。保留脱敏值即可保留原密钥。可前往 console.typesafe.ai 获取密钥。保存时会发送一次测试请求。",
+        "threshold": "阈值",
+        "thresholdHelp": "模型判断话题变化的概率达到或超过该值（0.5–1）时询问用户，值越高询问越少。TypeSafe 响应超时或出错时，消息会直接发送。"
       }
     }
   },

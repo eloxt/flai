@@ -200,6 +200,15 @@ export const regenerateSchema = z.object({
 })
 export type RegenerateInput = z.input<typeof regenerateSchema>
 
+export const topicCheckSchema = z.object({
+  parentId: z.string().min(1),
+  text: z.string().max(200_000),
+})
+export type TopicCheckInput = z.input<typeof topicCheckSchema>
+export interface TopicCheckResult {
+  offTopic: boolean
+}
+
 export const answerQuestionSchema = z.object({
   assistantId: uuid,
   toolCallId: z.string().min(1),
@@ -321,6 +330,14 @@ export const settingSchemas = {
   embedding: z.object({
     providerId: z.string().default(''),
     modelId: z.string().trim().max(200).default(''),
+  }),
+  /** TypeSafe decision model that asks before a message drifts off the conversation's topic. */
+  topic_check: z.object({
+    enabled: z.boolean().default(false),
+    apiKey: z.string().trim().max(1000).default(''),
+    model: z.string().trim().min(1).max(100).default('jev-latest'),
+    /** Probability of a topic change at or above which the user is asked. */
+    threshold: z.number().min(0.5).max(1).default(0.8),
   }),
   error_alert: z.object({
     barkUrl: z

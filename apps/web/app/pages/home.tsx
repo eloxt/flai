@@ -1,4 +1,4 @@
-import type { Conversation, Notification } from "@flai/shared"
+import type { FileRecord, Notification } from "@flai/shared"
 import { cn } from "cn"
 import { InfoIcon, TriangleAlertIcon, XIcon } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -7,11 +7,10 @@ import { useNavigate } from "react-router"
 import { ChatInput } from "~/components/chat-input"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { Button } from "~/components/ui/button"
+import { startConversation } from "~/features/chat/start-conversation"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
 import { useAppStore } from "~/store/app-store"
-import { useConversationStore } from "~/store/conversation-store"
-import { useInputStore } from "~/store/input-store"
 import { useCurrentModel } from "~/store/model-store"
 
 export default function Home() {
@@ -19,22 +18,12 @@ export default function Home() {
   const navigate = useNavigate()
   const current = useCurrentModel()
 
-  const start = async ({ text, files }: { text: string; files: import("@flai/shared").FileRecord[] }) => {
+  const start = async (input: { text: string; files: FileRecord[] }) => {
     if (!current) {
       notify.error(t("common.error.modelProviderNotFound"))
       return false
     }
-    try {
-      const conversation = await api<Conversation>("/conversations", { method: "POST", body: {} })
-      useConversationStore.getState().add({ ...conversation, title: t("components.sidebar.newChat") })
-      // The chat page picks this up and sends it once the conversation is open.
-      useInputStore.getState().setPending({ conversationId: conversation.id, text, files })
-      navigate(`/chat/${conversation.id}`)
-      return true
-    } catch (error) {
-      notify.error(error)
-      return false
-    }
+    return startConversation(input, navigate)
   }
 
   return (

@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next"
 import { PanelSection } from "~/components/panel-dialog"
 import { Button } from "~/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader } from "~/components/ui/empty"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field"
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
+import { Switch } from "~/components/ui/switch"
 import { Textarea } from "~/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import { api } from "~/lib/api"
@@ -98,6 +99,90 @@ export function WebSearchSettings() {
               />
               <FieldDescription>{t(`${p}.keyHelp`)}</FieldDescription>
             </Field>
+            <Button type="submit" className="mt-2 self-start" disabled={saving}>
+              {saving && <Spinner data-icon="inline-start" />}
+              {t("common.actions.save")}
+            </Button>
+          </FieldGroup>
+        </form>
+      )}
+    </PanelSection>
+  )
+}
+
+export function TopicCheckSettings() {
+  const { t } = useTranslation()
+  const { value, setValue, failed, saving, load, save } = useSetting("topic_check")
+  const p = "pages.admin.topicCheck"
+  if (failed) return <LoadFailed onRetry={load} />
+  return (
+    <PanelSection title={t(`${p}.title`)} description={t(`${p}.description`)}>
+      {!value ? (
+        <Skeleton className="h-60 w-full" />
+      ) : (
+        <form
+          className="max-w-xl"
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault()
+            void save(value, t("pages.admin.systemConfig.saved"))
+          }}
+        >
+          <FieldGroup>
+            <Field orientation="horizontal" className="items-center">
+              <FieldContent>
+                <FieldLabel htmlFor="topic-check-enabled">{t(`${p}.enabled`)}</FieldLabel>
+              </FieldContent>
+              <Switch
+                id="topic-check-enabled"
+                checked={value.enabled}
+                disabled={saving}
+                onCheckedChange={(enabled) => setValue({ ...value, enabled })}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="typesafe-api-key">TypeSafe API Key</FieldLabel>
+              <Input
+                id="typesafe-api-key"
+                type="password"
+                autoComplete="new-password"
+                spellCheck={false}
+                required={value.enabled}
+                disabled={saving}
+                value={value.apiKey}
+                onChange={(e) => setValue({ ...value, apiKey: e.target.value })}
+              />
+              <FieldDescription>{t(`${p}.keyHelp`)}</FieldDescription>
+            </Field>
+            <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
+              <Field>
+                <FieldLabel htmlFor="typesafe-model">{t("pages.admin.systemConfig.model")}</FieldLabel>
+                <Input
+                  id="typesafe-model"
+                  spellCheck={false}
+                  required
+                  disabled={saving}
+                  placeholder="jev-latest"
+                  value={value.model}
+                  onChange={(e) => setValue({ ...value, model: e.target.value })}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="topic-check-threshold">{t(`${p}.threshold`)}</FieldLabel>
+                <Input
+                  id="topic-check-threshold"
+                  type="number"
+                  inputMode="decimal"
+                  min={0.5}
+                  max={1}
+                  step={0.05}
+                  required
+                  disabled={saving}
+                  value={value.threshold}
+                  onChange={(e) => setValue({ ...value, threshold: e.target.valueAsNumber })}
+                />
+              </Field>
+            </div>
+            <FieldDescription>{t(`${p}.thresholdHelp`)}</FieldDescription>
             <Button type="submit" className="mt-2 self-start" disabled={saving}>
               {saving && <Spinner data-icon="inline-start" />}
               {t("common.actions.save")}

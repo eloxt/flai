@@ -11,6 +11,8 @@ import type {
   ModelRef,
   RegenerateInput,
   SendMessageInput,
+  TopicCheckInput,
+  TopicCheckResult,
 } from "@flai/shared"
 import {
   askUserQuestionSchema,
@@ -222,6 +224,38 @@ interface SendArgs {
   files?: FileRecord[]
   /** Defaults to the end of the visible branch. */
   parentId?: string | null
+}
+
+/**
+ * Whether a message sent at the end of the visible branch would change the
+ * chat's topic. Answers to pending questions and first messages are never checked,
+ * and any failure lets the message through.
+ */
+export async function isOffTopic(text: string): Promise<boolean> {
+  const { conversationId, path, map, streaming, answering } = get()
+  const parentId = path.at(-1)
+  if (!conversationId || !parentId || streaming || answering || !text.trim())
+    return false
+  if (
+    map[parentId]?.parts.some(
+      (p) => isAskUserPart(p) && p.state === "input-available"
+    )
+  )
+    return false
+  const body: TopicCheckInput = { parentId, text }
+  try {
+    const result = await api<TopicCheckResult>(
+      `/conversations/${conversationId}/topic-check`,
+      { method: "POST", body }
+    )
+    return (
+      result.offTopic &&
+      get().conversationId === conversationId &&
+      get().path.at(-1) === parentId
+    )
+  } catch {
+    return false
+  }
 }
 
 /** Send a user message and stream the reply. Returns false if nothing was sent. */
