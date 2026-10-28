@@ -563,6 +563,39 @@
         "threshold": "Threshold",
         "thresholdHelp": "The user is asked when the model's probability of a topic change is at or above this value (0.5–1). Higher values ask less often. If TypeSafe is slow or fails, the message is sent without asking."
       }
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "updated": "Last updated: October 28, 2026",
+      "back": "Back to login",
+      "link": "Privacy Policy",
+      "intro": "FlaiChat is a self-hosted AI chat service. This policy explains what information it handles and how.",
+      "sections": {
+        "collect": {
+          "title": "Information we collect",
+          "body": "Your account details (email, username and a hashed password), the conversations, messages and files you create, the memories the assistant saves about you, and any feedback you submit."
+        },
+        "use": {
+          "title": "How we use it",
+          "body": "To sign you in, run your conversations, personalise replies with your saved memories, and keep the service working. We do not sell your data or use it for advertising."
+        },
+        "models": {
+          "title": "Third-party model providers",
+          "body": "To generate replies, the content of your messages, attached files and relevant memories is sent to the AI model provider you select. Those providers handle it under their own privacy terms, so avoid sending sensitive information you would not want them to process."
+        },
+        "sharing": {
+          "title": "Sharing",
+          "body": "A conversation is visible to others only when you create a share link, and anyone with the link can read it. You can delete the link at any time to stop sharing."
+        },
+        "retention": {
+          "title": "Retention and deletion",
+          "body": "Your data is kept until you delete it. You can delete conversations, files and memories yourself, or ask an administrator to remove your account and its data."
+        },
+        "rights": {
+          "title": "Your choices and contact",
+          "body": "You can review and delete your data in the app. For questions or requests about your data, contact the administrator of this service."
+        }
+      }
     }
   },
   "components": {

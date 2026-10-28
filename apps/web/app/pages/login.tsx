@@ -1,7 +1,7 @@
 import type { AuthResult } from "@flai/shared"
 import { type FormEvent, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router"
+import { Link, useNavigate } from "react-router"
 import { Button } from "~/components/ui/button"
 import { Field, FieldGroup, FieldLabel, FieldSeparator } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
@@ -75,6 +75,11 @@ export default function Login() {
             {t("pages.login.register")}
           </Button>
         </Field>
+        <p className="text-center text-xs text-muted-foreground">
+          <Link to="/privacy" className="underline underline-offset-4 hover:text-foreground">
+            {t("pages.privacy.link")}
+          </Link>
+        </p>
       </FieldGroup>
     </form>
   )
