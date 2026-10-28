@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Switch } from "~/components/ui/switch"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
-import { useAuthStore } from "~/store/auth-store"
+import { useAuthStore, usePreferences } from "~/store/auth-store"
 
 const languages = [
   { value: "zh", label: "简体中文" },
@@ -31,7 +31,7 @@ export function useUpdatePreferences() {
 
 export function PreferenceSettings() {
   const { t, i18n } = useTranslation()
-  const user = useAuthStore((s) => s.user)
+  const preferences = usePreferences()
   const update = useUpdatePreferences()
 
   return (
@@ -68,7 +68,7 @@ export function PreferenceSettings() {
           </FieldContent>
           <Switch
             id="pref-emoji"
-            checked={user?.preferences.sidebarShowEmoji ?? true}
+            checked={preferences.sidebarShowEmoji}
             onCheckedChange={(checked) => void update({ sidebarShowEmoji: checked })}
           />
         </Field>
@@ -79,7 +79,7 @@ export function PreferenceSettings() {
           </FieldContent>
           <Switch
             id="pref-chat-history"
-            checked={user?.preferences.chatHistory ?? true}
+            checked={preferences.chatHistory}
             onCheckedChange={(checked) => void update({ chatHistory: checked })}
           />
         </Field>

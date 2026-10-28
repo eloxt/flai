@@ -1,4 +1,4 @@
-import { memoryContentSchema, type Preferences } from '@flai/shared'
+import { memoryContentSchema, type Preferences, resolvePreferences } from '@flai/shared'
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
 import { AppError } from '../lib/errors'
@@ -68,12 +68,13 @@ export function relevantMemoriesPrompt(memories: MemoryRow[], label = memoryLabe
   ].join('\n')
 }
 
-/** What the assistant may do with the user's memories; both preferences default to on. */
+/** What the assistant may do with the user's memories. */
 export type MemoryAccess = 'off' | 'read' | 'write'
 
 export function memoryAccess(preferences: Preferences): MemoryAccess {
-  if (preferences.memory === false) return 'off'
-  return preferences.memoryWrite === false ? 'read' : 'write'
+  const { memory, memoryWrite } = resolvePreferences(preferences)
+  if (!memory) return 'off'
+  return memoryWrite ? 'write' : 'read'
 }
 
 /** Tools that let the model maintain the user's memories, scoped to that user. */

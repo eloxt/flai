@@ -97,6 +97,7 @@ export async function claimUsers(limit = BATCH, { dayMs = 86_400_000 } = {}): Pr
         FROM user_memory um WHERE um.user_id = u.id
       ) c
       WHERE u.deleted_at IS NULL
+        -- Both default to on, as in PREFERENCE_DEFAULTS.
         AND coalesce((u.preferences->>'memory')::boolean, true)
         AND coalesce((u.preferences->>'memoryWrite')::boolean, true)
         AND c.total >= ${MIN_MEMORIES}

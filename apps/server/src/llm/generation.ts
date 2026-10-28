@@ -1,10 +1,11 @@
 import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, ModelConfig } from '@flai/shared'
-import { textOf } from '@flai/shared'
+import { resolvePreferences, textOf } from '@flai/shared'
 import { toAISdkStream } from '@mastra/ai-sdk'
 import { askUserTool } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
 import { db, schema } from '../db'
 import { AppError, userFacingError } from '../lib/errors'
+import type { UserRow } from '../lib/hono'
 import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
 import type { ProviderRow } from '../services/providers'
@@ -18,7 +19,7 @@ import { buildMcpToolset } from './mcp'
 import { buildModel } from './models'
 import { exaResponseSchema } from './exa'
 import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './stream-bus'
-import { createMemoryTools, type MemoryAccess, memoryLabels, relevantMemoriesPrompt } from './user-memory'
+import { createMemoryTools, memoryAccess, memoryLabels, relevantMemoriesPrompt } from './user-memory'
 
 const GENERATION_TIMEOUT_MS = 20 * 60 * 1000
 const MAX_STEPS = 10
@@ -112,7 +113,8 @@ export async function shutdownGenerations(): Promise<void> {
 }
 
 export interface StartGenerationInput {
-  userId: string
+  /** Whose reply it is; their preferences decide which past chats and memories it may use. */
+  user: Pick<UserRow, 'id' | 'preferences'>
   conversationId: string
   assistantId: string
   /** Root→leaf history ending with the user turn or answered question being continued. */
@@ -120,9 +122,6 @@ export interface StartGenerationInput {
   provider: ProviderRow
   model: ModelConfig
   options: ChatOptions
-  /** Whether the model may search and read the user's other conversations. */
-  chatHistory: boolean
-  memory: MemoryAccess
 }
 
 /** Start generating a reply in the background. Read it with `generationBus().read(assistantId, "0", …)`. */
@@ -132,7 +131,7 @@ export async function startGeneration(input: StartGenerationInput): Promise<void
   await listenForCancels()
   const opened = await bus.open({
     assistantId: input.assistantId,
-    userId: input.userId,
+    userId: input.user.id,
     conversationId: input.conversationId,
     parentId: input.path.at(-1)!.id,
   })
@@ -160,6 +159,9 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   const bus = generationBus()
   const emit = (chunk: Chunk) => bus.append(input.assistantId, chunk)
   const { provider, model, options } = input
+  const userId = input.user.id
+  const preferences = resolvePreferences(input.user.preferences)
+  const memoryMode = memoryAccess(preferences)
   const timeout = setTimeout(() => generation.controller.abort('timeout' satisfies StopReason), GENERATION_TIMEOUT_MS)
   const parentMessage = input.path.at(-1)!
   const baseMetadata: MessageMetadata = { providerId: provider.id, providerName: provider.name, modelId: model.id, chatOptions: options }
@@ -178,7 +180,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   }
   void writer.write({ type: 'start', messageId: input.assistantId })
 
-  const mcp = await buildMcpToolset(input.userId, options.mcpTools).catch((error) => {
+  const mcp = await buildMcpToolset(userId, options.mcpTools).catch((error) => {
     console.warn('failed to prepare MCP tools', error)
     return { tools: {}, close: async () => {} }
   })
@@ -188,15 +190,15 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   try {
     const resolved = buildModel({ provider, model, options, requestId: input.assistantId })
     const messages = await toModelMessages(input.path, provider.type)
-    const chatHistory = model.toolCall && input.chatHistory
-    const scope = { userId: input.userId, conversationId: input.conversationId }
-    const memoryWrite = model.toolCall && input.memory === 'write'
+    const chatHistory = model.toolCall && preferences.chatHistory
+    const scope = { userId, conversationId: input.conversationId }
+    const memoryWrite = model.toolCall && memoryMode === 'write'
     const query = textOf(input.path.findLast((m) => m.role === 'user')?.parts ?? [])
     const embedQuery = queryEmbedding(query)
     const firstTurn = input.path.filter((m) => m.role === 'user').length === 1
     const [selection, pastChats] = await Promise.all([
-      input.memory === 'off' ? undefined : loadMemories(input.userId, embedQuery),
-      input.chatHistory ? loadPastChats(input.userId, input.conversationId, { firstTurn, query, embedQuery }) : undefined,
+      memoryMode === 'off' ? undefined : loadMemories(userId, embedQuery),
+      preferences.chatHistory ? loadPastChats(userId, input.conversationId, { firstTurn, query, embedQuery }) : undefined,
     ])
     const shown = selection ? [...selection.core, ...selection.relevant] : []
     const label = memoryLabels(shown)

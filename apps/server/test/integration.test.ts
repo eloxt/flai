@@ -451,6 +451,9 @@ suite('API integration', () => {
     expect(inputs[2]).not.toContain('<existing_memories>')
     expect(await memories()).toHaveLength(1)
     await call('/me/preferences', { token: alice, method: 'PATCH', body: { memoryWrite: true } })
+    // Only known preferences, as booleans, are stored.
+    expect((await call('/me/preferences', { token: alice, method: 'PATCH', body: { theme: 'dark' } })).status).toBe(422)
+    expect((await call('/me/preferences', { token: alice, method: 'PATCH', body: { memory: 'off' } })).status).toBe(422)
 
     // Summaries are searchable by keyword and by meaning, and shown as recent chats.
     while (await indexPendingSummaries());

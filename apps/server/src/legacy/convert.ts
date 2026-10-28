@@ -10,6 +10,7 @@ import {
   type ModelConfig,
   modelConfigSchema,
   type Preferences,
+  preferencesSchema,
   type SettingKey,
   textOf,
 } from '@flai/shared'
@@ -240,11 +241,15 @@ export function convertAvatar(avatar: Buffer | null): string | null {
   return null
 }
 
-const PREFERENCE_KEYS: Record<string, string> = { sidebar_show_emoji: 'sidebarShowEmoji' }
+const PREFERENCE_KEYS: Record<string, keyof Preferences> = { sidebar_show_emoji: 'sidebarShowEmoji' }
 
+/** Carry over the preferences flai-next knows; the rest had no effect and are dropped. */
 export function convertPreferences(pref: unknown): Preferences {
   const out: Preferences = {}
-  for (const [key, value] of Object.entries(obj(pref))) out[PREFERENCE_KEYS[key] ?? key] = value
+  for (const [key, value] of Object.entries(obj(pref))) {
+    const name = PREFERENCE_KEYS[key] ?? (key in preferencesSchema.shape ? (key as keyof Preferences) : undefined)
+    if (name && typeof value === 'boolean') out[name] = value
+  }
   return out
 }
 

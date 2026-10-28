@@ -74,7 +74,7 @@ describe('answering a question', () => {
     expect(result.generation).toEqual({ assistantId: nextId, parentId: 'a1' })
     expect(mocks.resolve).toHaveBeenCalledWith('original-provider', 'original-model')
     expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({
-      assistantId: nextId, userId: 'alice', path: [message], options: message.metadata.chatOptions, chatHistory: true,
+      assistantId: nextId, user: expect.objectContaining({ id: 'alice' }), path: [message], options: message.metadata.chatOptions,
     }))
   })
 

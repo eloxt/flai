@@ -57,11 +57,10 @@ describe('Exa chat generation', () => {
       logo: null, models: [], isActive: true, sortOrder: 0, createdAt: new Date(), updatedAt: new Date(), deletedAt: null,
     }
     await startGeneration({
-      userId: 'alice', conversationId: 'c1', assistantId: 'exa-generation', provider,
+      user: { id: 'alice', preferences: { chatHistory: false, memory: false } },
+      conversationId: 'c1', assistantId: 'exa-generation', provider,
       model: modelConfigSchema.parse({ id: 'test', toolCall: true }),
       options: { webSearch: false, urlContext: false, mcpTools: [] },
-      chatHistory: false,
-      memory: 'off',
       path: [{
         id: 'u1', parentId: null, conversationId: 'c1', role: 'user', parts: [{ type: 'text', text: 'Find research' }],
         metadata: {}, createdAt: new Date(), deletedAt: null, searchText: 'Find research', tsv: null,

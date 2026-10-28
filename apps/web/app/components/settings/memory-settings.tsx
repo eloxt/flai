@@ -41,12 +41,12 @@ import { api } from "~/lib/api"
 import { formatDateTime } from "~/lib/format"
 import { notify } from "~/lib/notify"
 import { cn } from "cn"
-import { useAuthStore } from "~/store/auth-store"
+import { usePreferences } from "~/store/auth-store"
 import { useUpdatePreferences } from "./preference-settings"
 
 export function MemorySettings() {
   const { t } = useTranslation()
-  const preferences = useAuthStore((s) => s.user?.preferences)
+  const preferences = usePreferences()
   const updatePreferences = useUpdatePreferences()
   const [memories, setMemories] = useState<Memory[] | null>(null)
   const [editing, setEditing] = useState<Memory | null>(null)
@@ -73,7 +73,7 @@ export function MemorySettings() {
     void reload()
   }, [reload])
 
-  const enabled = preferences?.memory ?? true
+  const enabled = preferences.memory
 
   const save = async () => {
     if (!editing) return
@@ -163,7 +163,7 @@ export function MemorySettings() {
           <Switch
             id="pref-memory-write"
             disabled={!enabled}
-            checked={enabled && (preferences?.memoryWrite ?? true)}
+            checked={enabled && preferences.memoryWrite}
             onCheckedChange={(checked) =>
               void updatePreferences({ memoryWrite: checked })
             }

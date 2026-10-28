@@ -59,7 +59,7 @@ import {
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { initials } from "~/lib/format"
-import { useAuthStore } from "~/store/auth-store"
+import { useAuthStore, usePreferences } from "~/store/auth-store"
 import { type ConversationItem, useConversationStore } from "~/store/conversation-store"
 
 const AdminDialog = lazy(() => import("../admin/admin-dialog").then((module) => ({ default: module.AdminDialog })))
@@ -91,7 +91,7 @@ export function AppSidebar() {
   const navigate = useNavigate()
   const { toggleSidebar, isMobile, setOpenMobile } = useSidebar()
   const user = useAuthStore((s) => s.user)
-  const showEmoji = user?.preferences.sidebarShowEmoji ?? true
+  const showEmoji = usePreferences().sidebarShowEmoji
   const { conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove } = useConversationStore()
   // Mount each dialog on first use, then keep it mounted for its closing transition.
   const [settingsOpen, setSettingsOpen] = useState<boolean>()

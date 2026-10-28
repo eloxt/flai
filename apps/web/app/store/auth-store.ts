@@ -1,4 +1,4 @@
-import type { AuthResult, TokenPair, User } from "@flai/shared"
+import { type AuthResult, resolvePreferences, type TokenPair, type User } from "@flai/shared"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
@@ -43,3 +43,8 @@ export const useAuthStore = create<AuthState>()(
 useAuthStore.subscribe((state, previous) => {
   if (state.sessionVersion !== previous.sessionVersion) for (const listener of listeners) listener()
 })
+
+/** The signed-in user's preferences with defaults filled in. */
+export function usePreferences() {
+  return resolvePreferences(useAuthStore((s) => s.user?.preferences))
+}

@@ -50,16 +50,36 @@ export interface User {
   createdAt: string
 }
 
-export interface Preferences {
-  sidebarShowEmoji?: boolean
-  /** Let the assistant search and read the user's other chats. Defaults to on. */
-  chatHistory?: boolean
-  /** Give the assistant the user's saved memories in every chat. Defaults to on. */
-  memory?: boolean
-  /** Let the assistant save, update and delete memories. Defaults to on. */
-  memoryWrite?: boolean
-  translate?: { source?: string; target?: string; instruction?: string }
-  [key: string]: unknown
+export const preferencesSchema = z.object({
+  /** Show each chat's emoji in the sidebar. */
+  sidebarShowEmoji: z.boolean().optional(),
+  /** Let the assistant search and read the user's other chats. */
+  chatHistory: z.boolean().optional(),
+  /** Give the assistant the user's saved memories in every chat. */
+  memory: z.boolean().optional(),
+  /** Let the assistant save, update and delete memories. */
+  memoryWrite: z.boolean().optional(),
+})
+/** What the user has chosen; anything unset takes its value from PREFERENCE_DEFAULTS. */
+export type Preferences = z.infer<typeof preferencesSchema>
+export type ResolvedPreferences = Required<Preferences>
+
+/** Every preference is on until the user turns it off. */
+export const PREFERENCE_DEFAULTS: ResolvedPreferences = {
+  sidebarShowEmoji: true,
+  chatHistory: true,
+  memory: true,
+  memoryWrite: true,
+}
+
+/** The user's preferences with defaults filled in; stored values that aren't booleans are ignored. */
+export function resolvePreferences(preferences: Preferences | null | undefined): ResolvedPreferences {
+  const resolved = { ...PREFERENCE_DEFAULTS }
+  for (const key of Object.keys(PREFERENCE_DEFAULTS) as (keyof ResolvedPreferences)[]) {
+    const value = preferences?.[key]
+    if (typeof value === 'boolean') resolved[key] = value
+  }
+  return resolved
 }
 
 export interface TokenPair {
@@ -87,7 +107,7 @@ export const updateMeSchema = z.object({
   /** File id of an uploaded image, or null to clear. */
   avatarFileId: z.string().nullable().optional(),
 })
-export const updatePreferencesSchema = z.record(z.string(), z.unknown())
+export const updatePreferencesSchema = preferencesSchema.strict()
 // ---------- memories ----------
 
 /** Most memories a user can keep; the assistant has to update or delete one to save more. */

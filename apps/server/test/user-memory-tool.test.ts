@@ -1,4 +1,4 @@
-import { MAX_MEMORY_LENGTH } from '@flai/shared'
+import { MAX_MEMORY_LENGTH, PREFERENCE_DEFAULTS, resolvePreferences } from '@flai/shared'
 import { noopObserve } from '@mastra/core/tools'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../src/lib/errors'
@@ -88,6 +88,12 @@ describe('memory preferences', () => {
     expect(memoryAccess({ memoryWrite: false })).toBe('read')
     expect(memoryAccess({ memory: false })).toBe('off')
     expect(memoryAccess({ memory: false, memoryWrite: true })).toBe('off')
+  })
+
+  it('ignore stored values that are not booleans', () => {
+    expect(memoryAccess({ memory: 'no', memoryWrite: null } as never)).toBe('write')
+    expect(resolvePreferences({ chatHistory: 0 } as never)).toEqual(PREFERENCE_DEFAULTS)
+    expect(resolvePreferences(undefined)).toEqual({ sidebarShowEmoji: true, chatHistory: true, memory: true, memoryWrite: true })
   })
 })
 

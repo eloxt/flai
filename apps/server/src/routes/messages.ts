@@ -27,7 +27,6 @@ import { cancelGeneration, startGeneration } from '../llm/generation'
 import { generationBus, isStreamPosition } from '../llm/stream-bus'
 import { resolveThinking } from '../llm/models'
 import { isOffTopic } from '../llm/topic-check'
-import { memoryAccess } from '../llm/user-memory'
 import { getConversation, loadPath, touchConversation } from '../services/conversations'
 import { ownedFiles } from '../services/files'
 import { resolveModel } from '../services/providers'
@@ -105,9 +104,7 @@ export const messageRoutes = new Hono<AppEnv>()
 
     const path = await loadPath(conversation.id, message.id)
     await startGeneration({
-      userId: user.id,
-      chatHistory: user.preferences.chatHistory !== false,
-      memory: memoryAccess(user.preferences),
+      user,
       conversationId: conversation.id,
       assistantId: input.assistantId,
       path,
@@ -131,9 +128,7 @@ export const messageRoutes = new Hono<AppEnv>()
       throw badRequest('This model does not accept attachments')
     }
     await startGeneration({
-      userId: user.id,
-      chatHistory: user.preferences.chatHistory !== false,
-      memory: memoryAccess(user.preferences),
+      user,
       conversationId: conversation.id,
       assistantId: input.assistantId,
       path,
@@ -192,8 +187,7 @@ export const messageRoutes = new Hono<AppEnv>()
     })
 
     if (!result.pending) await startGeneration({
-      userId: user.id, conversationId: conversation.id, assistantId: input.assistantId,
-      chatHistory: user.preferences.chatHistory !== false, memory: memoryAccess(user.preferences),
+      user, conversationId: conversation.id, assistantId: input.assistantId,
       path: result.path, provider: result.provider, model: result.model, options: result.options,
     })
     return c.json({

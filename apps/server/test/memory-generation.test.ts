@@ -1,4 +1,4 @@
-import { modelConfigSchema, settingSchemas, type SettingKey } from '@flai/shared'
+import { modelConfigSchema, type Preferences, settingSchemas, type SettingKey } from '@flai/shared'
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MemoryAccess } from '../src/llm/user-memory'
 import type { ProviderRow } from '../src/services/providers'
@@ -20,6 +20,8 @@ const provider: ProviderRow = {
   logo: null, models: [], isActive: true, sortOrder: 0, createdAt: new Date(), updatedAt: new Date(), deletedAt: null,
 }
 
+const PREFERENCES: Record<MemoryAccess, Preferences> = { off: { memory: false }, read: { memoryWrite: false }, write: {} }
+
 let n = 0
 /** Generate one reply and return the request the model received. */
 async function request(memory: MemoryAccess) {
@@ -29,11 +31,10 @@ async function request(memory: MemoryAccess) {
   vi.stubGlobal('fetch', fetchMock)
   const assistantId = `memory-${n++}`
   await startGeneration({
-    userId: 'alice', conversationId: 'c1', assistantId, provider,
+    user: { id: 'alice', preferences: { chatHistory: false, ...PREFERENCES[memory] } },
+    conversationId: 'c1', assistantId, provider,
     model: modelConfigSchema.parse({ id: 'test', toolCall: true }),
     options: { webSearch: false, urlContext: false, mcpTools: [] },
-    chatHistory: false,
-    memory,
     path: [{
       id: 'u1', parentId: null, conversationId: 'c1', role: 'user', parts: [{ type: 'text', text: 'Hi' }],
       metadata: {}, createdAt: new Date(), deletedAt: null, searchText: 'Hi', tsv: null,
