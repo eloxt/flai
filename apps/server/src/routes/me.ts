@@ -1,12 +1,13 @@
-import { changePasswordSchema, feedbackSchema, updateMeSchema, updatePreferencesSchema } from '@flai/shared'
+import { changePasswordSchema, feedbackSchema, updateMeSchema, updateMemorySchema, updatePreferencesSchema } from '@flai/shared'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db, schema } from '../db'
 import { hashPassword, issueTokens, verifyPassword } from '../lib/auth'
-import { AppError, badRequest } from '../lib/errors'
+import { AppError, badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body } from '../lib/hono'
-import { toUser } from '../lib/serialize'
+import { toMemory, toUser } from '../lib/serialize'
 import { sendBark } from '../services/bark'
+import { clearMemories, deleteMemory, listMemories, updateMemory } from '../services/memories'
 import { getSetting } from '../services/settings'
 
 export const meRoutes = new Hono<AppEnv>()
@@ -35,6 +36,21 @@ export const meRoutes = new Hono<AppEnv>()
     const preferences = { ...user.preferences, ...input }
     const [updated] = await db.update(schema.users).set({ preferences }).where(eq(schema.users.id, user.id)).returning()
     return c.json(updated!.preferences)
+  })
+  .get('/me/memories', async (c) => c.json((await listMemories(c.get('user').id)).map(toMemory)))
+  .patch('/me/memories/:id', async (c) => {
+    const input = await body(c, updateMemorySchema)
+    const row = await updateMemory(c.get('user').id, c.req.param('id'), input.content)
+    if (!row) throw notFound('Memory')
+    return c.json(toMemory(row))
+  })
+  .delete('/me/memories/:id', async (c) => {
+    if (!(await deleteMemory(c.get('user').id, c.req.param('id')))) throw notFound('Memory')
+    return c.body(null, 204)
+  })
+  .delete('/me/memories', async (c) => {
+    await clearMemories(c.get('user').id)
+    return c.body(null, 204)
   })
   .put('/me/password', async (c) => {
     const user = c.get('user')

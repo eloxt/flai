@@ -199,3 +199,20 @@ export const notifications = pgTable('notification', {
   level: text('level', { enum: ['default', 'warning'] }).notNull().default('default'),
   createdAt: createdAt(),
 })
+
+/** Short, durable facts about the user, given to the assistant in every chat. */
+export const userMemories = pgTable(
+  'user_memory',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    content: text('content').notNull(),
+    /** The chat the assistant saved it from; null when the user wrote it. */
+    sourceConversationId: text('source_conversation_id').references(() => conversations.id),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('user_memory_user_idx').on(t.userId, t.createdAt)],
+)

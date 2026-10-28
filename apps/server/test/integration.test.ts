@@ -287,6 +287,43 @@ suite('API integration', () => {
     expect(await run(bobs.read_chat, { id: conversationId })).toEqual({ error: 'Chat not found' })
   })
 
+  it('keeps memories private, capped and manageable by their owner', async () => {
+    const { noopObserve } = await import('@mastra/core/tools')
+    const { MAX_MEMORIES } = await import('@flai/shared')
+    const { createMemoryTools } = await import('../src/llm/user-memory')
+    const { createMemory } = await import('../src/services/memories')
+    const aliceId = (await call('/me', { token: alice })).data.id as string
+    const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
+    const tools = createMemoryTools({ userId: aliceId, conversationId })
+
+    const saved = await run(tools.save_memory, { content: '喜欢简洁的回答' })
+    expect(saved.memory).toMatchObject({ content: '喜欢简洁的回答' })
+    // Saving the same fact again keeps one copy.
+    expect((await run(tools.save_memory, { content: '喜欢简洁的回答' })).memory.id).toBe(saved.memory.id)
+    const listed = await call('/me/memories', { token: alice })
+    expect(listed.data).toEqual([expect.objectContaining({ id: saved.memory.id, sourceConversationId: conversationId })])
+    expect((await call('/me/memories', { token: bob })).data).toEqual([])
+
+    // Another user can neither see nor change it, through the API or the tools.
+    expect((await call(`/me/memories/${saved.memory.id}`, { token: bob, method: 'PATCH', body: { content: 'hijacked' } })).status).toBe(404)
+    expect((await call(`/me/memories/${saved.memory.id}`, { token: bob, method: 'DELETE' })).status).toBe(404)
+    const bobId = (await call('/me', { token: bob })).data.id as string
+    expect(await run(createMemoryTools({ userId: bobId, conversationId: 'none' }).delete_memory, { id: saved.memory.id })).toEqual({ error: 'Memory not found' })
+
+    const patched = await call(`/me/memories/${saved.memory.id}`, { token: alice, method: 'PATCH', body: { content: '喜欢简洁、直接的回答' } })
+    expect(patched.data.content).toBe('喜欢简洁、直接的回答')
+    expect((await call(`/me/memories/${saved.memory.id}`, { token: alice, method: 'PATCH', body: { content: 'x'.repeat(201) } })).status).toBe(422)
+
+    await Promise.all(Array.from({ length: MAX_MEMORIES - 1 }, (_, i) => createMemory(aliceId, `fact ${i}`)))
+    expect((await run(tools.save_memory, { content: 'one too many' })).error).toContain('Memory is full')
+    expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORIES)
+
+    expect((await call(`/me/memories/${saved.memory.id}`, { token: alice, method: 'DELETE' })).status).toBe(204)
+    expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORIES - 1)
+    expect((await call('/me/memories', { token: alice, method: 'DELETE' })).status).toBe(204)
+    expect((await call('/me/memories', { token: alice })).data).toEqual([])
+  })
+
   it('finds past chats by meaning once an embedding model is configured', async () => {
     const { noopObserve } = await import('@mastra/core/tools')
     const { createChatHistoryTools } = await import('../src/llm/chat-history')

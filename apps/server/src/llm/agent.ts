@@ -3,8 +3,10 @@ import { Agent } from '@mastra/core/agent'
 import { Mastra } from '@mastra/core/mastra'
 import { RequestContext } from '@mastra/core/request-context'
 import type { ModelConfig } from '@flai/shared'
+import type { MemoryRow } from '../services/memories'
 import { getSetting } from '../services/settings'
 import type { ResolvedModel } from './models'
+import { memoryPrompt } from './user-memory'
 
 /** Values the chat agent reads from the per-request context. */
 export interface ChatRequestContext {
@@ -44,12 +46,24 @@ export function getGenuiPrompt(): string {
   return genuiPrompt
 }
 
-export function chatInstructions(model: ModelConfig, { chatHistory = false, now = new Date() } = {}): string {
+export interface ChatInstructionOptions {
+  chatHistory?: boolean
+  /** The user's saved memories, oldest first; empty when memory is off. */
+  memories?: MemoryRow[]
+  /** Whether the memory tools are offered. */
+  memoryWrite?: boolean
+  now?: Date
+}
+
+export function chatInstructions(model: ModelConfig, { chatHistory = false, memories = [], memoryWrite = false, now = new Date() }: ChatInstructionOptions = {}): string {
   const base = getSetting('system_prompt').chat.replaceAll('{{currentDate}}', promptDate.format(now))
   return [
     base,
+    // Right after the system prompt, and only changing when memories do, so the prefix caches well.
+    memoryPrompt(memories),
     model.toolCall && 'Use ask_user when you need clarification or a decision from the user. Ask in the user’s language, provide concise choices when helpful, and wait for the answer before continuing.',
     model.toolCall && chatHistory && 'Use search_chats and read_chat to recall the user’s earlier conversations when they refer to something discussed before or when past context would clearly help; don’t mention them otherwise.',
+    model.toolCall && memoryWrite && 'Use save_memory when the user shares a lasting fact or preference about themselves or asks you to remember something; use update_memory or delete_memory, with ids from the saved memories, when one changes or the user asks you to forget it. Keep one fact per memory and say briefly what you saved.',
     model.generativeUi && getGenuiPrompt(),
   ].filter(Boolean).join('\n\n')
 }

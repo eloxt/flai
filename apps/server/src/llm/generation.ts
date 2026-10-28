@@ -7,6 +7,7 @@ import { db, schema } from '../db'
 import { AppError, errorMessage } from '../lib/errors'
 import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
+import { listMemories } from '../services/memories'
 import type { ProviderRow } from '../services/providers'
 import { chatContext, chatInstructions, getChatAgent } from './agent'
 import { createChatHistoryTools } from './chat-history'
@@ -17,6 +18,7 @@ import { buildMcpToolset } from './mcp'
 import { buildModel } from './models'
 import { exaResponseSchema } from './exa'
 import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './stream-bus'
+import { createMemoryTools, type MemoryAccess } from './user-memory'
 
 const GENERATION_TIMEOUT_MS = 20 * 60 * 1000
 const MAX_STEPS = 10
@@ -119,6 +121,7 @@ export interface StartGenerationInput {
   options: ChatOptions
   /** Whether the model may search and read the user's other conversations. */
   chatHistory: boolean
+  memory: MemoryAccess
 }
 
 /** Start generating a reply in the background. Read it with `generationBus().read(assistantId, "0", …)`. */
@@ -187,9 +190,15 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     const resolved = buildModel({ provider, model, options, requestId: input.assistantId })
     const messages = await toModelMessages(input.path, provider.type)
     const chatHistory = model.toolCall && input.chatHistory
-    const memory = chatHistory ? createChatHistoryTools({ userId: input.userId, conversationId: input.conversationId }) : {}
+    const scope = { userId: input.userId, conversationId: input.conversationId }
+    const memoryWrite = model.toolCall && input.memory === 'write'
+    const memories = input.memory === 'off' ? [] : await listMemories(input.userId)
+    const memory = {
+      ...(chatHistory && createChatHistoryTools(scope)),
+      ...(memoryWrite && createMemoryTools(scope)),
+    }
     const stream = await getChatAgent().stream(messages as never, {
-      requestContext: chatContext({ model: resolved.model, instructions: chatInstructions(model, { chatHistory }) }),
+      requestContext: chatContext({ model: resolved.model, instructions: chatInstructions(model, { chatHistory, memories, memoryWrite }) }),
       providerOptions: resolved.providerOptions as never,
       toolsets: { builtin: resolved.tools, memory, mcp: model.toolCall ? mcp.tools : {} },
       // The browser supplies the answer; the existing message store preserves it across restarts.

@@ -54,6 +54,10 @@ export interface Preferences {
   sidebarShowEmoji?: boolean
   /** Let the assistant search and read the user's other chats. Defaults to on. */
   chatHistory?: boolean
+  /** Give the assistant the user's saved memories in every chat. Defaults to on. */
+  memory?: boolean
+  /** Let the assistant save, update and delete memories. Defaults to on. */
+  memoryWrite?: boolean
   translate?: { source?: string; target?: string; instruction?: string }
   [key: string]: unknown
 }
@@ -84,6 +88,23 @@ export const updateMeSchema = z.object({
   avatarFileId: z.string().nullable().optional(),
 })
 export const updatePreferencesSchema = z.record(z.string(), z.unknown())
+// ---------- memories ----------
+
+/** Most memories a user can keep; the assistant has to update or delete one to save more. */
+export const MAX_MEMORIES = 100
+export const MAX_MEMORY_LENGTH = 200
+
+export interface Memory {
+  id: string
+  content: string
+  sourceConversationId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export const memoryContentSchema = z.string().trim().min(1).max(MAX_MEMORY_LENGTH)
+export const updateMemorySchema = z.object({ content: memoryContentSchema })
+
 export const changePasswordSchema = z.object({ oldPassword: z.string().min(1), newPassword: password })
 export const feedbackSchema = z.object({ content: z.string().trim().min(1).max(2000) })
 

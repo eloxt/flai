@@ -27,6 +27,7 @@ import { cancelGeneration, startGeneration } from '../llm/generation'
 import { generationBus, isStreamPosition } from '../llm/stream-bus'
 import { resolveThinking } from '../llm/models'
 import { isOffTopic } from '../llm/topic-check'
+import { memoryAccess } from '../llm/user-memory'
 import { getConversation, loadPath, touchConversation } from '../services/conversations'
 import { ownedFiles } from '../services/files'
 import { resolveModel } from '../services/providers'
@@ -102,6 +103,7 @@ export const messageRoutes = new Hono<AppEnv>()
     await startGeneration({
       userId: user.id,
       chatHistory: user.preferences.chatHistory !== false,
+      memory: memoryAccess(user.preferences),
       conversationId: conversation.id,
       assistantId: input.assistantId,
       path,
@@ -127,6 +129,7 @@ export const messageRoutes = new Hono<AppEnv>()
     await startGeneration({
       userId: user.id,
       chatHistory: user.preferences.chatHistory !== false,
+      memory: memoryAccess(user.preferences),
       conversationId: conversation.id,
       assistantId: input.assistantId,
       path,
@@ -186,7 +189,7 @@ export const messageRoutes = new Hono<AppEnv>()
 
     if (!result.pending) await startGeneration({
       userId: user.id, conversationId: conversation.id, assistantId: input.assistantId,
-      chatHistory: user.preferences.chatHistory !== false,
+      chatHistory: user.preferences.chatHistory !== false, memory: memoryAccess(user.preferences),
       path: result.path, provider: result.provider, model: result.model, options: result.options,
     })
     return c.json({

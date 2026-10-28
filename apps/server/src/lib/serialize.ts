@@ -1,4 +1,4 @@
-import type { Conversation, FileRecord, McpServer, MessageRecord, User } from '@flai/shared'
+import type { Conversation, FileRecord, McpServer, Memory, MessageRecord, User } from '@flai/shared'
 import type { schema } from '../db'
 import type { UserRow } from './hono'
 
@@ -51,6 +51,16 @@ export function toMcpServer(row: typeof schema.mcpServers.$inferSelect): McpServ
     headers: row.headers,
     tools: row.tools,
     isActive: row.isActive,
+    createdAt: iso(row.createdAt),
+    updatedAt: iso(row.updatedAt),
+  }
+}
+
+export function toMemory(row: typeof schema.userMemories.$inferSelect): Memory {
+  return {
+    id: row.id,
+    content: row.content,
+    sourceConversationId: row.sourceConversationId,
     createdAt: iso(row.createdAt),
     updatedAt: iso(row.updatedAt),
   }
