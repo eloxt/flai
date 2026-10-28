@@ -44,7 +44,7 @@ const INSTRUCTIONS = `You keep a running summary of one conversation and the lon
 
 Language: write the summary and every memory in the language the user writes in (if the user writes Chinese, write Chinese).
 
-Summary: 2–3 sentences on what the whole conversation covers and where it ended up. Update <previous_summary> with the new turns; don't start over or list every turn.
+Summary: 2–3 sentences on what the whole conversation covers and where it ended up. Refer to the two sides as the user and the assistant (in Chinese: 用户, 助手), never "I", and don't guess the user's gender: no he or she. Update <previous_summary> with the new turns; don't start over or list every turn.
 
 Memories, only when <existing_memories> is given:
 - Record only lasting facts or preferences the user states, in their own voice, about themselves in <user> turns: their work, location, tools, tastes, how they want answers. Ignore one-off requests and details of the task at hand.
@@ -130,7 +130,8 @@ export async function claimIdleConversations(limit = BATCH, idleMs = IDLE_MS): P
         AND updated_at < now() - ${`${idleMs} milliseconds`}::interval
         AND (extracted_at IS NULL OR updated_at > extracted_at)
         AND (job_lease_until IS NULL OR job_lease_until < now())
-      ORDER BY updated_at
+      -- Newest first, so chats that just went quiet don't wait behind a backlog.
+      ORDER BY updated_at DESC
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED
     )

@@ -57,6 +57,13 @@
       "when": 1793174827666,
       "tag": "0007_memory_retrieval",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793175703195,
+      "tag": "0008_backfill_recent_chats",
+      "breakpoints": true
     }
   ]
 }
