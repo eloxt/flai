@@ -267,7 +267,10 @@ export function convertSystemConfig(rows: Array<{ key: string; value: unknown }>
   if (Object.keys(systemPrompt).length) {
     settings.push({
       key: 'system_prompt',
-      value: { chat: str(systemPrompt.prompt) ?? '', translate: str(systemPrompt.translate) ?? '' },
+      value: {
+        chat: (str(systemPrompt.prompt) ?? '').replaceAll('{{currentDateTime}}', '{{currentDate}}'),
+        translate: str(systemPrompt.translate) ?? '',
+      },
     })
   }
   const title = get('title_generation')

@@ -340,10 +340,10 @@
         "chatPrompt": "聊天系统提示词",
         "translatePrompt": "翻译提示词",
         "titleHelp": "描述标题生成的要求。会话内容会单独传入，返回结构由系统设置。",
-        "chatHelp": "可留空。支持变量：{{currentDateTime}}（当前日期时间）。",
+        "chatHelp": "可留空。支持变量：{{currentDate}}（当前日期）。",
         "translateHelp": "支持变量：{{sourceLanguage}}（源语言）、{{targetLanguage}}（目标语言）、{{text}}（待翻译内容）。",
         "systemPromptHelp": "每次对话和翻译时发送给模型的指令。",
-        "chatPromptHelp": "{{currentDateTime}} 会被替换为当前时间。",
+        "chatPromptHelp": "{{currentDate}} 会被替换为当前日期（新加坡时间）。",
         "translatePromptHelp": "占位符：{{sourceLanguage}}、{{targetLanguage}}、{{text}}。"
       },
       "title": "管理员设置",

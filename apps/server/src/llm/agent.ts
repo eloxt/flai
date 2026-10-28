@@ -33,6 +33,9 @@ export function chatContext(values: ChatRequestContext): RequestContext<ChatRequ
   return ctx
 }
 
+// en-CA formats as YYYY-MM-DD.
+const promptDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' })
+
 let genuiPrompt: string | undefined
 
 /** The OpenUI component reference, built once from the official library specification. */
@@ -42,7 +45,7 @@ export function getGenuiPrompt(): string {
 }
 
 export function chatInstructions(model: ModelConfig, { chatHistory = false, now = new Date() } = {}): string {
-  const base = getSetting('system_prompt').chat.replaceAll('{{currentDateTime}}', now.toISOString())
+  const base = getSetting('system_prompt').chat.replaceAll('{{currentDate}}', promptDate.format(now))
   return [
     base,
     model.toolCall && 'Use ask_user when you need clarification or a decision from the user. Ask in the user’s language, provide concise choices when helpful, and wait for the answer before continuing.',

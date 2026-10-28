@@ -91,12 +91,12 @@ describe('misc', () => {
 
   it('splits system_config into settings and notifications', () => {
     const { settings, notifications } = convertSystemConfig([
-      { key: 'system_prompt', value: { prompt: 'p', translate: 't' } },
+      { key: 'system_prompt', value: { prompt: 'p {{currentDateTime}}', translate: 't' } },
       { key: 'title_generation', value: { provider_id: 'p1', model_name: 'm', prompt: 'x' } },
       { key: 'notification', value: { list: [{ id: 'n', title: 'T', content: 'C', level: 'warning' }] } },
     ])
     expect(settings).toEqual([
-      { key: 'system_prompt', value: { chat: 'p', translate: 't' } },
+      { key: 'system_prompt', value: { chat: 'p {{currentDate}}', translate: 't' } },
       { key: 'title_generation', value: { providerId: 'p1', modelId: 'm', prompt: 'x' } },
     ])
     expect(notifications).toEqual([{ id: 'n', title: 'T', content: 'C', level: 'warning' }])

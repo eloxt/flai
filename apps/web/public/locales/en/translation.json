@@ -345,10 +345,10 @@
         "chatPrompt": "Chat system prompt",
         "translatePrompt": "Translation prompt",
         "titleHelp": "Describe the title requirements. Conversation content is supplied separately and the output structure is managed by the system.",
-        "chatHelp": "Optional. Supports {{currentDateTime}} for the current date and time.",
+        "chatHelp": "Optional. Supports {{currentDate}} for the current date.",
         "translateHelp": "Supports {{sourceLanguage}}, {{targetLanguage}} and {{text}} for source language, target language and input text.",
         "systemPromptHelp": "Instructions sent to the model with every conversation and translation.",
-        "chatPromptHelp": "{{currentDateTime}} is replaced with the current time.",
+        "chatPromptHelp": "{{currentDate}} is replaced with the current date (Singapore time).",
         "translatePromptHelp": "Placeholders: {{sourceLanguage}}, {{targetLanguage}}, {{text}}."
       },
       "title": "Admin Settings",
