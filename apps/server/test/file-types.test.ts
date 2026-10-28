@@ -23,5 +23,7 @@ describe('isTextFile', () => {
     expect(isTextFile('video/mp2t', 'index.ts')).toBe(true)
     expect(isTextFile('application/pdf', 'paper.pdf')).toBe(false)
     expect(isTextFile('image/png')).toBe(false)
+    expect(isTextFile('application/octet-stream', 'notes.v2/README')).toBe(false)
+    expect(isTextFile('application/octet-stream', '.ini')).toBe(false)
   })
 })

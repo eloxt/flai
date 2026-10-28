@@ -1,4 +1,4 @@
-import type { FileRecord } from "@flai/shared"
+import { ATTACHMENT_EXTENSIONS, fileExtension, type FileRecord } from "@flai/shared"
 import { api } from "./api"
 
 const ALLOWED_TYPES = new Set([
@@ -6,14 +6,11 @@ const ALLOWED_TYPES = new Set([
   "application/json", "application/xml", "application/pdf",
   "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
 ])
-const ALLOWED_EXTENSIONS = new Set([
-  "txt", "md", "csv", "html", "css", "js", "ts", "jsx", "tsx", "json", "xml", "yaml", "yml", "log", "conf", "cfg", "ini",
-  "pdf", "jpg", "jpeg", "png", "gif", "webp", "svg",
-])
+const ALLOWED_EXTENSIONS = new Set(ATTACHMENT_EXTENSIONS)
 
 export function isAllowedAttachment(file: File): boolean {
   if (ALLOWED_TYPES.has(file.type)) return true
-  return ALLOWED_EXTENSIONS.has(file.name.split(".").pop()?.toLowerCase() ?? "")
+  return ALLOWED_EXTENSIONS.has(fileExtension(file.name))
 }
 
 export async function uploadFile(file: File): Promise<FileRecord> {

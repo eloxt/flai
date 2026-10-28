@@ -1,13 +1,9 @@
-import { extname } from 'node:path'
+import { fileExtension, TEXT_FILE_EXTENSIONS } from '@flai/shared'
 
 const TEXT_TYPES = /^(text\/|application\/(json|xml|yaml|x-yaml|javascript|typescript|x-sh|toml|sql))/
-/** Source and config files browsers report as '' or as something unrelated (.ts → video/mp2t). */
-const TEXT_EXTENSIONS = new Set([
-  'txt', 'md', 'csv', 'html', 'css', 'js', 'ts', 'jsx', 'tsx', 'json', 'xml', 'yaml', 'yml', 'log', 'conf', 'cfg', 'ini',
-])
+const TEXT_EXTENSIONS = new Set(TEXT_FILE_EXTENSIONS)
 
-const hasTextExtension = (filename: string | undefined) =>
-  TEXT_EXTENSIONS.has(extname(filename ?? '').slice(1).toLowerCase())
+const hasTextExtension = (filename: string | undefined) => TEXT_EXTENSIONS.has(fileExtension(filename))
 
 /** Whether an attachment is inlined into the prompt as text rather than sent as a file. */
 export function isTextFile(mediaType: string, filename?: string): boolean {
