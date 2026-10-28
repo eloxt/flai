@@ -1,9 +1,10 @@
-import { MAX_MEMORY_LENGTH, type Memory } from "@flai/shared"
-import { PencilIcon, Trash2Icon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { MAX_MEMORY_LENGTH, type Memory, type MemoryEvent } from "@flai/shared"
+import { PencilIcon, PinIcon, Trash2Icon, Undo2Icon } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
 import { PanelSection, PanelTable } from "~/components/panel-dialog"
+import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
   Dialog,
@@ -39,6 +40,7 @@ import { Textarea } from "~/components/ui/textarea"
 import { api } from "~/lib/api"
 import { formatDateTime } from "~/lib/format"
 import { notify } from "~/lib/notify"
+import { cn } from "cn"
 import { useAuthStore } from "~/store/auth-store"
 import { useUpdatePreferences } from "./preference-settings"
 
@@ -51,12 +53,25 @@ export function MemorySettings() {
   const [draft, setDraft] = useState("")
   const [deleting, setDeleting] = useState<Memory | null>(null)
   const [clearing, setClearing] = useState(false)
+  const [events, setEvents] = useState<MemoryEvent[]>([])
+
+  // Edits and deletes change which automatic changes can still be undone.
+  const reload = useCallback(async () => {
+    try {
+      const [list, changes] = await Promise.all([
+        api<Memory[]>("/me/memories"),
+        api<MemoryEvent[]>("/me/memory-events"),
+      ])
+      setMemories(list)
+      setEvents(changes)
+    } catch (error) {
+      notify.error(error)
+    }
+  }, [])
 
   useEffect(() => {
-    api<Memory[]>("/me/memories")
-      .then(setMemories)
-      .catch((e) => notify.error(e))
-  }, [])
+    void reload()
+  }, [reload])
 
   const enabled = preferences?.memory ?? true
 
@@ -71,6 +86,30 @@ export function MemorySettings() {
         (list ?? []).map((m) => (m.id === updated.id ? updated : m))
       )
       setEditing(null)
+      void reload()
+    } catch (error) {
+      notify.error(error)
+    }
+  }
+
+  const togglePin = async (memory: Memory) => {
+    try {
+      const updated = await api<Memory>(`/me/memories/${memory.id}`, {
+        method: "PATCH",
+        body: { pinned: !memory.pinned },
+      })
+      setMemories((list) =>
+        (list ?? []).map((m) => (m.id === updated.id ? updated : m))
+      )
+    } catch (error) {
+      notify.error(error)
+    }
+  }
+
+  const undo = async (event: MemoryEvent) => {
+    try {
+      await api(`/me/memory-events/${event.id}/undo`, { method: "POST" })
+      await reload()
     } catch (error) {
       notify.error(error)
     }
@@ -169,6 +208,22 @@ export function MemorySettings() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        aria-label={t("pages.settings.memory.pin")}
+                        aria-pressed={memory.pinned}
+                        title={t("pages.settings.memory.pinHint")}
+                        onClick={() => void togglePin(memory)}
+                      >
+                        <PinIcon
+                          className={cn(
+                            memory.pinned
+                              ? "fill-current"
+                              : "text-muted-foreground"
+                          )}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         aria-label={t("pages.settings.memory.editTitle")}
                         onClick={() => {
                           setDraft(memory.content)
@@ -192,6 +247,67 @@ export function MemorySettings() {
             </TableBody>
           </Table>
         </PanelTable>
+      )}
+
+      {events.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h4 className="text-sm font-medium">
+              {t("pages.settings.memory.recentChanges")}
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {t("pages.settings.memory.recentChangesDescription")}
+            </p>
+          </div>
+          <PanelTable>
+            <Table>
+              <TableBody>
+                {events.map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="min-w-56 break-words whitespace-normal">
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={cn(
+                            event.undoneAt && "line-through opacity-60"
+                          )}
+                        >
+                          <ChangeText event={event} />
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {t(`pages.settings.memory.sources.${event.source}`)}
+                          {event.note && ` · ${event.note}`}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDateTime(event.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        {event.undoneAt ? (
+                          <Badge variant="secondary">
+                            {t("pages.settings.memory.undone")}
+                          </Badge>
+                        ) : (
+                          event.undoable && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void undo(event)}
+                            >
+                              <Undo2Icon data-icon="inline-start" />
+                              {t("pages.settings.memory.undo")}
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </PanelTable>
+        </section>
       )}
 
       <Dialog
@@ -229,6 +345,7 @@ export function MemorySettings() {
             setMemories((list) =>
               (list ?? []).filter((m) => m.id !== deleting.id)
             )
+            void reload()
           } catch (error) {
             notify.error(error)
           }
@@ -246,6 +363,7 @@ export function MemorySettings() {
           try {
             await api("/me/memories", { method: "DELETE" })
             setMemories([])
+            setEvents([])
           } catch (error) {
             notify.error(error)
           }
@@ -253,4 +371,13 @@ export function MemorySettings() {
       />
     </PanelSection>
   )
+}
+
+/** One automatic change in words: what was added, changed or removed. */
+function ChangeText({ event }: { event: MemoryEvent }) {
+  const { t } = useTranslation()
+  return t(`pages.settings.memory.changes.${event.action}`, {
+    before: event.before,
+    after: event.after,
+  })
 }

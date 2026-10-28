@@ -316,7 +316,23 @@
         "updatedAt": "Updated",
         "editTitle": "Edit memory",
         "empty": "No memories yet",
-        "emptyHint": "Tell the assistant “remember …” in a chat to save one."
+        "emptyHint": "Tell the assistant “remember …” in a chat to save one.",
+        "pin": "Pin",
+        "pinHint": "Pinned memories are always given to the assistant; others only when relevant, once there are many.",
+        "recentChanges": "Recent changes",
+        "recentChangesDescription": "Changes the assistant made in the last 30 days. Undo any you disagree with.",
+        "sources": {
+          "agent": "Saved in a chat",
+          "extraction": "Learned from a chat",
+          "consolidation": "Tidied up"
+        },
+        "changes": {
+          "add": "Added “{{after}}”",
+          "update": "Changed “{{before}}” to “{{after}}”",
+          "delete": "Removed “{{before}}”"
+        },
+        "undo": "Undo",
+        "undone": "Undone"
       },
       "share": {
         "title": "Shared Links",

@@ -311,7 +311,23 @@
         "updatedAt": "更新时间",
         "editTitle": "编辑记忆",
         "empty": "还没有记忆",
-        "emptyHint": "在对话中对助手说“记住……”即可保存。"
+        "emptyHint": "在对话中对助手说“记住……”即可保存。",
+        "pin": "置顶",
+        "pinHint": "置顶的记忆总会提供给助手；记忆较多时，其他记忆只在相关时提供。",
+        "recentChanges": "最近的变更",
+        "recentChangesDescription": "助手在最近 30 天内做出的修改，不认可的可以撤销。",
+        "sources": {
+          "agent": "对话中保存",
+          "extraction": "从对话中提取",
+          "consolidation": "自动整理"
+        },
+        "changes": {
+          "add": "新增「{{after}}」",
+          "update": "将「{{before}}」改为「{{after}}」",
+          "delete": "删除「{{before}}」"
+        },
+        "undo": "撤销",
+        "undone": "已撤销"
       },
       "share": {
         "title": "分享链接",
