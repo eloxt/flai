@@ -408,6 +408,15 @@ export type SettingKey = keyof typeof settingSchemas
 export type SettingValue<K extends SettingKey> = z.infer<(typeof settingSchemas)[K]>
 export const SETTING_KEYS = Object.keys(settingSchemas) as SettingKey[]
 
+/**
+ * Fields the API only ever returns masked. Sending the masked value back keeps the stored
+ * secret; an empty string clears it.
+ */
+export const SECRET_SETTING_FIELDS: { readonly [K in SettingKey]?: readonly (keyof SettingValue<K> & string)[] } = {
+  web_search: ['exaApiKey'],
+  topic_check: ['apiKey'],
+}
+
 function isSafeHttpUrl(value: string): boolean {
   try {
     const url = new URL(value)

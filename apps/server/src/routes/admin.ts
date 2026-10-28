@@ -5,13 +5,9 @@ import {
   providerInputSchema,
   providerOrderSchema,
   providerPatchSchema,
-  SETTING_KEYS,
-  type SettingKey,
-  settingSchemas,
 } from '@flai/shared'
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { z } from 'zod'
 import { db, schema } from '../db'
 import { hashPassword } from '../lib/auth'
 import { decodeCursor } from '../lib/cursor'
@@ -19,13 +15,10 @@ import { badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toAdminProvider, toConversation, toUser } from '../lib/serialize'
-import { embedWith } from '../llm/embedding'
-import { nudgeEmbeddingIndexer } from '../llm/embedding-index'
-import { verifyTypeSafe } from '../llm/topic-check'
-import { findProvider, maskKey, reloadProviders, resolveModel } from '../services/providers'
+import { maskKey, reloadProviders } from '../services/providers'
 import { listConversations } from '../services/conversations'
-import { getSetting, updateSetting } from '../services/settings'
 import { withUniqueEmail } from '../services/users'
+import { settingRoutes } from './admin-settings'
 import { adminNotificationRoutes } from './notifications'
 
 const u = schema.users
@@ -41,10 +34,6 @@ async function liveProvider(id: string) {
   const row = await db.query.providers.findFirst({ where: and(eq(p.id, id), isNull(p.deletedAt)) })
   if (!row) throw notFound('Provider')
   return row
-}
-
-function isSettingKey(key: string): key is SettingKey {
-  return (SETTING_KEYS as string[]).includes(key)
 }
 
 const userRoutes = new Hono<AppEnv>()
@@ -128,80 +117,6 @@ const providerRoutes = new Hono<AppEnv>()
     await db.update(p).set({ deletedAt: new Date() }).where(eq(p.id, current.id))
     await reloadProviders()
     return c.body(null, 204)
-  })
-
-const settingRoutes = new Hono<AppEnv>()
-  .get('/:key', (c) => {
-    const key = c.req.param('key')
-    if (!isSettingKey(key)) throw notFound('Setting')
-    if (key === 'web_search') {
-      const value = getSetting(key)
-      return c.json({ ...value, exaApiKey: value.exaApiKey ? maskKey(value.exaApiKey) : '' })
-    }
-    if (key === 'topic_check') {
-      const value = getSetting(key)
-      return c.json({ ...value, apiKey: value.apiKey ? maskKey(value.apiKey) : '' })
-    }
-    return c.json(getSetting(key))
-  })
-  .put('/:key', async (c) => {
-    const key = c.req.param('key')
-    if (!isSettingKey(key)) throw notFound('Setting')
-    if (key === 'web_search') {
-      // Remove defaults so a partial update cannot clear the key or reset the provider.
-      const patch = await body(c, z.object({
-        provider: settingSchemas.web_search.shape.provider.removeDefault().optional(),
-        exaApiKey: settingSchemas.web_search.shape.exaApiKey.removeDefault().optional(),
-      }))
-      const current = getSetting(key)
-      if (current.exaApiKey && patch.exaApiKey === maskKey(current.exaApiKey)) delete patch.exaApiKey
-      const merged = { ...current, ...patch }
-      if (merged.provider === 'exa' && !merged.exaApiKey) throw badRequest('Exa API key is required when Exa search is selected')
-      const value = await updateSetting(key, patch)
-      return c.json({ ...value, exaApiKey: value.exaApiKey ? maskKey(value.exaApiKey) : '' })
-    }
-    if (key === 'topic_check') {
-      const shape = settingSchemas.topic_check.shape
-      const patch = await body(c, z.object({
-        enabled: shape.enabled.removeDefault().optional(),
-        baseUrl: shape.baseUrl.removeDefault().optional(),
-        apiKey: shape.apiKey.removeDefault().optional(),
-        model: shape.model.removeDefault().optional(),
-        threshold: shape.threshold.removeDefault().optional(),
-      }))
-      const current = getSetting(key)
-      if (current.apiKey && patch.apiKey === maskKey(current.apiKey)) delete patch.apiKey
-      const merged = { ...current, ...patch }
-      if (merged.enabled) {
-        if (!merged.apiKey) throw badRequest('TypeSafe API key is required to turn on topic checks')
-        if (merged.apiKey !== current.apiKey || merged.baseUrl !== current.baseUrl || merged.model !== current.model || !current.enabled) {
-          await verifyTypeSafe(merged, merged.model)
-        }
-      }
-      const value = await updateSetting(key, patch)
-      return c.json({ ...value, apiKey: value.apiKey ? maskKey(value.apiKey) : '' })
-    }
-    const input = await body(c, settingSchemas[key].partial())
-    if (key === 'title_generation' || key === 'background_model') {
-      const merged = { ...getSetting(key), ...input } as { providerId: string; modelId: string }
-      if (merged.providerId || merged.modelId) resolveModel(merged.providerId, merged.modelId)
-    }
-    if (key === 'embedding') {
-      const merged = { ...getSetting('embedding'), ...input } as ReturnType<typeof getSetting<'embedding'>>
-      if (merged.providerId || merged.modelId) {
-        const provider = findProvider(merged.providerId)
-        if (!provider) throw notFound('Provider')
-        if (!merged.modelId) throw badRequest('Model is required')
-        // Fail now rather than in the background indexer.
-        await embedWith(provider, merged.modelId, ['test'], AbortSignal.timeout(30_000)).catch((error: unknown) => {
-          throw badRequest(error instanceof Error ? error.message : String(error))
-        })
-      }
-      const value = await updateSetting('embedding', merged)
-      nudgeEmbeddingIndexer()
-      return c.json(value)
-    }
-    return c.json(await updateSetting(key, input))
   })
 
 export const adminRoutes = new Hono<AppEnv>()
