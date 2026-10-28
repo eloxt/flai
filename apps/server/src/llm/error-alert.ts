@@ -1,27 +1,19 @@
-import { errorMessage } from '../lib/errors'
+import { errorMessage, redactSecret } from '../lib/errors'
 import { sendBark } from '../services/bark'
 import { getSetting } from '../services/settings'
+import type { ModelTarget } from './one-shot'
 
 const MAX_LENGTH = 1000
 
-export interface AlertContext {
-  operation: string
-  providerName?: string
-  modelId?: string
-  apiKey?: string
-}
-
-/** Fire-and-forget Bark alert for failed LLM calls. Never throws. */
-export function alertLlmError(ctx: AlertContext, error: unknown): void {
+/** Fire-and-forget Bark alert for a failed LLM call. Never throws. */
+export function alertLlmError(operation: string, { provider, model }: ModelTarget, error: unknown): void {
   const { barkUrl } = getSetting('error_alert')
   if (!barkUrl) return
-  let message = errorMessage(error)
-  if (ctx.apiKey) message = message.replaceAll(ctx.apiKey, '[REDACTED]')
   const body = [
-    `操作：${ctx.operation}`,
-    `提供商：${ctx.providerName ?? '-'}`,
-    `模型：${ctx.modelId ?? '-'}`,
-    `错误：${message}`,
+    `操作：${operation}`,
+    `提供商：${provider.name}`,
+    `模型：${model.id}`,
+    `错误：${redactSecret(errorMessage(error), provider.apiKey)}`,
   ].join('\n')
   const chars = [...body]
   const truncated = chars.length > MAX_LENGTH ? `${chars.slice(0, MAX_LENGTH).join('')}…` : body

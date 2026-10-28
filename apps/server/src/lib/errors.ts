@@ -35,6 +35,17 @@ export const notFound = (what = 'Resource') => new AppError('NOT_FOUND', `${what
 export const badRequest = (message: string, details?: unknown) => new AppError('BAD_REQUEST', message, details)
 export const forbidden = (message = 'Forbidden') => new AppError('FORBIDDEN', message)
 
+/** `text` with every occurrence of `secret` (e.g. an API key echoed in an upstream error) blanked out. */
+export function redactSecret(text: string, secret: string | undefined): string {
+  return secret ? text.replaceAll(secret, '[REDACTED]') : text
+}
+
+/** What to show the user for a failed model call: our own errors as is, others trimmed and without the key. */
+export function userFacingError(error: unknown, apiKey?: string): string {
+  if (error instanceof AppError) return error.message
+  return redactSecret(errorMessage(error).slice(0, 500), apiKey) || 'Generation failed. Please retry.'
+}
+
 /** Readable message for any thrown value. Mastra serializes stream errors (with stack) as JSON; keep only the message. */
 export function errorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : ''

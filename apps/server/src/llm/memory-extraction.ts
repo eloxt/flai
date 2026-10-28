@@ -6,7 +6,7 @@ import { AppError } from '../lib/errors'
 import { clip, escapeXml } from '../lib/text'
 import { latestPath, type MessageRow } from '../services/conversations'
 import { createMemory, deleteMemory, findMemoryIds, listMemories, type MemoryRow, updateMemory } from '../services/memories'
-import { backgroundModel, generateStructured } from './background-model'
+import { backgroundModel, generateInBackground } from './background-model'
 import { type Embedder, getEmbedder } from './embedding'
 import { indexPendingMemories, nudgeEmbeddingIndexer, saveMemoryEmbedding } from './embedding-index'
 import { runMemoryConsolidation } from './memory-consolidation'
@@ -229,7 +229,7 @@ export async function processConversation(claim: Claim, generate = generateExtra
   if (summary !== claim.summary || ops.length > 0) nudgeEmbeddingIndexer()
 }
 
-const generateExtraction = (input: string) => generateStructured('memory', INSTRUCTIONS, input, extractionSchema)
+const generateExtraction = (input: string) => generateInBackground('memory', INSTRUCTIONS, input, extractionSchema)
 
 /** Claim and process one batch; returns how many chats were claimed. */
 export async function runMemoryExtraction(): Promise<number> {

@@ -4,7 +4,7 @@ import { toAISdkStream } from '@mastra/ai-sdk'
 import { askUserTool } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
 import { db, schema } from '../db'
-import { AppError, errorMessage } from '../lib/errors'
+import { AppError, userFacingError } from '../lib/errors'
 import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
 import type { ProviderRow } from '../services/providers'
@@ -308,7 +308,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   } catch (error) {
     if (reason !== 'shutdown') {
       console.error('generation failed', error)
-      alertLlmError({ operation: 'chat', providerName: provider.name, modelId: model.id, apiKey: provider.apiKey }, error)
+      alertLlmError('chat', { provider, model }, error)
     }
     // No `finish` chunk: clients treat a stream without one as failed and reload from the server.
     emit({ type: 'error', errorText: userFacingError(error, provider.apiKey) })
@@ -337,11 +337,4 @@ async function collectMetadata(stream: {
       : undefined,
     ...(grounding ? { googleGrounding: grounding } : {}),
   }
-}
-
-export function userFacingError(error: unknown, apiKey?: string): string {
-  if (error instanceof AppError) return error.message
-  let message = errorMessage(error).slice(0, 500)
-  if (apiKey) message = message.replaceAll(apiKey, '[REDACTED]')
-  return message || 'Generation failed. Please retry.'
 }

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { db } from '../db'
 import { isoDay } from '../lib/text'
 import { deleteMemory, listMemories, type MemoryRow, pruneMemoryEvents, updateMemory } from '../services/memories'
-import { backgroundModel, generateStructured } from './background-model'
+import { backgroundModel, generateInBackground } from './background-model'
 import { nudgeEmbeddingIndexer } from './embedding-index'
 import { memoryLabels } from './user-memory'
 
@@ -123,7 +123,7 @@ async function undoneByUser(userId: string): Promise<Set<string>> {
   return new Set(result.rows.map((r) => r.memory_id))
 }
 
-const generateConsolidation = (input: string) => generateStructured('memory consolidation', INSTRUCTIONS, input, consolidationSchema)
+const generateConsolidation = (input: string) => generateInBackground('memory consolidation', INSTRUCTIONS, input, consolidationSchema)
 
 /** Tidy one claimed user's memories, logging each change so the user can undo it. */
 export async function consolidateUser(userId: string, generate = generateConsolidation): Promise<Change[]> {

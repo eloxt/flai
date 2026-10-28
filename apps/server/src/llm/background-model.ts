@@ -2,14 +2,10 @@ import type { z } from 'zod'
 import { AppError } from '../lib/errors'
 import { resolveModel } from '../services/providers'
 import { getSetting } from '../services/settings'
-import { chatContext, getChatAgent } from './agent'
-import { alertLlmError } from './error-alert'
-import { buildModel } from './models'
-
-const MODEL_TIMEOUT_MS = 2 * 60_000
+import { generateStructured, type ModelTarget } from './one-shot'
 
 /** The background model, falling back to the title model; null when neither is configured. */
-export function backgroundModel() {
+export function backgroundModel(): ModelTarget | null {
   const own = getSetting('background_model')
   const { providerId, modelId } = own.providerId && own.modelId ? own : getSetting('title_generation')
   if (!providerId || !modelId) return null
@@ -21,21 +17,8 @@ export function backgroundModel() {
 }
 
 /** Ask the background model for structured output; failures are alerted and rethrown. */
-export async function generateStructured<T>(operation: string, instructions: string, input: string, schema: z.ZodType<T>): Promise<T> {
-  const resolved = backgroundModel()
-  if (!resolved) throw new AppError('NOT_CONFIGURED', 'No background model is configured')
-  const { provider, model } = resolved
-  const built = buildModel({ provider, model, options: { thinking: model.thinkingLevels[0] } })
-  try {
-    const result = await getChatAgent().generate(input, {
-      requestContext: chatContext({ model: built.model, instructions }),
-      providerOptions: built.providerOptions as never,
-      structuredOutput: { schema },
-      abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
-    })
-    return schema.parse(result.object)
-  } catch (error) {
-    alertLlmError({ operation, providerName: provider.name, modelId: model.id, apiKey: provider.apiKey }, error)
-    throw error
-  }
+export async function generateInBackground<T>(operation: string, instructions: string, input: string, schema: z.ZodType<T>): Promise<T> {
+  const target = backgroundModel()
+  if (!target) throw new AppError('NOT_CONFIGURED', 'No background model is configured')
+  return generateStructured(operation, target, { instructions, input, schema })
 }
