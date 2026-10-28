@@ -334,6 +334,13 @@ export const settingSchemas = {
   /** TypeSafe decision model that asks before a message drifts off the conversation's topic. */
   topic_check: z.object({
     enabled: z.boolean().default(false),
+    /** API root without the /v1 version path, e.g. a proxy in front of TypeSafe. */
+    baseUrl: z
+      .string()
+      .trim()
+      .transform((v) => v.replace(/\/+$/, ''))
+      .refine(isSafeHttpUrl, 'must be an http(s) URL without credentials or fragment')
+      .default('https://api.typesafe.ai'),
     apiKey: z.string().trim().max(1000).default(''),
     model: z.string().trim().min(1).max(100).default('jev-latest'),
     /** Probability of a topic change at or above which the user is asked. */

@@ -205,6 +205,7 @@ const settingRoutes = new Hono<AppEnv>()
       const shape = settingSchemas.topic_check.shape
       const patch = await body(c, z.object({
         enabled: shape.enabled.removeDefault().optional(),
+        baseUrl: shape.baseUrl.removeDefault().optional(),
         apiKey: shape.apiKey.removeDefault().optional(),
         model: shape.model.removeDefault().optional(),
         threshold: shape.threshold.removeDefault().optional(),
@@ -214,8 +215,8 @@ const settingRoutes = new Hono<AppEnv>()
       const merged = { ...current, ...patch }
       if (merged.enabled) {
         if (!merged.apiKey) throw badRequest('TypeSafe API key is required to turn on topic checks')
-        if (merged.apiKey !== current.apiKey || merged.model !== current.model || !current.enabled) {
-          await verifyTypeSafe(merged.apiKey, merged.model)
+        if (merged.apiKey !== current.apiKey || merged.baseUrl !== current.baseUrl || merged.model !== current.model || !current.enabled) {
+          await verifyTypeSafe(merged, merged.model)
         }
       }
       const value = await updateSetting(key, patch)

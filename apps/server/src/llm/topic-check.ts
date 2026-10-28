@@ -4,7 +4,6 @@ import { AppError } from '../lib/errors'
 import type { MessageRow } from '../services/conversations'
 import { getSetting } from '../services/settings'
 
-const API_URL = 'https://api.typesafe.ai/v1'
 /** The check sits in front of every send, so a slow answer counts as "on topic". */
 const CHECK_TIMEOUT_MS = 5000
 const MAX_TURNS = 8
@@ -15,8 +14,10 @@ const responseSchema = z.object({
   answers: z.object({ topic_shift: z.object({ noul: z.number() }) }),
 })
 
-async function requestTypeSafe(path: string, apiKey: string, init: RequestInit & { signal: AbortSignal }) {
-  const response = await fetch(`${API_URL}${path}`, {
+type Connection = Pick<SettingValue<'topic_check'>, 'baseUrl' | 'apiKey'>
+
+async function requestTypeSafe(path: string, { baseUrl, apiKey }: Connection, init: RequestInit & { signal: AbortSignal }) {
+  const response = await fetch(`${baseUrl}/v1${path}`, {
     ...init,
     headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
   }).catch(() => {
@@ -36,8 +37,8 @@ async function requestTypeSafe(path: string, apiKey: string, init: RequestInit &
 const modelsSchema = z.object({ models: z.array(z.object({ name: z.string() })) })
 
 /** Fail on save rather than silently skipping every check later. */
-export async function verifyTypeSafe(apiKey: string, model: string): Promise<void> {
-  const result = modelsSchema.safeParse(await requestTypeSafe('/models', apiKey, { method: 'GET', signal: AbortSignal.timeout(15_000) }))
+export async function verifyTypeSafe(connection: Connection, model: string): Promise<void> {
+  const result = modelsSchema.safeParse(await requestTypeSafe('/models', connection, { method: 'GET', signal: AbortSignal.timeout(15_000) }))
   if (!result.success) throw new AppError('UPSTREAM', 'TypeSafe returned an invalid response')
   if (!result.data.models.some((m) => m.name === model)) throw new AppError('BAD_REQUEST', `TypeSafe model not found: ${model}`)
 }
@@ -51,7 +52,7 @@ export async function topicShift(settings: SettingValue<'topic_check'>, title: s
     .filter((m) => m.text)
     .slice(-MAX_TURNS)
   if (conversation.length === 0) return 0
-  const data = await requestTypeSafe('/systemone', settings.apiKey, {
+  const data = await requestTypeSafe('/systemone', settings, {
     method: 'POST',
     signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
     body: JSON.stringify({

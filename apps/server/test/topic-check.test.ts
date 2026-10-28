@@ -12,7 +12,7 @@ const path = [row('user', 'How do I bake sourdough?'), row('assistant', 'Start w
 const answer = (noul: number) => Response.json({ model: 'jev-1.14.0', answers: { topic_shift: { type: 'noul', noul } }, usage: { input_tokens: 1, output_tokens: 1 } })
 
 beforeEach(() => {
-  settings = { enabled: true, apiKey: 'ts-key', model: 'jev-latest', threshold: 0.8 }
+  settings = { enabled: true, baseUrl: 'https://api.typesafe.ai', apiKey: 'ts-key', model: 'jev-latest', threshold: 0.8 }
   vi.stubGlobal('fetch', fetchMock)
   fetchMock.mockReset().mockImplementation(async () => answer(0.9))
 })
@@ -32,6 +32,12 @@ describe('topic check', () => {
       new_message: 'What is the capital of Peru?',
     })
     expect(request.questions.topic_shift.type).toBe('noul')
+  })
+
+  it('sends requests to the configured base URL', async () => {
+    settings.baseUrl = 'https://typesafe.proxy.internal/api'
+    await isOffTopic('Bread', path, 'x')
+    expect(fetchMock.mock.calls[0]![0]).toBe('https://typesafe.proxy.internal/api/v1/systemone')
   })
 
   it('only asks the user at or above the threshold', async () => {
@@ -59,10 +65,10 @@ describe('topic check', () => {
 
   it('verifies the key and model on save', async () => {
     fetchMock.mockImplementation(async () => Response.json({ models: [{ name: 'jev-latest', description: '', release_date: '2026-09-15' }] }))
-    await expect(verifyTypeSafe('ts-key', 'jev-latest')).resolves.toBeUndefined()
+    await expect(verifyTypeSafe(settings, 'jev-latest')).resolves.toBeUndefined()
     expect(fetchMock.mock.calls[0]![0]).toBe('https://api.typesafe.ai/v1/models')
-    await expect(verifyTypeSafe('ts-key', 'jev-0')).rejects.toThrow('TypeSafe model not found: jev-0')
+    await expect(verifyTypeSafe(settings, 'jev-0')).rejects.toThrow('TypeSafe model not found: jev-0')
     fetchMock.mockImplementation(async () => new Response('{}', { status: 401 }))
-    await expect(verifyTypeSafe('bad', 'jev-latest')).rejects.toThrow('Invalid TypeSafe API key (HTTP 401)')
+    await expect(verifyTypeSafe({ ...settings, apiKey: 'bad' }, 'jev-latest')).rejects.toThrow('Invalid TypeSafe API key (HTTP 401)')
   })
 })

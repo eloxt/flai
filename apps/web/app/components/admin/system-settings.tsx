@@ -140,6 +140,20 @@ export function TopicCheckSettings() {
               />
             </Field>
             <Field>
+              <FieldLabel htmlFor="typesafe-base-url">Base URL</FieldLabel>
+              <Input
+                id="typesafe-base-url"
+                type="url"
+                spellCheck={false}
+                required
+                disabled={saving}
+                placeholder="https://api.typesafe.ai"
+                value={value.baseUrl}
+                onChange={(e) => setValue({ ...value, baseUrl: e.target.value })}
+              />
+              <FieldDescription>{t(`${p}.baseUrlHelp`, { baseUrl: value.baseUrl.replace(/\/+$/, "") || "https://api.typesafe.ai" })}</FieldDescription>
+            </Field>
+            <Field>
               <FieldLabel htmlFor="typesafe-api-key">TypeSafe API Key</FieldLabel>
               <Input
                 id="typesafe-api-key"

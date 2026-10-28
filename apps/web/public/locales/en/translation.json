@@ -520,6 +520,7 @@
         "title": "Topic check",
         "description": "Before a message is sent in an existing chat, a TypeSafe decision model judges whether it fits the chat's topic. If it doesn't, the user can ask in a new chat or keep it here.",
         "enabled": "Check messages for a topic change",
+        "baseUrlHelp": "Requests go to {{baseUrl}}/v1/systemone. Change it to use a proxy or a self-hosted gateway.",
         "keyHelp": "Stored on the server and masked when shown. Keep the masked value to keep the current key. Get a key at console.typesafe.ai. Saving sends a test request.",
         "threshold": "Threshold",
         "thresholdHelp": "The user is asked when the model's probability of a topic change is at or above this value (0.5–1). Higher values ask less often. If TypeSafe is slow or fails, the message is sent without asking."
