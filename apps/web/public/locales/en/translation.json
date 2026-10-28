@@ -308,7 +308,7 @@
         "use": "Use saved memories",
         "useDescription": "Give the assistant your saved memories in every chat.",
         "write": "Let the assistant save memories",
-        "writeDescription": "The assistant can save, update and delete memories when you share lasting facts or ask it to remember something.",
+        "writeDescription": "The assistant can save, update and delete memories when you ask it to, and picks up lasting facts from your chats after they go quiet.",
         "clearAll": "Clear all",
         "confirmClear": "Clear all memories?",
         "confirmClearDescription": "The assistant will forget everything listed here. This cannot be undone.",
@@ -336,6 +336,11 @@
       }
     },
     "admin": {
+      "backgroundModel": {
+        "title": "Background model",
+        "description": "A cheap model that summarizes chats after they go quiet and picks up lasting facts about the user from them. Leave empty to use the title generation model.",
+        "useTitleModel": "Use the title model"
+      },
       "embedding": {
         "title": "Semantic search",
         "description": "An embedding model lets the assistant find past chats by meaning, not only by keywords. Leave it unset for keyword search only.",

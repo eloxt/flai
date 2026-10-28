@@ -261,15 +261,80 @@ export function SystemPromptSettings() {
   )
 }
 
-export function TitleGenerationSettings() {
+interface ProviderModel {
+  providerId: string
+  modelId: string
+}
+
+/** Provider and model pickers over the active providers. */
+function ProviderModelSelects({
+  providers,
+  value,
+  onChange,
+}: {
+  providers: AdminProvider[]
+  value: ProviderModel
+  onChange: (patch: Partial<ProviderModel>) => void
+}) {
   const { t } = useTranslation()
-  const { value, setValue, failed, saving, load, save } = useSetting("title_generation")
+  const provider = providers.find((p) => p.id === value.providerId)
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
+      <Field>
+        <FieldLabel>{t("pages.admin.systemConfig.provider")}</FieldLabel>
+        <Select value={value.providerId || null} onValueChange={(v) => onChange({ providerId: String(v ?? ""), modelId: "" })}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t("pages.admin.systemConfig.selectProvider")}>
+              {(v: string | null) => (v ? (providers.find((p) => p.id === v)?.name ?? v) : t("pages.admin.systemConfig.selectProvider"))}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {providers.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field>
+        <FieldLabel>{t("pages.admin.systemConfig.model")}</FieldLabel>
+        <Select value={value.modelId || null} disabled={!provider} onValueChange={(v) => onChange({ modelId: String(v ?? "") })}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t("pages.admin.systemConfig.selectModel")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {provider?.models.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name || m.id}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <FieldDescription>{t("pages.admin.systemConfig.modelHelp")}</FieldDescription>
+      </Field>
+    </div>
+  )
+}
+
+/** Active providers, for model pickers. */
+function useActiveProviders() {
   const [providers, setProviders] = useState<AdminProvider[]>([])
   useEffect(() => {
     api<AdminProvider[]>("/admin/providers").then((list) => setProviders(list.filter((p) => p.isActive))).catch(() => {})
   }, [])
+  return providers
+}
+
+export function TitleGenerationSettings() {
+  const { t } = useTranslation()
+  const { value, setValue, failed, saving, load, save } = useSetting("title_generation")
+  const providers = useActiveProviders()
   if (failed) return <LoadFailed onRetry={load} />
-  const provider = providers.find((p) => p.id === value?.providerId)
   return (
     <PanelSection title={t("pages.admin.systemConfig.titleGeneration")} description={t("pages.admin.systemConfig.titleHelp")}>
       {!value ? (
@@ -282,45 +347,7 @@ export function TitleGenerationSettings() {
           }}
         >
           <FieldGroup>
-            <div className="grid gap-6 sm:grid-cols-2 sm:gap-x-4">
-              <Field>
-                <FieldLabel>{t("pages.admin.systemConfig.provider")}</FieldLabel>
-                <Select value={value.providerId || null} onValueChange={(v) => setValue({ ...value, providerId: String(v ?? ""), modelId: "" })}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("pages.admin.systemConfig.selectProvider")}>
-                      {(v: string | null) => (v ? (providers.find((p) => p.id === v)?.name ?? v) : t("pages.admin.systemConfig.selectProvider"))}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {providers.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>{t("pages.admin.systemConfig.model")}</FieldLabel>
-                <Select value={value.modelId || null} disabled={!provider} onValueChange={(v) => setValue({ ...value, modelId: String(v ?? "") })}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("pages.admin.systemConfig.selectModel")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {provider?.models.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name || m.id}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FieldDescription>{t("pages.admin.systemConfig.modelHelp")}</FieldDescription>
-              </Field>
-            </div>
+            <ProviderModelSelects providers={providers} value={value} onChange={(patch) => setValue({ ...value, ...patch })} />
             <Field>
               <FieldLabel htmlFor="tg-prompt">{t("pages.admin.systemConfig.titlePrompt")}</FieldLabel>
               <Textarea id="tg-prompt" rows={6} value={value.prompt} onChange={(e) => setValue({ ...value, prompt: e.target.value })} />
@@ -329,6 +356,42 @@ export function TitleGenerationSettings() {
               {saving && <Spinner data-icon="inline-start" />}
               {t("common.actions.save")}
             </Button>
+          </FieldGroup>
+        </form>
+      )}
+    </PanelSection>
+  )
+}
+
+export function BackgroundModelSettings() {
+  const { t } = useTranslation()
+  const { value, setValue, failed, saving, load, save } = useSetting("background_model")
+  const providers = useActiveProviders()
+  if (failed) return <LoadFailed onRetry={load} />
+  return (
+    <PanelSection title={t("pages.admin.backgroundModel.title")} description={t("pages.admin.backgroundModel.description")}>
+      {!value ? (
+        <Skeleton className="h-28 w-full" />
+      ) : (
+        <form
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault()
+            void save(value, t("pages.admin.systemConfig.saved"))
+          }}
+        >
+          <FieldGroup>
+            <ProviderModelSelects providers={providers} value={value} onChange={(patch) => setValue({ ...value, ...patch })} />
+            <div className="mt-2 flex gap-2">
+              <Button type="submit" disabled={saving}>
+                {saving && <Spinner data-icon="inline-start" />}
+                {t("common.actions.save")}
+              </Button>
+              {(value.providerId || value.modelId) && (
+                <Button type="button" variant="ghost" disabled={saving} onClick={() => void save({ providerId: "", modelId: "" }, t("pages.admin.systemConfig.saved"))}>
+                  {t("pages.admin.backgroundModel.useTitleModel")}
+                </Button>
+              )}
+            </div>
           </FieldGroup>
         </form>
       )}

@@ -303,7 +303,7 @@
         "use": "使用已保存的记忆",
         "useDescription": "在每次对话中向助手提供你保存的记忆。",
         "write": "允许助手保存记忆",
-        "writeDescription": "当你提到长期有效的信息或让助手记住某事时，助手可以保存、更新和删除记忆。",
+        "writeDescription": "助手可以按你的要求保存、更新和删除记忆，也会在对话闲置后从中提取长期有效的信息。",
         "clearAll": "全部清除",
         "confirmClear": "清除所有记忆？",
         "confirmClearDescription": "助手将忘记这里列出的所有内容，且无法撤销。",
@@ -331,6 +331,11 @@
       }
     },
     "admin": {
+      "backgroundModel": {
+        "title": "后台模型",
+        "description": "一个低成本模型，在对话闲置后为其生成摘要，并从中提取关于用户的长期信息。留空则使用标题生成模型。",
+        "useTitleModel": "使用标题模型"
+      },
       "embedding": {
         "title": "语义检索",
         "description": "配置向量模型后，助手可以按语义而不仅是关键词查找历史对话。不配置时只使用关键词检索。",
