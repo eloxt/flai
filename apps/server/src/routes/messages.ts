@@ -47,7 +47,7 @@ async function assertNewAssistantId(id: string) {
 
 /** The active provider and model for a reply, once they are known to support its options. */
 function replyModel(ref: ModelRef, options: ChatOptions) {
-  const resolved = resolveModel(ref.providerId, ref.modelId)
+  const resolved = resolveModel(ref.providerId, ref.modelId, { user: true })
   resolveThinking(resolved.model, options.thinking)
   return resolved
 }

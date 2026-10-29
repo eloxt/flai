@@ -16,7 +16,7 @@ const IMAGE_ONLY_TEXT = 'Translate the text content of the attached image(s).'
 export const translateRoutes = new Hono<AppEnv>().post('/translate', async (c) => {
   const user = c.get('user')
   const input = await body(c, translateSchema)
-  const target = resolveModel(input.model.providerId, input.model.modelId)
+  const target = resolveModel(input.model.providerId, input.model.modelId, { user: true })
   if (!input.text.trim() && input.imageFileIds.length === 0) throw badRequest('Nothing to translate')
   const images = await ownedFiles(user.id, input.imageFileIds)
   if (images.some((f) => !f.mediaType.startsWith('image/'))) throw badRequest('Only images can be translated')

@@ -21,12 +21,13 @@ export const emptyModel = (): ModelConfig => ({
   structuredOutput: false,
   temperature: true,
   openWeights: false,
+  hidden: false,
   generativeUi: false,
   modalities: { input: ["text"], output: ["text"] },
   internalTools: [],
 })
 
-const FEATURES = ["attachment", "reasoning", "toolCall", "structuredOutput", "temperature", "openWeights", "generativeUi"] as const
+const FEATURES = ["attachment", "reasoning", "toolCall", "structuredOutput", "temperature", "openWeights", "generativeUi", "hidden"] as const
 const toolLabelKey: Record<(typeof INTERNAL_TOOLS)[number], string> = { web_search: "internalSearch", url_context: "urlContext" }
 
 const optionalNumber = (value: string) => (value === "" ? undefined : Number(value))
@@ -56,6 +57,7 @@ export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
               <span className="truncate font-medium">{model.name || model.id || t("pages.admin.providers.model.model")}</span>
               {model.id && model.name !== model.id && <span className="truncate font-mono text-xs text-muted-foreground">{model.id}</span>}
               {model.generativeUi && <Badge variant="secondary">GenUI</Badge>}
+              {model.hidden && <Badge variant="outline">{t("pages.admin.providers.model.hiddenBadge")}</Badge>}
             </CollapsibleTrigger>
             <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.model.moveUp")} disabled={index === 0} onClick={() => move(index, -1)}>
               <ArrowUpIcon />
@@ -189,6 +191,7 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
             </Field>
           ))}
         </div>
+        {model.hidden && <FieldDescription>{t(`${p}.hiddenHelp`)}</FieldDescription>}
         {model.generativeUi && <FieldDescription>{t(`${p}.generativeUiHelp`)}</FieldDescription>}
       </FieldSet>
 

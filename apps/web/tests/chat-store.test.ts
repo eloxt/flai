@@ -23,6 +23,7 @@ const provider: PublicProvider = {
       structuredOutput: false,
       temperature: true,
       openWeights: false,
+    hidden: false,
       generativeUi: false,
       modalities: { input: ["text"], output: ["text"] },
       internalTools: [],

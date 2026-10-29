@@ -72,7 +72,7 @@ describe('answering a question', () => {
     const result = await response.json()
     expect(result.message.parts[0]).toMatchObject({ state: 'output-available', output: { answer: 'English', content: 'User answered: English', isError: false } })
     expect(result.generation).toEqual({ assistantId: nextId, parentId: 'a1' })
-    expect(mocks.resolve).toHaveBeenCalledWith('original-provider', 'original-model')
+    expect(mocks.resolve).toHaveBeenCalledWith('original-provider', 'original-model', { user: true })
     expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({
       assistantId: nextId, user: expect.objectContaining({ id: 'alice' }), path: [message], options: message.metadata.chatOptions,
     }))

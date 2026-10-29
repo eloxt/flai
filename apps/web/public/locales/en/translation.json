@@ -523,6 +523,9 @@
           "imageGeneration": "Image Generation",
           "urlContext": "URL Context",
           "idRequired": "Every model needs an ID",
+          "hidden": "Hide from users",
+          "hiddenBadge": "Hidden",
+          "hiddenHelp": "Users cannot pick this model in the model selector, but it can still be used as the title or background model in system settings.",
           "generativeUi": "Generative UI (OpenUI)",
           "generativeUiHelp": "Adds the OpenUI component guide to the system prompt so replies can include tables, charts and forms."
         }
@@ -599,6 +602,10 @@
     }
   },
   "components": {
+    "notifications": {
+      "title": "Notifications",
+      "empty": "No notifications"
+    },
     "feedback": {
       "title": "Feedback",
       "content": "Feedback content",

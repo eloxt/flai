@@ -43,6 +43,8 @@ export const modelConfigSchema = z.object({
   openWeights: z.boolean().default(false),
   /** When on, the OpenUI component prompt is injected and assistant replies may contain generative UI. */
   generativeUi: z.boolean().default(false),
+  /** Hidden from the model picker; the model stays usable as a title or background model. */
+  hidden: z.boolean().default(false),
   knowledge: z.string().optional(),
   releaseDate: z.string().optional(),
   lastUpdated: z.string().optional(),

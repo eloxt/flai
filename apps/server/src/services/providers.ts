@@ -26,23 +26,29 @@ export async function providersChanged(): Promise<void> {
 
 export function listPublicProviders(): PublicProvider[] {
   const exa = getSetting('web_search').provider === 'exa'
-  return active.map((p) => ({
-    id: p.id, name: p.name, type: p.type, logo: p.logo,
-    // Exa tools are automatic; only native mode exposes user-controlled search/URL toggles.
-    models: exa ? p.models.map((model) => ({ ...model, internalTools: [] })) : p.models,
-  }))
+  return active
+    .map((p) => {
+      const models = p.models.filter((model) => !model.hidden)
+      return {
+        id: p.id, name: p.name, type: p.type, logo: p.logo,
+        // Exa tools are automatic; only native mode exposes user-controlled search/URL toggles.
+        models: exa ? models.map((model) => ({ ...model, internalTools: [] })) : models,
+      }
+    })
+    .filter((p) => p.models.length > 0)
 }
 
 export function findProvider(providerId: string): ProviderRow | undefined {
   return active.find((p) => p.id === providerId)
 }
 
-/** Resolve an active provider + model pair or fail with a user-facing error. */
-export function resolveModel(providerId: string, modelId: string): { provider: ProviderRow; model: ModelConfig } {
+/** Resolve an active provider + model pair or fail with a user-facing error; `user` also rejects hidden models. */
+export function resolveModel(providerId: string, modelId: string, { user = false } = {}): { provider: ProviderRow; model: ModelConfig } {
   const provider = findProvider(providerId)
   if (!provider) throw new AppError('NOT_FOUND', 'Provider not found or inactive')
   const model = provider.models.find((m) => m.id === modelId)
-  if (!model) throw new AppError('NOT_FOUND', `Model ${modelId} is not available`)
+  // Hidden models are reserved for background work (titles, summaries).
+  if (!model || (user && model.hidden)) throw new AppError('NOT_FOUND', `Model ${modelId} is not available`)
   return { provider, model }
 }
 

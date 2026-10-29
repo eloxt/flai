@@ -518,6 +518,9 @@
           "imageGeneration": "图片生成",
           "urlContext": "URL 上下文",
           "idRequired": "每个模型都需要填写 ID",
+          "hidden": "对用户隐藏",
+          "hiddenBadge": "已隐藏",
+          "hiddenHelp": "用户无法在模型选择器中选到该模型，但仍可在系统设置中用作标题或后台模型。",
           "generativeUi": "生成式 UI（OpenUI）",
           "generativeUiHelp": "在系统提示词中加入 OpenUI 组件说明，使回复可以包含表格、图表和表单。"
         }
@@ -594,6 +597,10 @@
     }
   },
   "components": {
+    "notifications": {
+      "title": "站内通知",
+      "empty": "暂无通知"
+    },
     "feedback": {
       "title": "反馈",
       "content": "反馈内容",
