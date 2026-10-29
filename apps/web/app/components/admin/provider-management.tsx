@@ -329,7 +329,7 @@ function ImportModelsDialog({
           <DialogDescription>{t(`${f}.importJsonDescription`)}</DialogDescription>
         </DialogHeader>
         <Field>
-          <Textarea rows={12} className="font-mono text-xs" value={text} placeholder={t(`${f}.importJsonPlaceholder`)} onChange={(e) => setText(e.target.value)} />
+          <Textarea rows={12} className="field-sizing-fixed h-64 resize-none overflow-y-auto font-mono text-xs" value={text} placeholder={t(`${f}.importJsonPlaceholder`)} onChange={(e) => setText(e.target.value)} />
           <FieldDescription>{t(`${f}.importJsonHint`)}</FieldDescription>
         </Field>
         <DialogFooter>
