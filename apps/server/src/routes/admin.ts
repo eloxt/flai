@@ -15,7 +15,7 @@ import { badRequest, notFound } from '../lib/errors'
 import { type AppEnv, body, query } from '../lib/hono'
 import { newId } from '../lib/ids'
 import { toAdminProvider, toConversation, toUser } from '../lib/serialize'
-import { maskKey, reloadProviders } from '../services/providers'
+import { maskKey, providersChanged } from '../services/providers'
 import { listConversations } from '../services/conversations'
 import { withUniqueEmail } from '../services/users'
 import { settingRoutes } from './admin-settings'
@@ -83,7 +83,7 @@ const providerRoutes = new Hono<AppEnv>()
       ...input,
       sortOrder: sql`(select coalesce(max(${p.sortOrder}), -1) + 1 from ${p} where ${p.deletedAt} is null)`,
     }).returning()
-    await reloadProviders()
+    await providersChanged()
     return c.json(toAdminProvider(row!), 201)
   })
   .put('/order', async (c) => {
@@ -99,7 +99,7 @@ const providerRoutes = new Hono<AppEnv>()
         sortOrder: sql`case ${p.id} ${sql.join(ids.map((id, index) => sql`when ${id} then ${index}::integer`), sql` `)} end`,
       }).where(inArray(p.id, ids))
     })
-    await reloadProviders()
+    await providersChanged()
     return c.body(null, 204)
   })
   .get('/:id', async (c) => c.json(toAdminProvider(await liveProvider(c.req.param('id')))))
@@ -109,13 +109,13 @@ const providerRoutes = new Hono<AppEnv>()
     // The masked key is echoed back by the edit form; only a different value replaces it.
     if (input.apiKey === maskKey(current.apiKey)) delete input.apiKey
     const [row] = await db.update(p).set(input).where(eq(p.id, current.id)).returning()
-    await reloadProviders()
+    await providersChanged()
     return c.json(toAdminProvider(row!))
   })
   .delete('/:id', async (c) => {
     const current = await liveProvider(c.req.param('id'))
     await db.update(p).set({ deletedAt: new Date() }).where(eq(p.id, current.id))
-    await reloadProviders()
+    await providersChanged()
     return c.body(null, 204)
   })
 

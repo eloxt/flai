@@ -1,5 +1,6 @@
 import { type SettingKey, type SettingValue, settingSchemas, SETTING_KEYS } from '@flai/shared'
 import { db, schema } from '../db'
+import { cacheSync } from '../lib/cache-sync'
 
 const cache = new Map<SettingKey, unknown>()
 
@@ -21,7 +22,7 @@ export function getSetting<K extends SettingKey>(key: K): SettingValue<K> {
   return (cache.get(key) as SettingValue<K> | undefined) ?? normalize(key, undefined)
 }
 
-/** Merge `patch` into the stored value, persist it and refresh the cache. */
+/** Merge `patch` into the stored value, persist it and refresh the cache here and on other instances. */
 export async function updateSetting<K extends SettingKey>(key: K, patch: Partial<SettingValue<K>>): Promise<SettingValue<K>> {
   const next = settingSchemas[key].parse({ ...getSetting(key), ...patch }) as SettingValue<K>
   await db
@@ -29,5 +30,6 @@ export async function updateSetting<K extends SettingKey>(key: K, patch: Partial
     .values({ key, value: next })
     .onConflictDoUpdate({ target: schema.settings.key, set: { value: next } })
   cache.set(key, next)
+  await cacheSync().changed('settings')
   return next
 }

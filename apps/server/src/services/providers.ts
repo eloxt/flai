@@ -1,6 +1,7 @@
 import type { ModelConfig, PublicProvider } from '@flai/shared'
 import { and, eq, isNull } from 'drizzle-orm'
 import { db, schema } from '../db'
+import { cacheSync } from '../lib/cache-sync'
 import { AppError } from '../lib/errors'
 import { getSetting } from './settings'
 
@@ -8,13 +9,19 @@ export type ProviderRow = typeof schema.providers.$inferSelect
 
 let active: ProviderRow[] = []
 
-/** Rebuild the in-memory list of active providers. Called at startup and after every admin write. */
+/** Rebuild the in-memory list of active providers, at startup and when another instance changes them. */
 export async function reloadProviders(): Promise<void> {
   active = await db
     .select()
     .from(schema.providers)
     .where(and(eq(schema.providers.isActive, true), isNull(schema.providers.deletedAt)))
     .orderBy(schema.providers.sortOrder, schema.providers.createdAt, schema.providers.id)
+}
+
+/** After an admin write: reload here and on other instances. */
+export async function providersChanged(): Promise<void> {
+  await reloadProviders()
+  await cacheSync().changed('providers')
 }
 
 export function listPublicProviders(): PublicProvider[] {
