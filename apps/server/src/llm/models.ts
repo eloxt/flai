@@ -14,8 +14,6 @@ import { createWebFetchTool } from './web-fetch'
 export interface ResolvedModel {
   model: Exclude<LanguageModel, string>
   providerOptions: Record<string, Record<string, unknown>>
-  /** Built-in tools, including native tools and Exa search/page retrieval. */
-  tools: ToolsInput
 }
 
 interface BuildOptions {
@@ -78,52 +76,36 @@ export function providerClient(provider: ProviderRow, headers?: Record<string, s
   }
 }
 
+/** Whether the provider's own search should run for this request, rather than Exa or none. */
+function wantsNativeSearch(model: ModelConfig, options: BuildOptions['options'] = {}) {
+  return Boolean(options.webSearch) && model.internalTools.includes('web_search') && getSetting('web_search').provider === 'native'
+}
+
 export function buildModel({ provider, model, options = {}, requestId }: BuildOptions): ResolvedModel {
   const client = providerClient(provider, requestId ? { 'x-request-id': requestId } : undefined)
   const thinking = resolveThinking(model, options.thinking)
-  const wants = (t: 'web_search' | 'url_context') => model.internalTools.includes(t)
-  // Mastra 1.77 does not resolve webSearchTool placeholders passed via toolsets.
-  const tools: ToolsInput = {}
-  const search = getSetting('web_search')
-  const nativeSearch = options.webSearch && wants('web_search') && search.provider === 'native'
-  if (search.provider === 'exa' && model.toolCall) {
-    if (!search.exaApiKey) throw new AppError('NOT_CONFIGURED', 'Exa API key is not configured')
-    tools.web_search = createWebSearchTool(search.exaApiKey)
-    tools.web_fetch = createWebFetchTool(search.exaApiKey)
-  }
-  // Wikimedia needs no key, so photos are available to every model that can call tools.
-  if (model.toolCall) tools.image_search = imageSearchTool
-
   switch (client.type) {
-    case 'openai': {
-      const openai = client.sdk
-      if (nativeSearch) tools.web_search = openai.tools.webSearch()
+    case 'openai':
       return {
-        model: openai.responses(model.id),
+        model: client.sdk.responses(model.id),
         providerOptions: {
           openai: {
             ...(thinking && model.reasoning ? { reasoningEffort: thinking, reasoningSummary: 'auto' } : {}),
             store: false,
           },
         },
-        tools,
       }
-    }
     case 'openai_completion': {
       // OpenRouter exposes web search as a model variant rather than a tool.
-      const id = nativeSearch && isOpenRouter(provider) ? `${model.id}:online` : model.id
+      const id = wantsNativeSearch(model, options) && isOpenRouter(provider) ? `${model.id}:online` : model.id
       return {
         model: client.sdk.chatModel(id),
         providerOptions: { openaiCompatible: thinking && model.reasoning ? { reasoningEffort: thinking } : {} },
-        tools,
       }
     }
-    case 'gemini': {
-      const google = client.sdk
-      if (nativeSearch) tools.google_search = google.tools.googleSearch({})
-      if (search.provider === 'native' && options.urlContext && wants('url_context')) tools.url_context = google.tools.urlContext({})
+    case 'gemini':
       return {
-        model: google(model.id),
+        model: client.sdk(model.id),
         providerOptions: {
           google: {
             thinkingConfig: {
@@ -132,8 +114,31 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
             },
           },
         },
-        tools,
       }
+  }
+}
+
+/** The built-in tools for a chat reply: the provider's native search, or Exa search and page retrieval, and image search. */
+export function chatTools({ provider, model, options = {} }: Omit<BuildOptions, 'requestId'>): ToolsInput {
+  // Mastra 1.77 does not resolve webSearchTool placeholders passed via toolsets.
+  const tools: ToolsInput = {}
+  const search = getSetting('web_search')
+  if (search.provider === 'exa' && model.toolCall) {
+    if (!search.exaApiKey) throw new AppError('NOT_CONFIGURED', 'Exa API key is not configured')
+    tools.web_search = createWebSearchTool(search.exaApiKey)
+    tools.web_fetch = createWebFetchTool(search.exaApiKey)
+  }
+  // Wikimedia needs no key, so photos are available to every model that can call tools.
+  if (model.toolCall) tools.image_search = imageSearchTool
+
+  const nativeSearch = wantsNativeSearch(model, options)
+  const client = providerClient(provider)
+  if (client.type === 'openai' && nativeSearch) tools.web_search = client.sdk.tools.webSearch()
+  if (client.type === 'gemini') {
+    if (nativeSearch) tools.google_search = client.sdk.tools.googleSearch({})
+    if (search.provider === 'native' && options.urlContext && model.internalTools.includes('url_context')) {
+      tools.url_context = client.sdk.tools.urlContext({})
     }
   }
+  return tools
 }

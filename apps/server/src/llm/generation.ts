@@ -16,7 +16,7 @@ import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
 import { loadMemories, queryEmbedding, withContext } from './memory-retrieval'
 import { buildMcpToolset } from './mcp'
-import { buildModel } from './models'
+import { buildModel, chatTools } from './models'
 import { exaResponseSchema } from './exa'
 import { type CancelReason, type Chunk, generationBus, HEARTBEAT_MS } from './stream-bus'
 import { createMemoryTools, memoryAccess, memoryLabels, relevantMemoriesPrompt } from './user-memory'
@@ -213,7 +213,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     const stream = await getChatAgent().stream(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)) as never, {
       requestContext: chatContext({ model: resolved.model, instructions }),
       providerOptions: resolved.providerOptions as never,
-      toolsets: { builtin: resolved.tools, memory, mcp: model.toolCall ? mcp.tools : {} },
+      toolsets: { builtin: chatTools({ provider, model, options }), memory, mcp: model.toolCall ? mcp.tools : {} },
       // The browser supplies the answer; the existing message store preserves it across restarts.
       clientTools: model.toolCall ? { ask_user: askUserTool } : {},
       maxSteps: MAX_STEPS,
