@@ -2,6 +2,7 @@ import { memoryContentSchema, textOf } from '@flai/shared'
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, schema } from '../db'
+import { backgroundLoop, msInterval, processClaims } from '../lib/background-job'
 import { AppError } from '../lib/errors'
 import { clip, escapeXml } from '../lib/text'
 import { latestPath, type MessageRow } from '../services/conversations'
@@ -121,11 +122,11 @@ export type Claim = {
 export async function claimIdleConversations(limit = BATCH, idleMs = IDLE_MS): Promise<Claim[]> {
   // Plain SQL so `updated_at`, which orders the sidebar and marks new activity, stays untouched.
   const result = await db.execute<Claim>(sql`
-    UPDATE conversation SET job_lease_until = now() + ${`${LEASE_MS} milliseconds`}::interval
+    UPDATE conversation SET job_lease_until = now() + ${msInterval(LEASE_MS)}
     WHERE id IN (
       SELECT id FROM conversation
       WHERE deleted_at IS NULL
-        AND updated_at < now() - ${`${idleMs} milliseconds`}::interval
+        AND updated_at < now() - ${msInterval(idleMs)}
         AND (extracted_at IS NULL OR updated_at > extracted_at)
         AND (job_lease_until IS NULL OR job_lease_until < now())
       -- Newest first, so chats that just went quiet don't wait behind a backlog.
@@ -234,58 +235,28 @@ const generateExtraction = (input: string) => generateInBackground('memory', INS
 /** Claim and process one batch; returns how many chats were claimed. */
 export async function runMemoryExtraction(): Promise<number> {
   if (!backgroundModel()) return 0
-  const claims = await claimIdleConversations()
-  for (const claim of claims) {
-    try {
-      await processConversation(claim)
-    } catch (error) {
-      console.warn('failed to process conversation for memory', claim.id, error)
-      await db.execute(sql`
-        UPDATE conversation SET job_lease_until = now() + ${`${RETRY_MS} milliseconds`}::interval WHERE id = ${claim.id}
-      `).catch(() => {})
-    }
-  }
-  return claims.length
-}
-
-let timer: NodeJS.Timeout | undefined
-let running: Promise<void> | undefined
-let started = false
-
-function schedule(ms: number) {
-  clearTimeout(timer)
-  timer = setTimeout(() => void run(), ms).unref()
-}
-
-async function run(): Promise<void> {
-  if (running) return running
-  running = (async () => {
-    try {
-      // Work through a backlog before waiting for the next poll.
-      while (started && (await runMemoryExtraction()) === BATCH);
-    } catch (error) {
-      console.warn('memory extraction failed', error)
-    }
-    try {
-      // After extraction, so a pass sees the memories it just added.
-      if (started) await runMemoryConsolidation()
-    } catch (error) {
-      console.warn('memory consolidation failed', error)
-    } finally {
-      running = undefined
-      if (started) schedule(POLL_MS)
-    }
-  })()
-  return running
+  return processClaims('process conversation for memory', await claimIdleConversations(), {
+    id: (claim) => claim.id,
+    process: (claim) => processConversation(claim),
+    release: (claim) => db.execute(sql`UPDATE conversation SET job_lease_until = now() + ${msInterval(RETRY_MS)} WHERE id = ${claim.id}`),
+  })
 }
 
 /** Summarize idle chats, update memories and consolidate them in the background for as long as the server runs. */
-export function startMemoryExtraction(): void {
-  started = true
-  schedule(START_MS)
-}
+const memoryJob = backgroundLoop('memory job', {
+  startMs: START_MS,
+  idleMs: POLL_MS,
+  async pass(active) {
+    try {
+      // Work through a backlog before waiting for the next poll.
+      while (active() && (await runMemoryExtraction()) === BATCH);
+    } catch (error) {
+      console.warn('memory extraction failed', error)
+    }
+    // After extraction, so a pass sees the memories it just added.
+    if (active()) await runMemoryConsolidation()
+  },
+})
 
-export function stopMemoryExtraction(): void {
-  started = false
-  clearTimeout(timer)
-}
+export const startMemoryExtraction = memoryJob.start
+export const stopMemoryExtraction = memoryJob.stop

@@ -1,5 +1,6 @@
 import { inArray, sql } from 'drizzle-orm'
 import { db, schema } from '../db'
+import { backgroundLoop } from '../lib/background-job'
 import { getEmbedder } from './embedding'
 
 const CHUNK_CHARS = 1500
@@ -114,50 +115,23 @@ export async function indexPendingMemories({ userId, abortSignal }: { userId?: s
   return pending.rows.length
 }
 
-let timer: NodeJS.Timeout | undefined
-let running: Promise<void> | undefined
-let started = false
-
-function schedule(ms: number) {
-  clearTimeout(timer)
-  timer = setTimeout(() => void run(), ms).unref()
-}
-
-async function run(): Promise<void> {
-  if (running) return running
-  running = (async () => {
-    let delay = IDLE_MS
-    try {
-      // Keep going while there is a backlog, e.g. after enabling search or changing the model.
-      for (let more = true; more;) {
-        const messages = await indexPendingMessages(AbortSignal.timeout(60_000))
-        const summaries = await indexPendingSummaries(AbortSignal.timeout(60_000))
-        const memories = await indexPendingMemories({ abortSignal: AbortSignal.timeout(60_000) })
-        more = [messages, summaries, memories].includes(BATCH_MESSAGES)
-      }
-    } catch (error) {
-      console.warn('failed to embed messages', error)
-      delay = RETRY_MS
-    } finally {
-      running = undefined
-      if (started) schedule(delay)
-    }
-  })()
-  return running
-}
-
 /** Index new and backfilled messages, summaries and memories in the background for as long as the server runs. */
-export function startEmbeddingIndexer(): void {
-  started = true
-  schedule(NUDGE_MS)
-}
+const indexer = backgroundLoop('embedding', {
+  startMs: NUDGE_MS,
+  idleMs: IDLE_MS,
+  retryMs: RETRY_MS,
+  async pass(active) {
+    // Keep going while there is a backlog, e.g. after enabling search or changing the model.
+    for (let more = true; more && active();) {
+      const messages = await indexPendingMessages(AbortSignal.timeout(60_000))
+      const summaries = await indexPendingSummaries(AbortSignal.timeout(60_000))
+      const memories = await indexPendingMemories({ abortSignal: AbortSignal.timeout(60_000) })
+      more = [messages, summaries, memories].includes(BATCH_MESSAGES)
+    }
+  },
+})
 
-export function stopEmbeddingIndexer(): void {
-  started = false
-  clearTimeout(timer)
-}
-
+export const startEmbeddingIndexer = indexer.start
+export const stopEmbeddingIndexer = indexer.stop
 /** Index soon after new messages are saved or the model changes; a no-op until the indexer starts. */
-export function nudgeEmbeddingIndexer(): void {
-  if (started && !running) schedule(NUDGE_MS)
-}
+export const nudgeEmbeddingIndexer = indexer.nudge

@@ -2,6 +2,7 @@ import { memoryContentSchema } from '@flai/shared'
 import { sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db'
+import { msInterval, processClaims } from '../lib/background-job'
 import { isoDay } from '../lib/text'
 import { deleteMemory, listMemories, type MemoryRow, pruneMemoryEvents, updateMemory } from '../services/memories'
 import { backgroundModel, generateInBackground } from './background-model'
@@ -102,12 +103,12 @@ export async function claimUsers(limit = BATCH, { dayMs = 86_400_000 } = {}): Pr
         AND coalesce((u.preferences->>'memoryWrite')::boolean, true)
         AND c.total >= ${MIN_MEMORIES}
         AND (c.changed >= ${CHANGES_TRIGGER} OR (c.changed > 0 AND (
-          j.consolidated_at IS NULL OR j.consolidated_at < now() - ${`${dayMs} milliseconds`}::interval)))
+          j.consolidated_at IS NULL OR j.consolidated_at < now() - ${msInterval(dayMs)})))
         AND (j.lease_until IS NULL OR j.lease_until < now())
       LIMIT ${limit}
     )
     INSERT INTO memory_job (user_id, lease_until)
-    SELECT id, now() + ${`${LEASE_MS} milliseconds`}::interval FROM due
+    SELECT id, now() + ${msInterval(LEASE_MS)} FROM due
     ON CONFLICT (user_id) DO UPDATE SET lease_until = excluded.lease_until
       WHERE memory_job.lease_until IS NULL OR memory_job.lease_until < now()
     RETURNING user_id
@@ -150,16 +151,9 @@ export async function consolidateUser(userId: string, generate = generateConsoli
 export async function runMemoryConsolidation(): Promise<number> {
   if (!backgroundModel()) return 0
   await pruneMemoryEvents()
-  const users = await claimUsers()
-  for (const userId of users) {
-    try {
-      await consolidateUser(userId)
-    } catch (error) {
-      console.warn('failed to consolidate memories', userId, error)
-      await db.execute(sql`
-        UPDATE memory_job SET lease_until = now() + ${`${RETRY_MS} milliseconds`}::interval WHERE user_id = ${userId}
-      `).catch(() => {})
-    }
-  }
-  return users.length
+  return processClaims('consolidate memories', await claimUsers(), {
+    id: (userId) => userId,
+    process: (userId) => consolidateUser(userId),
+    release: (userId) => db.execute(sql`UPDATE memory_job SET lease_until = now() + ${msInterval(RETRY_MS)} WHERE user_id = ${userId}`),
+  })
 }
