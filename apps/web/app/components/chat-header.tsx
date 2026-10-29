@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/tooltip"
 import { FeedbackDialog } from "./feedback-dialog"
 import { ModelSelector } from "./model-selector"
+import { NotificationBell } from "./notification-bell"
 
 const ShareDialog = lazy(() => import("./share-dialog").then((module) => ({ default: module.ShareDialog })))
 
@@ -74,6 +75,7 @@ export function ChatHeader() {
               <Share2Icon />
             </HeaderButton>
             <FeedbackDialog />
+            <NotificationBell />
             <Suspense fallback={null}>
               {shareOpen !== undefined && (
                 <ShareDialog
