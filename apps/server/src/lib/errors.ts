@@ -35,6 +35,15 @@ export const notFound = (what = 'Resource') => new AppError('NOT_FOUND', `${what
 export const badRequest = (message: string, details?: unknown) => new AppError('BAD_REQUEST', message, details)
 export const forbidden = (message = 'Forbidden') => new AppError('FORBIDDEN', message)
 
+/**
+ * The error for a failed response from an outside service: the reason for its status when known,
+ * else `fallback`, with the status code. The response body is discarded.
+ */
+export async function upstreamError(response: Response, reasons: Record<number, string>, fallback: string): Promise<AppError> {
+  await response.body?.cancel()
+  return new AppError('UPSTREAM', `${reasons[response.status] ?? fallback} (HTTP ${response.status})`)
+}
+
 /** `text` with every occurrence of `secret` (e.g. an API key echoed in an upstream error) blanked out. */
 export function redactSecret(text: string, secret: string | undefined): string {
   return secret ? text.replaceAll(secret, '[REDACTED]') : text

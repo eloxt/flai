@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { AppError } from '../lib/errors'
+import { AppError, upstreamError } from '../lib/errors'
 
 const sourceSchema = z.object({ url: z.string(), title: z.string().nullish() }).passthrough()
 export const exaResponseSchema = z.object({
@@ -14,6 +14,11 @@ export const exaResponseSchema = z.object({
   }).passthrough().optional(),
 }).passthrough()
 
+const EXA_ERRORS: Record<number, string> = {
+  400: 'Invalid Exa request parameters', 401: 'Invalid Exa API key', 402: 'Exa credits or spending budget exhausted',
+  403: 'Exa access denied', 429: 'Exa rate limit exceeded; try again later',
+}
+
 /** Search and page retrieval share authentication, cancellation, and error handling. */
 export async function requestExa(endpoint: 'search' | 'contents', input: Record<string, unknown>, apiKey: string, abortSignal?: AbortSignal) {
   if (!apiKey) throw new AppError('NOT_CONFIGURED', 'Exa API key is not configured')
@@ -26,14 +31,7 @@ export async function requestExa(endpoint: 'search' | 'contents', input: Record<
       body: JSON.stringify(input),
       signal,
     })
-    if (!response.ok) {
-      const reason = ({
-        400: 'Invalid Exa request parameters', 401: 'Invalid Exa API key', 402: 'Exa credits or spending budget exhausted',
-        403: 'Exa access denied', 429: 'Exa rate limit exceeded; try again later',
-      } as Record<number, string>)[response.status] ?? `Exa ${operation} service unavailable`
-      await response.body?.cancel()
-      throw new AppError('UPSTREAM', `${reason} (HTTP ${response.status})`)
-    }
+    if (!response.ok) throw await upstreamError(response, EXA_ERRORS, `Exa ${operation} service unavailable`)
     const result = exaResponseSchema.safeParse(await response.json())
     if (!result.success) throw new AppError('UPSTREAM', `Exa returned an invalid ${operation} response`)
     // Preserve page contents, per-URL statuses, notices, metadata and costs; warnings are diagnostic only.

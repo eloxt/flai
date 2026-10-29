@@ -1,6 +1,6 @@
 import { type SettingValue, textOf } from '@flai/shared'
 import { z } from 'zod'
-import { AppError } from '../lib/errors'
+import { AppError, upstreamError } from '../lib/errors'
 import { clip } from '../lib/text'
 import type { MessageRow } from '../services/conversations'
 import { getSetting } from '../services/settings'
@@ -15,6 +15,11 @@ const responseSchema = z.object({
   answers: z.object({ topic_shift: z.object({ noul: z.number() }) }),
 })
 
+const TYPESAFE_ERRORS: Record<number, string> = {
+  401: 'Invalid TypeSafe API key', 403: 'TypeSafe access denied', 422: 'Invalid TypeSafe request',
+  429: 'TypeSafe rate limit exceeded; try again later', 529: 'TypeSafe is overloaded; try again later',
+}
+
 type Connection = Pick<SettingValue<'topic_check'>, 'baseUrl' | 'apiKey'>
 
 async function requestTypeSafe(path: string, { baseUrl, apiKey }: Connection, init: RequestInit & { signal: AbortSignal }) {
@@ -24,14 +29,7 @@ async function requestTypeSafe(path: string, { baseUrl, apiKey }: Connection, in
   }).catch(() => {
     throw new AppError('UPSTREAM', init.signal.aborted ? 'TypeSafe request timed out' : 'Could not reach TypeSafe')
   })
-  if (!response.ok) {
-    const reason = ({
-      401: 'Invalid TypeSafe API key', 403: 'TypeSafe access denied', 422: 'Invalid TypeSafe request',
-      429: 'TypeSafe rate limit exceeded; try again later', 529: 'TypeSafe is overloaded; try again later',
-    } as Record<number, string>)[response.status] ?? 'TypeSafe service unavailable'
-    await response.body?.cancel()
-    throw new AppError('UPSTREAM', `${reason} (HTTP ${response.status})`)
-  }
+  if (!response.ok) throw await upstreamError(response, TYPESAFE_ERRORS, 'TypeSafe service unavailable')
   return response.json() as Promise<unknown>
 }
 
