@@ -2,7 +2,7 @@ import type { ModelMessage } from 'ai'
 import { sql } from 'drizzle-orm'
 import { db } from '../db'
 import { listMemories, type MemoryRow } from '../services/memories'
-import { getEmbedder } from './embedding'
+import { type Embedder, getEmbedder } from './embedding'
 import { indexPendingMemories } from './embedding-index'
 
 /** Up to these, every memory goes into the system prompt; beyond them only core plus relevant ones. */
@@ -73,15 +73,32 @@ export async function nearestMemories(
   return result.rows.map((r) => ({ id: r.id, similarity: Number(r.similarity) }))
 }
 
+export interface Restatement {
+  vector: number[]
+  /** The saved memory this content restates, if any. */
+  duplicateOf?: string
+}
+
+/**
+ * Embed `contents` and find, for each, a saved memory of the user it restates. The user's
+ * memory vectors are brought up to date first. Throws when embedding fails.
+ */
+export async function findRestatements(userId: string, contents: string[], embedder: Embedder, abortSignal: AbortSignal): Promise<Restatement[]> {
+  await indexPendingMemories({ userId })
+  const vectors = await embedder.embed(contents, abortSignal)
+  return Promise.all(vectors.map(async (vector) => {
+    const [nearest] = await nearestMemories(userId, embedder.key, vector, 1)
+    return { vector, ...(nearest && nearest.similarity >= DUPLICATE_SIMILARITY && { duplicateOf: nearest.id }) }
+  }))
+}
+
 /** The id of a saved memory that `content` restates, when an embedding model can tell. */
 export async function findDuplicate(userId: string, content: string): Promise<string | undefined> {
   const embedder = getEmbedder()
   if (!embedder) return undefined
   try {
-    await indexPendingMemories({ userId })
-    const [vector] = await embedder.embed([content], AbortSignal.timeout(QUERY_TIMEOUT_MS))
-    const [nearest] = await nearestMemories(userId, embedder.key, vector!, 1)
-    return nearest && nearest.similarity >= DUPLICATE_SIMILARITY ? nearest.id : undefined
+    const [found] = await findRestatements(userId, [content], embedder, AbortSignal.timeout(QUERY_TIMEOUT_MS))
+    return found?.duplicateOf
   } catch (error) {
     console.warn('failed to check for a duplicate memory', error)
     return undefined

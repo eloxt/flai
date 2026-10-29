@@ -9,9 +9,9 @@ import { latestPath, type MessageRow } from '../services/conversations'
 import { createMemory, deleteMemory, findMemoryIds, listMemories, type MemoryRow, updateMemory } from '../services/memories'
 import { backgroundModel, generateInBackground } from './background-model'
 import { type Embedder, getEmbedder } from './embedding'
-import { indexPendingMemories, nudgeEmbeddingIndexer, saveMemoryEmbedding } from './embedding-index'
+import { nudgeEmbeddingIndexer, saveMemoryEmbedding } from './embedding-index'
 import { runMemoryConsolidation } from './memory-consolidation'
-import { DUPLICATE_SIMILARITY, nearestMemories } from './memory-retrieval'
+import { findRestatements } from './memory-retrieval'
 import { memoryAccess, shortId } from './user-memory'
 
 /** A chat is processed once nothing has happened in it for this long. */
@@ -172,16 +172,13 @@ export async function planOperations(
 
   const adds = ops.filter((op) => op.action === 'add')
   if (!embedder || adds.length === 0) return ops
-  await indexPendingMemories({ userId })
-  const vectors = await embedder.embed(adds.map((op) => op.content), AbortSignal.timeout(60_000))
-  return Promise.all(ops.map(async (op) => {
+  const found = await findRestatements(userId, adds.map((op) => op.content), embedder, AbortSignal.timeout(60_000))
+  return ops.map((op) => {
     if (op.action !== 'add') return op
-    const vector = vectors[adds.indexOf(op)]!
-    const [nearest] = await nearestMemories(userId, embedder.key, vector, 1)
+    const { vector, duplicateOf } = found[adds.indexOf(op)]!
     // Merge into the memory it restates, keeping the newer wording.
-    if (nearest && nearest.similarity >= DUPLICATE_SIMILARITY) return { action: 'update' as const, id: nearest.id, content: op.content }
-    return { ...op, vector }
-  }))
+    return duplicateOf ? { action: 'update', id: duplicateOf, content: op.content } : { ...op, vector }
+  })
 }
 
 /** Summarize one claimed chat and apply memory changes, then advance its watermark. */

@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ find: vi.fn() }))
+const mocks = vi.hoisted(() => ({ find: vi.fn(), restatements: vi.fn() }))
 vi.mock('../src/db', async () => ({ schema: await import('../src/db/schema'), db: {} }))
 vi.mock('../src/services/memories', () => ({ findMemoryIds: mocks.find }))
+vi.mock('../src/llm/memory-retrieval', () => ({ findRestatements: mocks.restatements }))
 
 import { pastChatsPrompt } from '../src/llm/chat-history'
 import { extractionInput, pendingTurns, planOperations, type Turn, userStatements } from '../src/llm/memory-extraction'
@@ -100,6 +101,20 @@ describe('memory operations', () => {
       { action: 'delete', id: '3f2a9c1e-full' },
     ])
     expect(mocks.find).toHaveBeenCalledWith('alice', '3f2a9c1e')
+  })
+
+  it('turn adds that restate a saved memory into updates of it', async () => {
+    mocks.restatements.mockResolvedValue([{ vector: [1], duplicateOf: 'm-tea' }, { vector: [2] }])
+    const embedder = { key: 'p:e', embed: vi.fn() }
+    const ops = await planOperations('alice', [
+      { action: 'add', id: null, content: 'Drinks green tea', evidence: 'I only drink green tea now', pinned: null },
+      { action: 'add', id: null, content: 'Lives in Lisbon', evidence: 'I live in Lisbon', pinned: true },
+    ], said, embedder)
+    expect(mocks.restatements).toHaveBeenCalledWith('alice', ['Drinks green tea', 'Lives in Lisbon'], embedder, expect.any(AbortSignal))
+    expect(ops).toEqual([
+      { action: 'update', id: 'm-tea', content: 'Drinks green tea' },
+      { action: 'add', content: 'Lives in Lisbon', pinned: true, vector: [2] },
+    ])
   })
 })
 
