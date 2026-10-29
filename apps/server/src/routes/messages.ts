@@ -8,6 +8,7 @@ import {
   isAskUserPart,
   isMultiSelect,
   type ModelRef,
+  pendingQuestion,
   regenerateSchema,
   sendMessageSchema,
   textOf,
@@ -182,7 +183,7 @@ export const messageRoutes = new Hono<AppEnv>()
       return {
         message: updated!, provider, model, options,
         path: await loadPath(conversation.id, message.id, tx),
-        pending: parts.some((p) => isAskUserPart(p) && p.state === 'input-available'),
+        pending: Boolean(pendingQuestion(parts)),
       }
     })
 

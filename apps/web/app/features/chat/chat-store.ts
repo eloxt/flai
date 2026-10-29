@@ -18,8 +18,8 @@ import {
   askUserQuestionSchema,
   canReplyTo,
   fileMetaOf,
-  isAskUserPart,
   isMultiSelect,
+  pendingQuestion,
   questionsAnswered,
   toFilePart,
 } from "@flai/shared"
@@ -236,12 +236,7 @@ export async function isOffTopic(text: string): Promise<boolean> {
   const parentId = path.at(-1)
   if (!conversationId || !parentId || streaming || answering || !text.trim())
     return false
-  if (
-    map[parentId]?.parts.some(
-      (p) => isAskUserPart(p) && p.state === "input-available"
-    )
-  )
-    return false
+  if (pendingQuestion(map[parentId]?.parts ?? [])) return false
   const body: TopicCheckInput = { parentId, text }
   try {
     const result = await api<TopicCheckResult>(
@@ -274,12 +269,8 @@ export async function sendMessage({
   )
     return false
   const parent = parentId === undefined ? (state.path.at(-1) ?? null) : parentId
-  const pending = parent
-    ? state.map[parent]?.parts.find(
-        (p) => isAskUserPart(p) && p.state === "input-available"
-      )
-    : undefined
-  if (parent && pending && isAskUserPart(pending) && files.length === 0) {
+  const pending = parent ? pendingQuestion(state.map[parent]?.parts ?? []) : undefined
+  if (parent && pending && files.length === 0) {
     const question = askUserQuestionSchema.safeParse(pending.input)
     if (question.success)
       return answerQuestion(

@@ -62,8 +62,15 @@ export type FlaiDataParts = {}
 export type FlaiUIMessage = UIMessage<MessageMetadata, FlaiDataParts>
 export type FlaiPart = UIMessagePart<FlaiDataParts, UITools>
 
-export function isAskUserPart(part: FlaiPart): part is Extract<FlaiPart, { toolCallId: string }> {
+export type AskUserPart = Extract<FlaiPart, { toolCallId: string }>
+
+export function isAskUserPart(part: FlaiPart): part is AskUserPart {
   return part.type === 'tool-ask_user' || (part.type === 'dynamic-tool' && part.toolName === 'ask_user')
+}
+
+/** The first question in `parts` still waiting for the user's answer. */
+export function pendingQuestion(parts: FlaiPart[]): AskUserPart | undefined {
+  return parts.find((p): p is AskUserPart => isAskUserPart(p) && p.state === 'input-available')
 }
 
 /** Whether the message asked questions and every one of them has been answered. */
