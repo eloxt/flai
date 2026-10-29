@@ -54,9 +54,32 @@ function geminiThinkingLevel(level: ThinkingLevel): 'minimal' | 'low' | 'medium'
   return level
 }
 
-export function buildModel({ provider, model, options = {}, requestId }: BuildOptions): ResolvedModel {
-  const headers = requestId ? { 'x-request-id': requestId } : undefined
+/** The AI SDK client for a provider, tagged with its type; chat and embedding models both come from it. */
+export function providerClient(provider: ProviderRow, headers?: Record<string, string>) {
   const baseURL = provider.baseUrl || undefined
+  switch (provider.type) {
+    case 'openai':
+      return { type: 'openai', sdk: createOpenAI({ apiKey: provider.apiKey, baseURL, headers }) } as const
+    case 'openai_completion':
+      return {
+        type: 'openai_completion',
+        sdk: createOpenAICompatible({
+          name: 'openaiCompatible',
+          apiKey: provider.apiKey,
+          baseURL: baseURL ?? 'https://api.openai.com/v1',
+          headers,
+          includeUsage: true,
+        }),
+      } as const
+    case 'gemini':
+      return { type: 'gemini', sdk: createGoogleGenerativeAI({ apiKey: provider.apiKey, baseURL: geminiBaseUrl(provider.baseUrl), headers }) } as const
+    default:
+      throw new AppError('NOT_CONFIGURED', `Unsupported provider type ${String(provider.type)}`)
+  }
+}
+
+export function buildModel({ provider, model, options = {}, requestId }: BuildOptions): ResolvedModel {
+  const client = providerClient(provider, requestId ? { 'x-request-id': requestId } : undefined)
   const thinking = resolveThinking(model, options.thinking)
   const wants = (t: 'web_search' | 'url_context') => model.internalTools.includes(t)
   // Mastra 1.77 does not resolve webSearchTool placeholders passed via toolsets.
@@ -71,9 +94,9 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
   // Wikimedia needs no key, so photos are available to every model that can call tools.
   if (model.toolCall) tools.image_search = imageSearchTool
 
-  switch (provider.type) {
+  switch (client.type) {
     case 'openai': {
-      const openai = createOpenAI({ apiKey: provider.apiKey, baseURL, headers })
+      const openai = client.sdk
       if (nativeSearch) tools.web_search = openai.tools.webSearch()
       return {
         model: openai.responses(model.id),
@@ -87,23 +110,16 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
       }
     }
     case 'openai_completion': {
-      const compatible = createOpenAICompatible({
-        name: 'openaiCompatible',
-        apiKey: provider.apiKey,
-        baseURL: baseURL ?? 'https://api.openai.com/v1',
-        headers,
-        includeUsage: true,
-      })
       // OpenRouter exposes web search as a model variant rather than a tool.
       const id = nativeSearch && isOpenRouter(provider) ? `${model.id}:online` : model.id
       return {
-        model: compatible.chatModel(id),
+        model: client.sdk.chatModel(id),
         providerOptions: { openaiCompatible: thinking && model.reasoning ? { reasoningEffort: thinking } : {} },
         tools,
       }
     }
     case 'gemini': {
-      const google = createGoogleGenerativeAI({ apiKey: provider.apiKey, baseURL: geminiBaseUrl(provider.baseUrl), headers })
+      const google = client.sdk
       if (nativeSearch) tools.google_search = google.tools.googleSearch({})
       if (search.provider === 'native' && options.urlContext && wants('url_context')) tools.url_context = google.tools.urlContext({})
       return {
@@ -119,7 +135,5 @@ export function buildModel({ provider, model, options = {}, requestId }: BuildOp
         tools,
       }
     }
-    default:
-      throw new AppError('NOT_CONFIGURED', `Unsupported provider type ${String(provider.type)}`)
   }
 }

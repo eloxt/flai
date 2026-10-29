@@ -1,12 +1,9 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { embedMany, type EmbeddingModel } from 'ai'
 import { EMBEDDING_DIMENSIONS } from '../db/schema'
 import { AppError } from '../lib/errors'
 import { findProvider, type ProviderRow } from '../services/providers'
 import { getSetting } from '../services/settings'
-import { geminiBaseUrl } from './models'
+import { providerClient } from './models'
 
 export interface Embedder {
   /** `providerId:modelId`, stored with each vector so a model change re-embeds everything. */
@@ -15,17 +12,14 @@ export interface Embedder {
 }
 
 function embeddingModel(provider: ProviderRow, modelId: string): EmbeddingModel {
-  const baseURL = provider.baseUrl || undefined
-  switch (provider.type) {
+  const client = providerClient(provider)
+  switch (client.type) {
     case 'openai':
-      return createOpenAI({ apiKey: provider.apiKey, baseURL }).embedding(modelId)
+      return client.sdk.embedding(modelId)
     case 'openai_completion':
-      return createOpenAICompatible({ name: 'openaiCompatible', apiKey: provider.apiKey, baseURL: baseURL ?? 'https://api.openai.com/v1' })
-        .embeddingModel(modelId)
+      return client.sdk.embeddingModel(modelId)
     case 'gemini':
-      return createGoogleGenerativeAI({ apiKey: provider.apiKey, baseURL: geminiBaseUrl(provider.baseUrl) }).embedding(modelId)
-    default:
-      throw new AppError('NOT_CONFIGURED', `Unsupported provider type ${String(provider.type)}`)
+      return client.sdk.embedding(modelId)
   }
 }
 
