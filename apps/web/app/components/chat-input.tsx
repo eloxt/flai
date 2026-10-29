@@ -12,7 +12,7 @@ import {
   WrenchIcon,
   XIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import TextareaAutosize from "react-textarea-autosize"
 import { Attachment, AttachmentAction, AttachmentActions, AttachmentContent, AttachmentGroup, AttachmentMedia, AttachmentTitle } from "~/components/ui/attachment"
@@ -32,9 +32,9 @@ import { InputGroup, InputGroupAddon, InputGroupButton } from "~/components/ui/i
 import { Spinner } from "~/components/ui/spinner"
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+import { useUploads } from "~/hooks/use-uploads"
 import { api } from "~/lib/api"
-import { notify } from "~/lib/notify"
-import { isAllowedAttachment, uploadFile } from "~/lib/upload"
+import { isAllowedAttachment } from "~/lib/upload"
 import { type BuiltinTool, useInputStore } from "~/store/input-store"
 import { useCurrentModel } from "~/store/model-store"
 
@@ -56,11 +56,6 @@ interface ChatInputProps {
   onExpand?: () => void
 }
 
-interface Pending {
-  id: string
-  name: string
-}
-
 const EMPTY: FileRecord[] = []
 /** Toolbar menus read like the toggles beside them: quiet (45%) when unset, full-strength when set. */
 const TOOL_TRIGGER = "text-muted-foreground hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground"
@@ -80,7 +75,11 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
   const setDraft = useInputStore((s) => s.setDraft)
   const files = useInputStore((s) => s.attachments[draftKey] ?? EMPTY)
   const setAttachments = useInputStore((s) => s.setAttachments)
-  const [pending, setPending] = useState<Pending[]>([])
+  const { pending, upload } = useUploads({
+    accepts: isAllowedAttachment,
+    // Read the latest list: uploads finish one by one after this render.
+    onUploaded: (record) => setAttachments(draftKey, [...(useInputStore.getState().attachments[draftKey] ?? []), record]),
+  })
   const [dragging, setDragging] = useState(false)
   const [checking, setChecking] = useState(false)
   const dragDepth = useRef(0)
@@ -96,29 +95,6 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
     // The input is still growing out of a clipped row; don't let focus scroll it.
     textarea.current?.focus({ preventScroll: true })
   }, [collapsed])
-
-  const upload = useCallback(
-    async (list: File[]) => {
-      for (const file of list) {
-        if (!isAllowedAttachment(file)) {
-          notify.error(t("common.fileTypeNotAllowed"))
-          continue
-        }
-        const id = crypto.randomUUID()
-        setPending((p) => [...p, { id, name: file.name }])
-        try {
-          const record = await uploadFile(file)
-          const latest = useInputStore.getState().attachments[draftKey] ?? []
-          setAttachments(draftKey, [...latest, record])
-        } catch (error) {
-          notify.error(error, t("common.uploadFailed"))
-        } finally {
-          setPending((p) => p.filter((x) => x.id !== id))
-        }
-      }
-    },
-    [draftKey, setAttachments, t]
-  )
 
   const submit = async () => {
     if (streaming || checking || pending.length > 0) return

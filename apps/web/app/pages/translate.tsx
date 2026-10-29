@@ -22,11 +22,11 @@ import {
 } from "~/components/ui/select"
 import { Spinner } from "~/components/ui/spinner"
 import { Textarea } from "~/components/ui/textarea"
+import { useUploads } from "~/hooks/use-uploads"
 import i18n from "~/i18n"
 import { apiFetch, errorText } from "~/lib/api"
 import { notify } from "~/lib/notify"
 import { parseUIMessageStream } from "~/lib/ui-stream"
-import { uploadFile } from "~/lib/upload"
 import { useModelStore } from "~/store/model-store"
 import { useTranslateStore } from "~/store/translate-store"
 
@@ -65,39 +65,18 @@ export default function TranslatePage() {
   const [text, setText] = useState("")
   const [output, setOutput] = useState("")
   const [images, setImages] = useState<FileRecord[]>([])
-  const [uploading, setUploading] = useState(0)
   const [running, setRunning] = useState(false)
   const abort = useRef<AbortController | null>(null)
   const imageInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => () => abort.current?.abort(), [])
 
-  const addImages = async (files: File[]) => {
-    // State read here doesn't change during the loop, so count the slots this batch takes.
-    let slots = MAX_IMAGES - images.length - uploading
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        notify.error(t("common.fileTypeNotAllowed"))
-        continue
-      }
-      if (slots <= 0) {
-        notify.error(t("pages.translate.errors.maxImages"))
-        return
-      }
-      slots--
-      setUploading((n) => n + 1)
-      try {
-        const record = await uploadFile(file)
-        setImages((list) =>
-          list.length >= MAX_IMAGES ? list : [...list, record]
-        )
-      } catch (error) {
-        notify.error(error, t("common.uploadFailed"))
-      } finally {
-        setUploading((n) => n - 1)
-      }
-    }
-  }
+  const { pending, upload: addImages } = useUploads({
+    accepts: (file) => file.type.startsWith("image/"),
+    onUploaded: (record) => setImages((list) => (list.length >= MAX_IMAGES ? list : [...list, record])),
+    limit: { room: () => MAX_IMAGES - images.length, message: t("pages.translate.errors.maxImages") },
+  })
+  const uploading = pending.length
 
   const translate = async () => {
     const { selected } = useModelStore.getState()
