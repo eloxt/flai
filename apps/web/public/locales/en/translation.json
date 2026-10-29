@@ -19,7 +19,8 @@
       "confirm": "Confirm",
       "delete": "Delete",
       "update": "Update",
-      "back": "Back"
+      "back": "Back",
+      "retry": "Retry"
     },
     "crud": {
       "createSuccess": "Created successfully",
@@ -36,7 +37,8 @@
     },
     "empty": {
       "noItems": "No items yet",
-      "noResults": "No results found"
+      "noResults": "No results found",
+      "loadFailed": "Couldn't load this."
     },
     "table": {
       "actions": "Actions",
@@ -372,12 +374,10 @@
         "promptDescription": "Configure chat and translation prompts. Saved changes apply to subsequent requests.",
         "titleDescription": "Choose the provider, model and prompt for automatic conversation titles.",
         "saved": "Settings saved and cache updated",
-        "reload": "Reload settings",
         "provider": "Provider",
         "model": "Model",
         "selectProvider": "Select a provider",
         "selectModel": "Select a model",
-        "unavailable": "Unavailable",
         "modelHelp": "Only models from active providers are shown. Select a new model after changing providers.",
         "titlePrompt": "Title generation prompt",
         "chatPrompt": "Chat system prompt",

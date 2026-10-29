@@ -3,7 +3,7 @@ import { ArrowDownIcon, ArrowUpIcon, FileJsonIcon, PencilIcon, PlusIcon, Trash2I
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection, PanelTable } from "~/components/panel-dialog"
+import { PanelList, PanelSection, PanelTable } from "~/components/panel-dialog"
 import { ProviderLogo } from "~/components/provider-logo"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
@@ -11,11 +11,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { Switch } from "~/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table"
 import { Textarea } from "~/components/ui/textarea"
+import { useResourceList } from "~/hooks/use-resource-list"
 import { api } from "~/lib/api"
 import { extractModels } from "~/lib/model-import"
 import { notify } from "~/lib/notify"
@@ -30,14 +30,10 @@ const TYPE_LABELS: Record<ProviderType, string> = {
 
 export function ProviderManagement() {
   const { t } = useTranslation()
-  const [providers, setProviders] = useState<AdminProvider[] | null>(null)
+  const { items: providers, failed, reload, upsert, remove, setItems: setProviders } = useResourceList<AdminProvider>("/admin/providers", { addAt: "end" })
   const [editing, setEditing] = useState<AdminProvider | "new" | null>(null)
   const [deleting, setDeleting] = useState<AdminProvider | null>(null)
   const [reordering, setReordering] = useState(false)
-
-  useEffect(() => {
-    api<AdminProvider[]>("/admin/providers").then(setProviders).catch((e) => notify.error(e))
-  }, [])
 
   const changed = () => void useModelStore.getState().load().catch(() => {})
 
@@ -69,66 +65,66 @@ export function ProviderManagement() {
         </Button>
       }
     >
-      {providers === null ? (
-        <Skeleton className="h-40 w-full" />
-      ) : (
-        <PanelTable>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("pages.admin.providers.table.order")}</TableHead>
-                <TableHead>{t("pages.admin.providers.table.name")}</TableHead>
-                <TableHead>{t("pages.admin.providers.table.providerType")}</TableHead>
-                <TableHead>{t("pages.admin.providers.table.apiKey")}</TableHead>
-                <TableHead>{t("pages.admin.providers.table.status")}</TableHead>
-                <TableHead className="text-right">{t("pages.admin.providers.table.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody aria-busy={reordering}>
-              {providers.map((p, index) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.moveUp", { name: p.name })} disabled={reordering || index === 0} onClick={() => move(index, -1)}>
-                        <ArrowUpIcon />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.moveDown", { name: p.name })} disabled={reordering || index === providers.length - 1} onClick={() => move(index, 1)}>
-                        <ArrowDownIcon />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-2 font-medium">
-                      <ProviderLogo logo={p.logo} name={p.name} />
-                      {p.name}
-                    </span>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">{TYPE_LABELS[p.type] ?? p.type}</TableCell>
-                  <TableCell className="font-mono text-xs">{p.apiKey}</TableCell>
-                  <TableCell>
-                    <Badge variant={p.isActive ? "secondary" : "outline"}>{p.isActive ? t("common.status.active") : t("common.status.inactive")}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} disabled={reordering} onClick={() => setEditing(p)}>
-                        <PencilIcon />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} disabled={reordering} onClick={() => setDeleting(p)}>
-                        <Trash2Icon />
-                      </Button>
-                    </div>
-                  </TableCell>
+      <PanelList items={providers} failed={failed} onRetry={reload} tall>
+        {(providers) => (
+          <PanelTable>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("pages.admin.providers.table.order")}</TableHead>
+                  <TableHead>{t("pages.admin.providers.table.name")}</TableHead>
+                  <TableHead>{t("pages.admin.providers.table.providerType")}</TableHead>
+                  <TableHead>{t("pages.admin.providers.table.apiKey")}</TableHead>
+                  <TableHead>{t("pages.admin.providers.table.status")}</TableHead>
+                  <TableHead className="text-right">{t("pages.admin.providers.table.actions")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </PanelTable>
-      )}
+              </TableHeader>
+              <TableBody aria-busy={reordering}>
+                {providers.map((p, index) => (
+                  <TableRow key={p.id}>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.moveUp", { name: p.name })} disabled={reordering || index === 0} onClick={() => move(index, -1)}>
+                          <ArrowUpIcon />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.providers.moveDown", { name: p.name })} disabled={reordering || index === providers.length - 1} onClick={() => move(index, 1)}>
+                          <ArrowDownIcon />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-2 font-medium">
+                        <ProviderLogo logo={p.logo} name={p.name} />
+                        {p.name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{TYPE_LABELS[p.type] ?? p.type}</TableCell>
+                    <TableCell className="font-mono text-xs">{p.apiKey}</TableCell>
+                    <TableCell>
+                      <Badge variant={p.isActive ? "secondary" : "outline"}>{p.isActive ? t("common.status.active") : t("common.status.inactive")}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} disabled={reordering} onClick={() => setEditing(p)}>
+                          <PencilIcon />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} disabled={reordering} onClick={() => setDeleting(p)}>
+                          <Trash2Icon />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </PanelTable>
+        )}
+      </PanelList>
       <ProviderDialog
         provider={editing}
         onClose={() => setEditing(null)}
         onSaved={(saved) => {
-          setProviders((list) => (list?.some((p) => p.id === saved.id) ? list.map((p) => (p.id === saved.id ? saved : p)) : [...(list ?? []), saved]))
+          upsert(saved)
           changed()
         }}
       />
@@ -143,7 +139,7 @@ export function ProviderManagement() {
           if (!deleting) return
           try {
             await api(`/admin/providers/${deleting.id}`, { method: "DELETE" })
-            setProviders((list) => (list ?? []).filter((p) => p.id !== deleting.id))
+            remove(deleting.id)
             changed()
           } catch (error) {
             notify.error(error)

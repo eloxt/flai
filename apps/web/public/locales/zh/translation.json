@@ -19,7 +19,8 @@
       "confirm": "确认",
       "delete": "删除",
       "update": "更新",
-      "back": "返回"
+      "back": "返回",
+      "retry": "重试"
     },
     "crud": {
       "createSuccess": "创建成功",
@@ -36,7 +37,8 @@
     },
     "empty": {
       "noItems": "暂无数据",
-      "noResults": "未找到结果"
+      "noResults": "未找到结果",
+      "loadFailed": "加载失败。"
     },
     "table": {
       "actions": "操作",
@@ -367,12 +369,10 @@
         "promptDescription": "设置聊天与翻译使用的系统提示词，保存后对后续请求生效。",
         "titleDescription": "选择自动生成会话标题的服务商、模型与提示词。",
         "saved": "配置已保存并更新缓存",
-        "reload": "重新加载",
         "provider": "服务商",
         "model": "模型",
         "selectProvider": "选择服务商",
         "selectModel": "选择模型",
-        "unavailable": "不可用",
         "modelHelp": "仅显示已启用服务商的模型。切换服务商后请重新选择模型。",
         "titlePrompt": "标题生成提示词",
         "chatPrompt": "聊天系统提示词",

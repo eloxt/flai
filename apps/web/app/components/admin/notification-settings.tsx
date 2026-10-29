@@ -3,18 +3,17 @@ import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection, PanelTable } from "~/components/panel-dialog"
+import { PanelList, PanelSection, PanelTable } from "~/components/panel-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
-import { Empty, EmptyHeader, EmptyTitle } from "~/components/ui/empty"
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table"
 import { Textarea } from "~/components/ui/textarea"
+import { useResourceList } from "~/hooks/use-resource-list"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
 
@@ -22,13 +21,9 @@ type Level = Notification["level"]
 
 export function NotificationSettings() {
   const { t } = useTranslation()
-  const [items, setItems] = useState<Notification[] | null>(null)
+  const { items, failed, reload, upsert, remove } = useResourceList<Notification>("/admin/notifications")
   const [editing, setEditing] = useState<Notification | "new" | null>(null)
   const [deleting, setDeleting] = useState<Notification | null>(null)
-
-  useEffect(() => {
-    api<Notification[]>("/admin/notifications").then(setItems).catch((e) => notify.error(e))
-  }, [])
 
   const levelLabel = (level: Level) => (level === "warning" ? t("pages.admin.notification.levelWarning") : t("pages.admin.notification.levelDefault"))
 
@@ -43,55 +38,47 @@ export function NotificationSettings() {
         </Button>
       }
     >
-      {items === null ? (
-        <Skeleton className="h-28 w-full" />
-      ) : items.length === 0 ? (
-        <Empty className="bg-muted shadow-(--sunken)">
-          <EmptyHeader>
-            <EmptyTitle>{t("common.empty.noItems")}</EmptyTitle>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <PanelTable>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("pages.admin.notification.titleLabel")}</TableHead>
-                <TableHead>{t("pages.admin.notification.contentLabel")}</TableHead>
-                <TableHead>{t("pages.admin.notification.levelLabel")}</TableHead>
-                <TableHead className="text-right">{t("common.table.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((n) => (
-                <TableRow key={n.id}>
-                  <TableCell className="font-medium">{n.title}</TableCell>
-                  <TableCell className="max-w-72 truncate">{n.content}</TableCell>
-                  <TableCell>
-                    <Badge variant={n.level === "warning" ? "destructive" : "secondary"}>{levelLabel(n.level)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(n)}>
-                        <PencilIcon />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} onClick={() => setDeleting(n)}>
-                        <Trash2Icon />
-                      </Button>
-                    </div>
-                  </TableCell>
+      <PanelList items={items} failed={failed} onRetry={reload}>
+        {(items) => (
+          <PanelTable>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("pages.admin.notification.titleLabel")}</TableHead>
+                  <TableHead>{t("pages.admin.notification.contentLabel")}</TableHead>
+                  <TableHead>{t("pages.admin.notification.levelLabel")}</TableHead>
+                  <TableHead className="text-right">{t("common.table.actions")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </PanelTable>
-      )}
+              </TableHeader>
+              <TableBody>
+                {items.map((n) => (
+                  <TableRow key={n.id}>
+                    <TableCell className="font-medium">{n.title}</TableCell>
+                    <TableCell className="max-w-72 truncate">{n.content}</TableCell>
+                    <TableCell>
+                      <Badge variant={n.level === "warning" ? "destructive" : "secondary"}>{levelLabel(n.level)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(n)}>
+                          <PencilIcon />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} onClick={() => setDeleting(n)}>
+                          <Trash2Icon />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </PanelTable>
+        )}
+      </PanelList>
       <NotificationDialog
         item={editing}
         onClose={() => setEditing(null)}
-        onSaved={(saved) =>
-          setItems((list) => (list?.some((n) => n.id === saved.id) ? list.map((n) => (n.id === saved.id ? saved : n)) : [saved, ...(list ?? [])]))
-        }
+        onSaved={upsert}
         levelLabel={levelLabel}
       />
       <ConfirmDialog
@@ -105,7 +92,7 @@ export function NotificationSettings() {
           if (!deleting) return
           try {
             await api(`/admin/notifications/${deleting.id}`, { method: "DELETE" })
-            setItems((list) => (list ?? []).filter((n) => n.id !== deleting.id))
+            remove(deleting.id)
           } catch (error) {
             notify.error(error)
           }

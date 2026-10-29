@@ -1,9 +1,8 @@
 import type { AdminProvider, SettingKey, SettingValue } from "@flai/shared"
 import { type FormEvent, type ReactNode, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { PanelSection } from "~/components/panel-dialog"
+import { LoadFailed, PanelSection } from "~/components/panel-dialog"
 import { Button } from "~/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader } from "~/components/ui/empty"
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
@@ -111,22 +110,6 @@ function SettingPanel<K extends SettingKey>({
         </form>
       )}
     </PanelSection>
-  )
-}
-
-function LoadFailed({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation()
-  return (
-    <Empty className="bg-muted shadow-(--sunken)">
-      <EmptyHeader>
-        <EmptyDescription>{t("pages.admin.systemConfig.unavailable")}</EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent>
-        <Button variant="outline" onClick={onRetry}>
-          {t("pages.admin.systemConfig.reload")}
-        </Button>
-      </EmptyContent>
-    </Empty>
   )
 }
 

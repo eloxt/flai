@@ -3,39 +3,31 @@ import { PencilIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection } from "~/components/panel-dialog"
+import { PanelList, PanelSection } from "~/components/panel-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
-import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { Switch } from "~/components/ui/switch"
 import { Textarea } from "~/components/ui/textarea"
+import { useResourceList } from "~/hooks/use-resource-list"
 import { api } from "~/lib/api"
 import { notify } from "~/lib/notify"
 
 export function McpSettings() {
   const { t } = useTranslation()
-  const [servers, setServers] = useState<McpServer[] | null>(null)
+  const { items: servers, failed, reload, upsert, remove } = useResourceList<McpServer>("/mcp-servers")
   const [editing, setEditing] = useState<McpServer | "new" | null>(null)
   const [deleting, setDeleting] = useState<McpServer | null>(null)
   const [refreshing, setRefreshing] = useState<string | null>(null)
 
-  const load = () => api<McpServer[]>("/mcp-servers").then(setServers).catch((e) => notify.error(e))
-  useEffect(() => {
-    void load()
-  }, [])
-
-  const replace = (server: McpServer) => setServers((list) => (list ?? []).map((s) => (s.id === server.id ? server : s)))
-
   const refresh = async (server: McpServer) => {
     setRefreshing(server.id)
     try {
-      replace(await api<McpServer>(`/mcp-servers/${server.id}/refresh`, { method: "POST" }))
+      upsert(await api<McpServer>(`/mcp-servers/${server.id}/refresh`, { method: "POST" }))
       notify.success(t("pages.settings.mcp.refreshSuccess"))
     } catch (error) {
       notify.error(error)
@@ -46,7 +38,7 @@ export function McpSettings() {
 
   const toggle = async (server: McpServer, isActive: boolean) => {
     try {
-      replace(await api<McpServer>(`/mcp-servers/${server.id}`, { method: "PATCH", body: { isActive } }))
+      upsert(await api<McpServer>(`/mcp-servers/${server.id}`, { method: "PATCH", body: { isActive } }))
     } catch (error) {
       notify.error(error)
     }
@@ -63,62 +55,55 @@ export function McpSettings() {
         </Button>
       }
     >
-      {servers === null ? (
-        <Skeleton className="h-28 w-full" />
-      ) : servers.length === 0 ? (
-        <Empty className="bg-muted shadow-(--sunken)">
-          <EmptyHeader>
-            <EmptyTitle>{t("common.empty.noItems")}</EmptyTitle>
-            <EmptyDescription>{t("pages.settings.mcp.emptyHint")}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {servers.map((server) => (
-            <Card key={server.id} size="sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {server.name}
-                  <Badge variant={server.isActive ? "secondary" : "outline"}>
-                    {server.isActive ? t("common.status.active") : t("common.status.inactive")}
-                  </Badge>
-                </CardTitle>
-                <CardDescription className="truncate font-mono text-xs">{server.url}</CardDescription>
-                <CardAction className="flex items-center gap-1">
-                  <Switch checked={server.isActive} aria-label={t("pages.settings.mcp.activate")} onCheckedChange={(v) => void toggle(server, v)} />
-                  <Button variant="ghost" size="icon-sm" aria-label={t("pages.settings.mcp.refreshTools")} disabled={refreshing === server.id} onClick={() => void refresh(server)}>
-                    {refreshing === server.id ? <Spinner /> : <RefreshCwIcon />}
-                  </Button>
-                  <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(server)}>
-                    <PencilIcon />
-                  </Button>
-                  <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} onClick={() => setDeleting(server)}>
-                    <Trash2Icon />
-                  </Button>
-                </CardAction>
-              </CardHeader>
-              <CardContent>
-                {server.tools.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("pages.settings.mcp.noTools")}</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {server.tools.map((tool) => (
-                      <Badge key={tool.name} variant="outline" title={tool.description}>
-                        {tool.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <PanelList items={servers} failed={failed} onRetry={reload} emptyHint={t("pages.settings.mcp.emptyHint")}>
+        {(servers) => (
+          <div className="flex flex-col gap-4">
+            {servers.map((server) => (
+              <Card key={server.id} size="sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {server.name}
+                    <Badge variant={server.isActive ? "secondary" : "outline"}>
+                      {server.isActive ? t("common.status.active") : t("common.status.inactive")}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="truncate font-mono text-xs">{server.url}</CardDescription>
+                  <CardAction className="flex items-center gap-1">
+                    <Switch checked={server.isActive} aria-label={t("pages.settings.mcp.activate")} onCheckedChange={(v) => void toggle(server, v)} />
+                    <Button variant="ghost" size="icon-sm" aria-label={t("pages.settings.mcp.refreshTools")} disabled={refreshing === server.id} onClick={() => void refresh(server)}>
+                      {refreshing === server.id ? <Spinner /> : <RefreshCwIcon />}
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(server)}>
+                      <PencilIcon />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} onClick={() => setDeleting(server)}>
+                      <Trash2Icon />
+                    </Button>
+                  </CardAction>
+                </CardHeader>
+                <CardContent>
+                  {server.tools.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t("pages.settings.mcp.noTools")}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {server.tools.map((tool) => (
+                        <Badge key={tool.name} variant="outline" title={tool.description}>
+                          {tool.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </PanelList>
       <McpServerDialog
         server={editing}
         onClose={() => setEditing(null)}
         onSaved={(server, created) => {
-          setServers((list) => (created ? [server, ...(list ?? [])] : (list ?? []).map((s) => (s.id === server.id ? server : s))))
+          upsert(server)
           if (created) void refresh(server)
         }}
       />
@@ -133,7 +118,7 @@ export function McpSettings() {
           if (!deleting) return
           try {
             await api(`/mcp-servers/${deleting.id}`, { method: "DELETE" })
-            setServers((list) => (list ?? []).filter((s) => s.id !== deleting.id))
+            remove(deleting.id)
           } catch (error) {
             notify.error(error)
           }

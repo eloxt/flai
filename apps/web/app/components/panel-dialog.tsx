@@ -1,6 +1,10 @@
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
+import { useTranslation } from "react-i18next"
+import { Button } from "~/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog"
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty"
+import { Skeleton } from "~/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { useIsMobile } from "~/hooks/use-mobile"
 
@@ -78,4 +82,54 @@ export function PanelTable({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
+}
+
+/** Shown in place of a panel's content when it could not be loaded. */
+export function LoadFailed({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <Empty className="bg-muted shadow-(--sunken)">
+      <EmptyHeader>
+        <EmptyDescription>{t("common.empty.loadFailed")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button variant="outline" onClick={onRetry}>
+          {t("common.actions.retry")}
+        </Button>
+      </EmptyContent>
+    </Empty>
+  )
+}
+
+/** A panel's list: a placeholder while it loads, a retry when that failed, a note when it is empty. */
+export function PanelList<T>({
+  items,
+  failed,
+  onRetry,
+  tall = false,
+  emptyHint,
+  children,
+}: {
+  items: T[] | null
+  failed: boolean
+  onRetry: () => void
+  /** Use a taller placeholder, for lists that are rarely short. */
+  tall?: boolean
+  emptyHint?: string
+  children: (items: T[]) => ReactNode
+}) {
+  const { t } = useTranslation()
+  if (failed) return <LoadFailed onRetry={onRetry} />
+  if (items === null) return <Skeleton className={tall ? "h-40 w-full" : "h-28 w-full"} />
+  if (items.length === 0) {
+    return (
+      <Empty className="bg-muted shadow-(--sunken)">
+        <EmptyHeader>
+          <EmptyTitle>{t("common.empty.noItems")}</EmptyTitle>
+          {emptyHint && <EmptyDescription>{emptyHint}</EmptyDescription>}
+        </EmptyHeader>
+      </Empty>
+    )
+  }
+  return children(items)
 }

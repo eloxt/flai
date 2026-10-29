@@ -4,18 +4,18 @@ import { type FormEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 import { ConfirmDialog } from "~/components/confirm-dialog"
-import { PanelSection, PanelTable } from "~/components/panel-dialog"
+import { PanelList, PanelSection, PanelTable } from "~/components/panel-dialog"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
 import { Field, FieldContent, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "~/components/ui/sheet"
-import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { Switch } from "~/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table"
+import { useResourceList } from "~/hooks/use-resource-list"
 import { api } from "~/lib/api"
 import { formatDateTime } from "~/lib/format"
 import { notify } from "~/lib/notify"
@@ -24,17 +24,10 @@ import { useAuthStore } from "~/store/auth-store"
 export function UserManagement() {
   const { t } = useTranslation()
   const me = useAuthStore((s) => s.user)
-  const [users, setUsers] = useState<User[] | null>(null)
+  const { items: users, failed, reload, upsert, remove } = useResourceList<User>("/admin/users")
   const [editing, setEditing] = useState<User | "new" | null>(null)
   const [deleting, setDeleting] = useState<User | null>(null)
   const [viewing, setViewing] = useState<User | null>(null)
-
-  useEffect(() => {
-    api<User[]>("/admin/users").then(setUsers).catch((e) => notify.error(e))
-  }, [])
-
-  const upsert = (user: User) =>
-    setUsers((list) => (list?.some((u) => u.id === user.id) ? list.map((u) => (u.id === user.id ? user : u)) : [user, ...(list ?? [])]))
 
   const toggleActive = async (user: User, isActive: boolean) => {
     try {
@@ -55,59 +48,59 @@ export function UserManagement() {
         </Button>
       }
     >
-      {users === null ? (
-        <Skeleton className="h-40 w-full" />
-      ) : (
-        <PanelTable>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("pages.admin.users.table.username")}</TableHead>
-                <TableHead>{t("pages.admin.users.table.email")}</TableHead>
-                <TableHead>{t("pages.admin.users.table.role")}</TableHead>
-                <TableHead>{t("pages.admin.users.table.status")}</TableHead>
-                <TableHead>{t("pages.admin.users.table.createdAt")}</TableHead>
-                <TableHead className="text-right">{t("pages.admin.users.table.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                      {user.role === "admin" ? t("pages.admin.users.roleAdmin") : t("pages.admin.users.roleUser")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={user.isActive}
-                      disabled={user.id === me?.id}
-                      aria-label={t("pages.admin.users.form.isActive")}
-                      onCheckedChange={(v) => void toggleActive(user, v)}
-                    />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">{formatDateTime(user.createdAt)}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.users.conversations")} onClick={() => setViewing(user)}>
-                        <MessagesSquareIcon />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(user)}>
-                        <PencilIcon />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} disabled={user.id === me?.id} onClick={() => setDeleting(user)}>
-                        <Trash2Icon />
-                      </Button>
-                    </div>
-                  </TableCell>
+      <PanelList items={users} failed={failed} onRetry={reload} tall>
+        {(users) => (
+          <PanelTable>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("pages.admin.users.table.username")}</TableHead>
+                  <TableHead>{t("pages.admin.users.table.email")}</TableHead>
+                  <TableHead>{t("pages.admin.users.table.role")}</TableHead>
+                  <TableHead>{t("pages.admin.users.table.status")}</TableHead>
+                  <TableHead>{t("pages.admin.users.table.createdAt")}</TableHead>
+                  <TableHead className="text-right">{t("pages.admin.users.table.actions")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </PanelTable>
-      )}
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                        {user.role === "admin" ? t("pages.admin.users.roleAdmin") : t("pages.admin.users.roleUser")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={user.isActive}
+                        disabled={user.id === me?.id}
+                        aria-label={t("pages.admin.users.form.isActive")}
+                        onCheckedChange={(v) => void toggleActive(user, v)}
+                      />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{formatDateTime(user.createdAt)}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon-sm" aria-label={t("pages.admin.users.conversations")} onClick={() => setViewing(user)}>
+                          <MessagesSquareIcon />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label={t("common.edit")} onClick={() => setEditing(user)}>
+                          <PencilIcon />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label={t("common.actions.delete")} disabled={user.id === me?.id} onClick={() => setDeleting(user)}>
+                          <Trash2Icon />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </PanelTable>
+        )}
+      </PanelList>
       <UserDialog user={editing} onClose={() => setEditing(null)} onSaved={upsert} />
       <UserConversations user={viewing} onClose={() => setViewing(null)} />
       <ConfirmDialog
@@ -121,7 +114,7 @@ export function UserManagement() {
           if (!deleting) return
           try {
             await api(`/admin/users/${deleting.id}`, { method: "DELETE" })
-            setUsers((list) => (list ?? []).filter((u) => u.id !== deleting.id))
+            remove(deleting.id)
           } catch (error) {
             notify.error(error)
           }
