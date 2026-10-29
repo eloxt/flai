@@ -1,6 +1,6 @@
 import { cjk } from "@streamdown/cjk"
 import { code } from "@streamdown/code"
-import { math } from "@streamdown/math"
+import { createMathPlugin } from "@streamdown/math"
 import { mermaid } from "@streamdown/mermaid"
 import { cn } from "cn"
 import { memo } from "react"
@@ -9,6 +9,9 @@ import { ProxiedImage } from "~/components/proxied-image"
 import "streamdown/styles.css"
 import "katex/dist/katex.min.css"
 
+const math = createMathPlugin({
+  singleDollarTextMath: true
+})
 const fullPlugins = { cjk, code, math, mermaid }
 const lightPlugins = { cjk, math }
 const components = { img: ProxiedImage }
