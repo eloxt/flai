@@ -17,9 +17,10 @@ import { toConversation, toMessage } from '../lib/serialize'
 import { generateTitle } from '../llm/title'
 import { activeGeneration, cancelConversationGeneration } from '../llm/generation'
 import { deleteMessage, getConversation, listConversations, listMessages } from '../services/conversations'
-import { searchMessages } from '../services/search'
+import { searchChats } from '../services/search'
 
 const c_ = schema.conversations
+const SEARCH_LIMIT = 50
 
 export const conversationRoutes = new Hono<AppEnv>()
   .get('/conversations', async (c) => {
@@ -80,16 +81,14 @@ export const conversationRoutes = new Hono<AppEnv>()
   })
   .get('/search', async (c) => {
     const { q } = query(c, z.object({ q: z.string().trim().min(1).max(200) }))
-    const { rows, terms } = await searchMessages(c.get('user').id, q)
-    const hits: SearchHit[] = rows
-      .map((r) => ({
-        conversationId: r.conversation_id,
-        messageId: r.message_id,
-        title: r.title,
-        icon: r.icon,
-        createdAt: new Date(r.created_at).toISOString(),
-        highlight: highlight(r.search_text, terms),
-      }))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    const { rows, terms } = await searchChats(c.get('user').id, q, { limit: SEARCH_LIMIT })
+    const hits: SearchHit[] = rows.map((r) => ({
+      conversationId: r.conversation_id,
+      title: r.title,
+      icon: r.icon,
+      createdAt: new Date(r.created_at).toISOString(),
+      // A chat found by its summary alone has no matching message to quote.
+      highlight: highlight(r.search_text || r.summary || '', terms),
+    }))
     return c.json(hits)
   })

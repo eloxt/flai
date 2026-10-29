@@ -26,7 +26,6 @@ await i18n.use(initReactI18next).init({
 
 const hit: SearchHit = {
   conversationId: "conversation-1",
-  messageId: "message-1",
   title: "Design notes",
   icon: null,
   createdAt: "2026-10-15T00:00:00Z",

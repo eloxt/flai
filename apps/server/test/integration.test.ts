@@ -270,7 +270,7 @@ suite('API integration', () => {
 
   it('finds messages with Chinese full-text search', async () => {
     const res = await call(`/search?q=${encodeURIComponent('世界')}`, { token: alice })
-    expect(res.data[0]).toMatchObject({ conversationId, messageId: u1 })
+    expect(res.data[0]).toMatchObject({ conversationId })
     expect(res.data[0].highlight).toContain('<em>世界</em>')
   })
 

@@ -217,9 +217,9 @@ export const updateConversationSchema = z.object({
 })
 export const generateTitleSchema = z.object({ content: z.string().max(20000).optional() })
 
+/** A chat matching a search, by its messages or summary, by keyword or meaning; most relevant first. */
 export interface SearchHit {
   conversationId: string
-  messageId: string
   title: string
   icon: string | null
   createdAt: string

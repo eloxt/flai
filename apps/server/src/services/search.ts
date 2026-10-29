@@ -2,25 +2,6 @@ import { type SQL, sql } from 'drizzle-orm'
 import { db } from '../db'
 import { getEmbedder } from '../llm/embedding'
 
-export type MessageSearchRow = {
-  conversation_id: string
-  message_id: string
-  title: string
-  icon: string | null
-  created_at: Date
-  updated_at: Date
-  /** The matching message's text. */
-  search_text: string
-  rank: number
-}
-
-export interface MessageSearchResult {
-  /** The best-matching message of each conversation, most relevant first. */
-  rows: MessageSearchRow[]
-  /** The query's lexemes, for highlighting snippets. */
-  terms: string[]
-}
-
 interface SearchOptions {
   excludeConversationId?: string
   limit?: number
@@ -41,7 +22,7 @@ function messageMatches(userId: string, q: string, excludeConversationId?: strin
   const tsq = tsquery(q)
   return sql`
     SELECT DISTINCT ON (m.conversation_id)
-      m.conversation_id, m.id AS message_id, m.search_text, ts_rank(m.tsv, ${tsq}) AS rank
+      m.conversation_id, m.search_text, ts_rank(m.tsv, ${tsq}) AS rank
     FROM message m
     JOIN conversation cv ON cv.id = m.conversation_id
     WHERE m.tsv @@ ${tsq}
@@ -56,28 +37,11 @@ async function queryTerms(q: string): Promise<string[]> {
   return result.rows.map((r) => r.term)
 }
 
-/** Full-text search over a user's live messages, one hit per conversation. */
-export async function searchMessages(
-  userId: string,
-  q: string,
-  { excludeConversationId, limit = 50 }: SearchOptions = {},
-): Promise<MessageSearchResult> {
-  const [rows, terms] = await Promise.all([
-    db.execute<MessageSearchRow>(sql`
-      SELECT hits.conversation_id, hits.message_id, cv.title, cv.icon, cv.created_at, cv.updated_at, hits.search_text, hits.rank
-      FROM (${messageMatches(userId, q, excludeConversationId)}) hits
-      JOIN conversation cv ON cv.id = hits.conversation_id
-      ORDER BY hits.rank DESC, cv.updated_at DESC
-      LIMIT ${limit}
-    `).then((r) => r.rows),
-    queryTerms(q),
-  ])
-  return { rows, terms }
-}
-
 export type ChatSearchRow = {
   conversation_id: string
   title: string
+  icon: string | null
+  created_at: Date
   updated_at: Date
   summary: string | null
   /** The best-matching message text or slice of it; empty when only the summary matched. */
@@ -150,7 +114,7 @@ export async function searchChats(
         ),
         vec AS (${vec}),
         svec AS (${svec})
-        SELECT cv.id AS conversation_id, cv.title, cv.updated_at, cv.summary,
+        SELECT cv.id AS conversation_id, cv.title, cv.icon, cv.created_at, cv.updated_at, cv.summary,
           coalesce(fts.search_text, vec.text, '') AS search_text,
           ${rrf(sql`fts.r`)} + ${rrf(sql`sfts.r`)} + ${rrf(sql`vec.r`)} + ${rrf(sql`svec.r`)} AS rank
         FROM conversation cv
