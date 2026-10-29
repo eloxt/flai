@@ -45,10 +45,16 @@ async function assertNewAssistantId(id: string) {
   }
 }
 
-/** Validate the model, options and reply id shared by every request that starts a reply. */
+/** The active provider and model for a reply, once they are known to support its options. */
+function replyModel(ref: ModelRef, options: ChatOptions) {
+  const resolved = resolveModel(ref.providerId, ref.modelId)
+  resolveThinking(resolved.model, options.thinking)
+  return resolved
+}
+
+/** Validate the model, options and reply id of a request that starts a reply with a chosen model. */
 async function prepareReply(input: { assistantId: string; model: ModelRef; options: ChatOptions }) {
-  const resolved = resolveModel(input.model.providerId, input.model.modelId)
-  resolveThinking(resolved.model, input.options.thinking)
+  const resolved = replyModel(input.model, input.options)
   await assertNewAssistantId(input.assistantId)
   return resolved
 }
@@ -168,11 +174,11 @@ export const messageRoutes = new Hono<AppEnv>()
       if (!question.success) throw badRequest('Invalid question')
       if (Array.isArray(input.answer) !== isMultiSelect(question.data)) throw badRequest('Answer does not match the question selection mode')
 
+      // The answer continues with the model and options that asked the question.
       const { providerId, modelId } = message.metadata
       if (!providerId || !modelId) throw badRequest('Question has no model configuration')
-      const { provider, model } = resolveModel(providerId, modelId)
       const options = chatOptionsSchema.parse(message.metadata.chatOptions ?? {})
-      resolveThinking(model, options.thinking)
+      const { provider, model } = replyModel({ providerId, modelId }, options)
       const parts = message.parts.map((p): FlaiPart => p === part ? {
         ...part,
         state: 'output-available',
