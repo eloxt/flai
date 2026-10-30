@@ -1,7 +1,7 @@
 import type { FlaiUIMessage, MessageRecord } from "@flai/shared"
 import { textOf } from "@flai/shared"
 import { cn } from "cn"
-import { memo, useState } from "react"
+import { memo, useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import TextareaAutosize from "react-textarea-autosize"
 import { Button } from "~/components/ui/button"
@@ -25,11 +25,17 @@ interface MessageRowProps {
 }
 
 const sendFollowUp = (text: string) => void sendMessage({ text })
+const NONE: MessageRecord[] = []
 
-export const MessageRow = memo(function MessageRow({ message, earlier = [], continuation, streaming = false, isLast, busy }: MessageRowProps) {
+export const MessageRow = memo(function MessageRow({ message, earlier = NONE, continuation, streaming = false, isLast, busy }: MessageRowProps) {
   const { t } = useTranslation()
   const [editing, setEditing] = useState<string | null>(null)
   const isUser = message.role === "user"
+
+  // Stable props let the memoized action bars skip the renders of a streaming reply.
+  const turn = useMemo(() => [...earlier, message], [earlier, message])
+  const onRegenerate = useCallback(() => void regenerate(message.id), [message.id])
+  const startEditing = useCallback(() => setEditing(textOf(message.parts)), [message.parts])
 
   const submitEdit = () => {
     if (!editing?.trim() || busy) return
@@ -85,16 +91,18 @@ export const MessageRow = memo(function MessageRow({ message, earlier = [], cont
             )}
           </div>
         )}
-        {editing === null && !busy && (
-          <div className={cn(isUser && "md:opacity-0 md:transition-opacity md:group-hover/row:opacity-100 md:focus-within:opacity-100")}>
+        {/* Hidden rather than unmounted while busy: remounting every row's actions stalls the frame a reply finishes in.
+            The streaming reply gets its own only when it finishes, or they would re-render with every frame. */}
+        {editing === null && !streaming && (
+          <div hidden={busy} className={cn(isUser && "md:opacity-0 md:transition-opacity md:group-hover/row:opacity-100 md:focus-within:opacity-100")}>
             <MessageActions
               message={message}
-              turn={[...earlier, message]}
+              turn={turn}
               isLast={isLast}
-              onRegenerate={() => void regenerate(message.id)}
+              onRegenerate={onRegenerate}
               onDelete={deleteLastMessage}
               onSwitch={switchSibling}
-              onEdit={isUser ? () => setEditing(textOf(message.parts)) : undefined}
+              onEdit={isUser ? startEditing : undefined}
             />
           </div>
         )}

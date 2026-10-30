@@ -2,8 +2,9 @@ import type { MessageRecord } from "@flai/shared"
 import { textOf } from "@flai/shared"
 import { cn } from "cn"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, InfoIcon, PencilIcon, RefreshCcwIcon, Trash2Icon } from "lucide-react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useShallow } from "zustand/react/shallow"
 import { ConfirmDialog } from "~/components/confirm-dialog"
 import { Button } from "~/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover"
@@ -35,12 +36,16 @@ function IconAction({ label, onClick, children }: { label: string; onClick?: () 
   )
 }
 
-export function MessageActions({ message, turn = [message], isLast, onRegenerate, onDelete, onSwitch, onEdit }: MessageActionsProps) {
+export const MessageActions = memo(function MessageActions({ message, turn = [message], isLast, onRegenerate, onDelete, onSwitch, onEdit }: MessageActionsProps) {
   const { t } = useTranslation()
-  const tree = useChatStore((s) => s.tree)
-  // A merged turn has one branch control: the latest record with alternatives.
-  const branch = turn.findLast((record) => siblingsOf(tree, record.id).count > 1) ?? message
-  const siblings = siblingsOf(tree, branch.id)
+  // Picked out of the tree so that rows whose branches didn't change skip the tree's updates.
+  const { branchId, ...siblings } = useChatStore(
+    useShallow((s) => {
+      // A merged turn has one branch control: the latest record with alternatives.
+      const branch = turn.findLast((record) => siblingsOf(s.tree, record.id).count > 1) ?? message
+      return { branchId: branch.id, ...siblingsOf(s.tree, branch.id) }
+    })
+  )
   const [copied, setCopied] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -54,13 +59,13 @@ export function MessageActions({ message, turn = [message], isLast, onRegenerate
     <div className="flex items-center gap-0.5 text-muted-foreground">
       {siblings.count > 1 && (
         <div className="flex items-center">
-          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.previous")} disabled={!siblings.prev} onClick={() => onSwitch(branch.id, -1)}>
+          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.previous")} disabled={!siblings.prev} onClick={() => onSwitch(branchId, -1)}>
             <ChevronLeftIcon />
           </Button>
           <span className="text-xs tabular-nums">
             {siblings.index + 1}/{siblings.count}
           </span>
-          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.next")} disabled={!siblings.next} onClick={() => onSwitch(branch.id, 1)}>
+          <Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.next")} disabled={!siblings.next} onClick={() => onSwitch(branchId, 1)}>
             <ChevronRightIcon />
           </Button>
         </div>
@@ -99,7 +104,7 @@ export function MessageActions({ message, turn = [message], isLast, onRegenerate
       {message.role === "assistant" && <span className="ml-2 text-xs">{formatDateTime(message.createdAt)}</span>}
     </div>
   )
-}
+})
 
 /** A label and its value; `sub` rows break down the row above them. Rows without a value are left out. */
 type UsageRow = { label: string; value: string | undefined; sub?: boolean }

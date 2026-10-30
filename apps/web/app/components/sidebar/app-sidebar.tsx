@@ -21,6 +21,7 @@ import {
 import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, useLocation, useNavigate } from "react-router"
+import { useShallow } from "zustand/react/shallow"
 import { ConfirmDialog } from "~/components/confirm-dialog"
 import { FlaiMark } from "~/components/flai-mark"
 import { type Theme, useTheme } from "~/components/theme-provider"
@@ -92,7 +93,12 @@ export function AppSidebar() {
   const { toggleSidebar, isMobile, setOpenMobile } = useSidebar()
   const user = useAuthStore((s) => s.user)
   const showEmoji = usePreferences().sidebarShowEmoji
-  const { conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove } = useConversationStore()
+  // Everything but `replying`, which changes on every send and finish; each row watches its own entry.
+  const { conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove } = useConversationStore(
+    useShallow(({ conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove }) => ({
+      conversations, favourites, loading, loadingMore, nextCursor, loaded, load, loadMore, remove,
+    }))
+  )
   // Mount each dialog on first use, then keep it mounted for its closing transition.
   const [settingsOpen, setSettingsOpen] = useState<boolean>()
   const [adminOpen, setAdminOpen] = useState<boolean>()
@@ -250,8 +256,10 @@ function ConversationRow({
 }) {
   const { t } = useTranslation()
   const location = useLocation()
-  const { setFavourite, generateTitle, replying } = useConversationStore()
-  const busy = item.generating || Boolean(replying[item.id])
+  const setFavourite = useConversationStore((s) => s.setFavourite)
+  const generateTitle = useConversationStore((s) => s.generateTitle)
+  const replying = useConversationStore((s) => Boolean(s.replying[item.id]))
+  const busy = item.generating || replying
   const title = item.title || t("components.sidebar.untitled")
   // Titles that replace the loading placeholder fade in; rows that mount with a title don't.
   const [titleArrives, setTitleArrives] = useState(false)

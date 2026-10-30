@@ -1,6 +1,6 @@
 import type { FileRecord } from "@flai/shared"
 import { MessageSquarePlusIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { memo, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router"
 import { ChatInput } from "~/components/chat-input"
@@ -53,11 +53,12 @@ export default function ChatPage() {
   )
 }
 
-function Composer({ conversationId, collapsed, expand }: { conversationId: string } & FooterState) {
-  const streaming = useChatStore((s) => s.streaming)
+const Composer = memo(function Composer({ conversationId, collapsed, expand }: { conversationId: string } & FooterState) {
+  const streaming = useChatStore((s) => Boolean(s.streaming))
+  const stopping = useChatStore((s) => s.streaming?.stopping)
   const messages = useVisibleMessages()
   const contextLimit = useCurrentModel()?.model.limit?.context
-  const lastUsage = [...messages].reverse().find((m) => m.role === "assistant")?.metadata.usage
+  const lastUsage = messages.findLast((m) => m.role === "assistant")?.metadata.usage
   const used = (lastUsage?.inputTokens ?? 0) + (lastUsage?.outputTokens ?? 0)
   const contextUsage = contextLimit && used ? Math.min(100, (used / contextLimit) * 100) : undefined
   const navigate = useNavigate()
@@ -96,8 +97,8 @@ function Composer({ conversationId, collapsed, expand }: { conversationId: strin
       <ChatInput
         draftKey={conversationId}
         autoFocus
-        streaming={Boolean(streaming)}
-        stopping={streaming?.stopping}
+        streaming={streaming}
+        stopping={stopping}
         onStop={() => void stopGeneration()}
         contextUsage={contextUsage}
         collapsed={collapsed}
@@ -107,7 +108,7 @@ function Composer({ conversationId, collapsed, expand }: { conversationId: strin
       />
     </div>
   )
-}
+})
 
 /** Floats above the input while a draft that changes the topic waits for a choice. */
 function TopicShiftNotice({ onStay, onNewChat }: { onStay: () => void; onNewChat: () => void }) {

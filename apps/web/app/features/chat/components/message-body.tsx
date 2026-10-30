@@ -268,7 +268,6 @@ function ToolCall({ part, index }: { part: ToolPart; index: number }) {
   const { t } = useTranslation()
   const failed = part.state === "output-error"
   const done = part.state === "output-available"
-  const output = done ? (typeof part.output === "string" ? part.output : JSON.stringify(part.output, null, 2)) : failed ? part.errorText : ""
   const summary = inputSummary(part.input)
   return (
     <li className="min-w-0">
@@ -291,18 +290,28 @@ function ToolCall({ part, index }: { part: ToolPart; index: number }) {
           />
         </CollapsibleTrigger>
         <CollapsibleContent className="transition-none">
-          {/* Indented to the tool name, past the index column and icon. */}
-          <div className="flex min-w-0 flex-col gap-3 pt-1 pr-1 pb-3 pl-13.5">
-            {part.input !== undefined && <ToolData label={t("components.toolCall.input")}>{JSON.stringify(part.input, null, 2)}</ToolData>}
-            {output && (
-              <ToolData label={failed ? t("components.toolCall.error") : t("components.toolCall.output")} failed={failed}>
-                {output}
-              </ToolData>
-            )}
-          </div>
+          <ToolDetails part={part} />
         </CollapsibleContent>
       </Collapsible>
     </li>
+  )
+}
+
+/** Mounted only while the call is expanded: serializing large tool payloads on every streamed frame is wasted work. */
+function ToolDetails({ part }: { part: ToolPart }) {
+  const { t } = useTranslation()
+  const failed = part.state === "output-error"
+  const output = part.state === "output-available" ? (typeof part.output === "string" ? part.output : JSON.stringify(part.output, null, 2)) : failed ? part.errorText : ""
+  return (
+    // Indented to the tool name, past the index column and icon.
+    <div className="flex min-w-0 flex-col gap-3 pt-1 pr-1 pb-3 pl-13.5">
+      {part.input !== undefined && <ToolData label={t("components.toolCall.input")}>{JSON.stringify(part.input, null, 2)}</ToolData>}
+      {output && (
+        <ToolData label={failed ? t("components.toolCall.error") : t("components.toolCall.output")} failed={failed}>
+          {output}
+        </ToolData>
+      )}
+    </div>
   )
 }
 

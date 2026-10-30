@@ -24,6 +24,7 @@ import {
   toFilePart,
 } from "@flai/shared"
 import { readUIMessageStream } from "ai"
+import { useMemo } from "react"
 import { create } from "zustand"
 import i18n from "~/i18n"
 import { api, apiFetch, errorText } from "~/lib/api"
@@ -626,5 +627,5 @@ async function followReply({
 export function useVisibleMessages(): MessageRecord[] {
   const map = useChatStore((s) => s.map)
   const path = useChatStore((s) => s.path)
-  return path.map((id) => map[id]).filter((m): m is MessageRecord => Boolean(m))
+  return useMemo(() => path.map((id) => map[id]).filter((m): m is MessageRecord => Boolean(m)), [map, path])
 }

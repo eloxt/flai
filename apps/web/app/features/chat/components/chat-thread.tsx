@@ -1,5 +1,5 @@
 import type { FlaiPart, MessageRecord } from "@flai/shared"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -14,6 +14,9 @@ import { useChatStore, useVisibleMessages } from "../chat-store"
 import { asksUser, groupTurns } from "../turns"
 import { ConversationNav } from "./conversation-nav"
 import { MessageRow } from "./message-row"
+
+const NONE: MessageRecord[] = []
+const Nav = memo(ConversationNav)
 
 const SCROLL_UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"])
 const SCROLL_DOWN_KEYS = new Set(["ArrowDown", "PageDown", "End"])
@@ -30,7 +33,7 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
   const streaming = useChatStore((s) => s.streaming)
   const answering = useChatStore((s) => s.answering)
   const messages = useVisibleMessages()
-  const turns = groupTurns(messages)
+  const turns = useMemo(() => groupTurns(messages).map((turn) => ({ turn, earlier: turn.length > 1 ? turn.slice(0, -1) : NONE })), [messages])
   // Continuing after an answered question: stream into the question's turn.
   const lastMessage = messages.at(-1)
   const streamingJoinsTurn = Boolean(streaming && lastMessage?.id === streaming.parentId && asksUser(lastMessage))
@@ -58,7 +61,7 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
                 <ThreadSkeleton />
               </MessageScrollerItem>
             ) : (
-              (reply ? [...turns, [reply]] : turns).map((turn, index, all) => {
+              (reply ? [...turns, { turn: [reply], earlier: NONE }] : turns).map(({ turn, earlier }, index, all) => {
                 const last = index === all.length - 1
                 const message = turn.at(-1)!
                 const streamingReply = message === reply
@@ -70,7 +73,7 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
                   >
                     <MessageRow
                       message={message}
-                      earlier={turn.slice(0, -1)}
+                      earlier={earlier}
                       continuation={last && streamingJoinsTurn ? streaming!.message : undefined}
                       streaming={streamingReply}
                       isLast={!streaming && last}
@@ -82,7 +85,7 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
             )}
           </MessageScrollerContent>
         </MessageScrollerViewport>
-        <ConversationNav />
+        <Nav />
         <MessageScrollerButton size="icon-lg" className="z-10 rounded-lg bg-card shadow-md hover:bg-muted" onClick={onScrollToEnd} />
       </div>
       <div className="mx-auto w-full max-w-4xl shrink-0 px-4 pb-6 md:px-8">
@@ -131,6 +134,8 @@ function useCollapseWhileReading() {
     scrollToEnd({ behavior: "instant" })
   }, [collapsed, scrollToEnd])
 
+  const expand = useCallback(() => setCollapsed(false), [])
+
   const viewportProps = {
     onWheel: (e: React.WheelEvent) => {
       if (e.deltaY < 0) collapse()
@@ -150,7 +155,7 @@ function useCollapseWhileReading() {
     },
   }
 
-  return { collapsed, expand: () => setCollapsed(false), viewportProps, onScrollToEnd: () => (headingUp.current = false) }
+  return { collapsed, expand, viewportProps, onScrollToEnd: () => (headingUp.current = false) }
 }
 
 function ThreadSkeleton() {
