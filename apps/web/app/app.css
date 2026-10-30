@@ -491,9 +491,10 @@ code {
     right: 0.5rem;
 }
 
+/* The controls sit on the header, which already has the block's background and divider. */
 .markdown-body [data-streamdown="code-block-actions"] {
     border: 0;
-    background: var(--muted);
+    background: transparent;
     backdrop-filter: none;
 }
 
