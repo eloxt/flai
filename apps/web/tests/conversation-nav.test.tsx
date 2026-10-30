@@ -110,7 +110,7 @@ describe("ConversationNav", () => {
     fireEvent.click(first)
     expect(scroller.scrollToMessage).toHaveBeenCalledWith("u1", {
       align: "start",
-      behavior: "smooth",
+      behavior: "instant",
     })
   })
 

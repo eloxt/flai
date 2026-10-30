@@ -183,7 +183,7 @@ export function ConversationNav() {
                 aria-label={s.title}
                 aria-current={isCurrent ? "true" : undefined}
                 onClick={() =>
-                  scrollToMessage(s.id, { align: "start", behavior: "smooth" })
+                  scrollToMessage(s.id, { align: "start", behavior: "instant" })
                 }
                 onFocus={() => handleFocus(i)}
                 onBlur={reset}
