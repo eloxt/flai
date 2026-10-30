@@ -485,10 +485,10 @@ code {
     margin-left: 0;
 }
 
-/* Align the sticky controls with the header after removing the wrapper gap. */
+/* Streamdown positions the controls absolutely; sit them in the header row. */
 .markdown-body [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
-    margin-top: -2rem;
-    padding-inline: 0.5rem;
+    top: 0;
+    right: 0.5rem;
 }
 
 .markdown-body [data-streamdown="code-block-actions"] {
