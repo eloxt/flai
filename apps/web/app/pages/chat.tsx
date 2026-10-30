@@ -6,12 +6,11 @@ import { useNavigate, useParams } from "react-router"
 import { ChatInput } from "~/components/chat-input"
 import { Button } from "~/components/ui/button"
 import { MessageScrollerProvider } from "~/components/ui/message-scroller"
-import { closeConversation, isOffTopic, openConversation, sendMessage, stopGeneration, useChatStore, useVisibleMessages } from "~/features/chat/chat-store"
+import { closeConversation, isOffTopic, openConversation, sendMessage, stopGeneration, useChatStore } from "~/features/chat/chat-store"
 import { ChatThread, type FooterState } from "~/features/chat/components/chat-thread"
 import { startConversation } from "~/features/chat/start-conversation"
 import { useConversationStore } from "~/store/conversation-store"
 import { useInputStore } from "~/store/input-store"
-import { useCurrentModel } from "~/store/model-store"
 
 export const meta = ({ params }: { params: { conversationId?: string } }) => {
   const conversation = useConversationStore
@@ -56,11 +55,6 @@ export default function ChatPage() {
 const Composer = memo(function Composer({ conversationId, collapsed, expand }: { conversationId: string } & FooterState) {
   const streaming = useChatStore((s) => Boolean(s.streaming))
   const stopping = useChatStore((s) => s.streaming?.stopping)
-  const messages = useVisibleMessages()
-  const contextLimit = useCurrentModel()?.model.limit?.context
-  const lastUsage = messages.findLast((m) => m.role === "assistant")?.metadata.usage
-  const used = (lastUsage?.inputTokens ?? 0) + (lastUsage?.outputTokens ?? 0)
-  const contextUsage = contextLimit && used ? { used, limit: contextLimit } : undefined
   const navigate = useNavigate()
   // The draft flagged as a new topic; sending it unchanged again keeps it here.
   const [flagged, setFlagged] = useState<string | null>(null)
@@ -100,7 +94,6 @@ const Composer = memo(function Composer({ conversationId, collapsed, expand }: {
         streaming={streaming}
         stopping={stopping}
         onStop={() => void stopGeneration()}
-        contextUsage={contextUsage}
         collapsed={collapsed}
         onExpand={expand}
         confirm={confirm}

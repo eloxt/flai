@@ -49,6 +49,8 @@
     /* Three radius tiers, never mixed within a tier: 8px small elements (icon buttons, menu items,
        badges), 12px controls (buttons, inputs, code blocks, menus), 20px panels (sheets, dialogs,
        cards, the composer, message bubbles). 4px is only for checkboxes and inline code. */
+    /* The macOS window's corner (Tahoe); the inset panel's radius is this minus its 8px margin. */
+    --radius-window: 26px;
     --radius-xs: 4px;
     --radius-sm: 8px;
     --radius-md: 8px;
@@ -217,6 +219,13 @@
   * {
     @apply border-border outline-ring/50;
     }
+  /* Continuous ("squircle") corners where supported, like macOS windows. Circles and pills keep
+     plain arcs: a squircle of full radius turns a circle into a rounded square. */
+  @supports (corner-shape: squircle) {
+    [class*="rounded"]:not([class*="rounded-full"]):not([class*="rounded-none"]) {
+      corner-shape: squircle;
+    }
+  }
   body {
     @apply bg-background text-foreground;
     }

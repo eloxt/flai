@@ -48,8 +48,6 @@ interface ChatInputProps {
   streaming?: boolean
   stopping?: boolean
   onStop?: () => void
-  /** 0–100 share of the model's context window used by the conversation. */
-  contextUsage?: { used: number; limit: number }
   autoFocus?: boolean
   /** Shrink to a one-line bar; clicking it calls onExpand. */
   collapsed?: boolean
@@ -64,10 +62,12 @@ const TOOL_TRIGGER_ON = "bg-accent text-foreground shadow-[inset_0_0_0_1px_var(-
 const ICON_ENTER = "transition-[opacity,scale] duration-120 ease-out starting:scale-85 starting:opacity-0 motion-reduce:transition-[opacity]"
 /** Bar and full input swap by animating their row height (0fr ↔ 1fr) while crossfading. */
 // The swap panels clip (they collapse to zero height), so focus rings are drawn inside.
+// Concentric with the card: its radius minus its p-1.5 padding.
+const INNER_RADIUS = "[--inner-radius:calc(var(--radius-xl)-var(--spacing)*1.5)]"
 const RING_INSIDE = "focus-visible:ring-inset"
 const SWAP = "grid min-w-0 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 
-export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stopping = false, onStop, contextUsage, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
+export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stopping = false, onStop, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
   const { t } = useTranslation()
   const current = useCurrentModel()
   const model = current?.model
@@ -131,7 +131,7 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
 
   return (
     <div
-      className="relative flex w-full min-w-0 flex-col rounded-xl bg-card p-1.5 shadow-lg"
+      className={cn("relative flex w-full min-w-0 flex-col rounded-xl bg-card p-1.5 shadow-lg", INNER_RADIUS)}
       onDragEnter={(e) => {
         e.preventDefault()
         if (!canAttach) return
@@ -154,10 +154,10 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
         </div>
       )}
       <div className={cn(SWAP, collapsed ? "grid-rows-[1fr]" : "grid-rows-[0fr] opacity-0")} inert={!collapsed}>
-        <div className="flex min-h-0 min-w-0 items-center gap-2 overflow-hidden rounded-lg pr-0.5">
+        <div className="flex min-h-0 min-w-0 items-center gap-2 overflow-hidden rounded-(--inner-radius) pr-0.5">
           <button
             type="button"
-            className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 text-left text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:text-[15px]"
+            className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-(--inner-radius) pl-2.5 text-left text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset md:text-[15px]"
             onClick={() => {
               focusOnExpand.current = true
               onExpand?.()
@@ -172,15 +172,14 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
             )}
           </button>
           {streaming && (
-            <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 shrink-0 rounded-lg", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+            <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 shrink-0 rounded-(--inner-radius)", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
               <SquareIcon />
             </InputGroupButton>
           )}
         </div>
       </div>
       <div className={cn(SWAP, collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr]")} inert={collapsed}>
-        <div className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
-          {contextUsage && <ContextUsageBar {...contextUsage} />}
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <InputGroup className="h-auto flex-col rounded-none border-0 bg-transparent shadow-none dark:bg-transparent has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
             {(files.length > 0 || pending.length > 0) && (
               <AttachmentGroup className="w-full px-1.5 pt-1.5">
@@ -252,22 +251,21 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
                 }}
               />
               {canAttach && (
-                <InputGroupButton size="icon-sm" className={cn("size-9 rounded-lg text-muted-foreground", RING_INSIDE)} aria-label={t("common.attachment")} onClick={() => fileInput.current?.click()}>
+                <InputGroupButton size="icon-sm" className={cn("size-9 rounded-(--inner-radius) text-muted-foreground", RING_INSIDE)} aria-label={t("common.attachment")} onClick={() => fileInput.current?.click()}>
                   <PaperclipIcon />
                 </InputGroupButton>
               )}
               <ToolBar />
               <div className="ml-auto flex shrink-0 items-center gap-2">
-                {contextUsage && <ContextUsagePill {...contextUsage} />}
                 {streaming ? (
-                  <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 rounded-lg", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
+                  <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 rounded-(--inner-radius)", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
                     <SquareIcon className={ICON_ENTER} />
                   </InputGroupButton>
                 ) : (
                   <InputGroupButton
                     variant="default"
                     size="icon-sm"
-                    className={cn("size-9 rounded-lg", RING_INSIDE)}
+                    className={cn("size-9 rounded-(--inner-radius)", RING_INSIDE)}
                     aria-label={t("common.send")}
                     disabled={checking || pending.length > 0 || (!text.trim() && files.length === 0)}
                     onClick={() => void submit()}
@@ -406,44 +404,5 @@ function ToolBar() {
         </ToggleGroup>
       )}
     </div>
-  )
-}
-
-const compact = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 })
-
-/** Fill ratio of the model's context window, and the colour and wording that go with it. */
-function useContextUsage({ used, limit }: { used: number; limit: number }) {
-  const { t } = useTranslation()
-  const percentage = Math.min(100, (used / limit) * 100)
-  return {
-    percentage,
-    tone: percentage >= 90 ? "text-destructive" : percentage >= 70 ? "text-amber-500" : "text-muted-foreground",
-    label: t("components.chatInput.contextUsage", { used: compact.format(used), limit: compact.format(limit), percent: Math.round(percentage) }),
-  }
-}
-
-/** A hairline along the input's bottom edge that fills as the context window does. */
-function ContextUsageBar(usage: { used: number; limit: number }) {
-  const { percentage, tone } = useContextUsage(usage)
-  return (
-    <div aria-hidden className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-0.5", tone)}>
-      <div className="h-full origin-left bg-current opacity-40 transition-[transform,color] duration-300 ease-out motion-reduce:transition-none" style={{ transform: `scaleX(${percentage / 100})` }} />
-    </div>
-  )
-}
-
-/** Appears once the window is mostly full, with the figure the bar only hints at. */
-function ContextUsagePill(usage: { used: number; limit: number }) {
-  const { percentage, tone, label } = useContextUsage(usage)
-  if (percentage < 70) return null
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<span role="img" aria-label={label} className={cn("flex h-6 shrink-0 items-center rounded-full bg-current/10 px-2 text-xs font-medium tabular-nums starting:scale-95 starting:opacity-0 transition-[opacity,scale] duration-150 ease-out motion-reduce:transition-none", tone)} />}
-      >
-        {Math.round(percentage)}%
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
   )
 }
