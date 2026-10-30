@@ -13,6 +13,7 @@
     "dropFilesHere": "拖放文件到这里",
     "allowedFileTypes": "仅支持文本、PDF和图片",
     "shareConversation": "分享对话",
+    "updateAvailable": "有新版本可用",
     "actions": {
       "save": "保存",
       "cancel": "取消",
@@ -20,7 +21,8 @@
       "delete": "删除",
       "update": "更新",
       "back": "返回",
-      "retry": "重试"
+      "retry": "重试",
+      "reload": "刷新"
     },
     "crud": {
       "createSuccess": "创建成功",

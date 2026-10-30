@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "pnpm genui:spec && react-router build",
+    "build": "pnpm genui:spec && react-router build && tsx scripts/generate-sw.ts",
     "genui:spec": "tsx scripts/generate-genui-spec.ts",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest run",
@@ -60,6 +60,7 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "workbox-build": "^7.4.1"
   }
 }

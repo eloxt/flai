@@ -1,5 +1,8 @@
+import { reloadToLatest } from "./service-worker"
+
 // After a redeploy the previous build's hashed chunks are gone, so lazy imports from an
-// already-open tab fail. Reload once to pick up the new build; if the chunk is still missing
+// already-open tab fail. Reload once to pick up the new build (through the new service worker,
+// since the current one would serve the old shell again); if the chunk is still missing
 // shortly after a reload, let the error reach the nearest boundary instead of looping.
 const KEY = "flai-chunk-reload"
 const WINDOW_MS = 10_000
@@ -14,7 +17,7 @@ if (typeof window !== "undefined") {
       return
     }
     event.preventDefault()
-    window.location.reload()
+    void reloadToLatest()
   })
 }
 
