@@ -127,6 +127,13 @@
         "complete": "回复完成",
         "messageReady": "AI 回复已就绪"
       },
+      "selection": {
+        "copy": "复制",
+        "translate": "翻译",
+        "quote": "引用",
+        "explain": "解释",
+        "failed": "解释失败"
+      },
       "actions": {
         "copy": "复制",
         "edit": "编辑",
@@ -721,6 +728,7 @@
       "copy": "复制链接"
     },
     "chatInput": {
+      "contextUsage": "上下文已用 {{used}} / {{limit}}（{{percent}}%）",
       "mcpTools": "MCP 工具",
       "thinkingIntensity": "思考强度",
       "default": "默认",

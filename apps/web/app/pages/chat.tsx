@@ -60,7 +60,7 @@ const Composer = memo(function Composer({ conversationId, collapsed, expand }: {
   const contextLimit = useCurrentModel()?.model.limit?.context
   const lastUsage = messages.findLast((m) => m.role === "assistant")?.metadata.usage
   const used = (lastUsage?.inputTokens ?? 0) + (lastUsage?.outputTokens ?? 0)
-  const contextUsage = contextLimit && used ? Math.min(100, (used / contextLimit) * 100) : undefined
+  const contextUsage = contextLimit && used ? { used, limit: contextLimit } : undefined
   const navigate = useNavigate()
   // The draft flagged as a new topic; sending it unchanged again keeps it here.
   const [flagged, setFlagged] = useState<string | null>(null)

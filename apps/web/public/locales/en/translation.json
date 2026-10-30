@@ -129,6 +129,13 @@
         "complete": "Response Complete",
         "messageReady": "Your AI response is ready"
       },
+      "selection": {
+        "copy": "Copy",
+        "translate": "Translate",
+        "quote": "Quote",
+        "explain": "Explain",
+        "failed": "Could not explain"
+      },
       "actions": {
         "copy": "Copy",
         "edit": "Edit",
@@ -726,6 +733,7 @@
       "copy": "Copy link"
     },
     "chatInput": {
+      "contextUsage": "Context used: {{used}} of {{limit}} ({{percent}}%)",
       "mcpTools": "MCP Tools",
       "thinkingIntensity": "Thinking",
       "default": "Default",

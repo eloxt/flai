@@ -49,7 +49,7 @@ interface ChatInputProps {
   stopping?: boolean
   onStop?: () => void
   /** 0–100 share of the model's context window used by the conversation. */
-  contextUsage?: number
+  contextUsage?: { used: number; limit: number }
   autoFocus?: boolean
   /** Shrink to a one-line bar; clicking it calls onExpand. */
   collapsed?: boolean
@@ -179,7 +179,8 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
         </div>
       </div>
       <div className={cn(SWAP, collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr]")} inert={collapsed}>
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <div className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
+          {contextUsage && <ContextUsageBar {...contextUsage} />}
           <InputGroup className="h-auto flex-col rounded-none border-0 bg-transparent shadow-none dark:bg-transparent has-[[data-slot=input-group-control]:focus-visible]:border-b-border has-[[data-slot=input-group-control]:focus-visible]:ring-0 hover:border-b-border">
             {(files.length > 0 || pending.length > 0) && (
               <AttachmentGroup className="w-full px-1.5 pt-1.5">
@@ -216,6 +217,7 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
             <TextareaAutosize
               ref={textarea}
               data-slot="input-group-control"
+              data-chat-input
               placeholder={t("pages.chat.placeholder")}
               value={text}
               autoFocus={autoFocus}
@@ -254,7 +256,9 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
                   <PaperclipIcon />
                 </InputGroupButton>
               )}
-              <div className="ml-auto flex items-center gap-2">
+              <ToolBar />
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {contextUsage && <ContextUsagePill {...contextUsage} />}
                 {streaming ? (
                   <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 rounded-lg", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
                     <SquareIcon className={ICON_ENTER} />
@@ -274,14 +278,6 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
               </div>
             </InputGroupAddon>
           </InputGroup>
-          <div className="flex min-w-0 items-center gap-2">
-            <ToolBar />
-            {contextUsage !== undefined && (
-              <div className="ml-auto shrink-0 px-2 pt-1">
-                <ContextUsageRing percentage={contextUsage} />
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
@@ -338,7 +334,7 @@ function ToolBar() {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden p-1 text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden text-muted-foreground">
       {hasMcp && (
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={cn(TOOL_TRIGGER, mcpTools.length > 0 && TOOL_TRIGGER_ON)} />}>
@@ -413,22 +409,41 @@ function ToolBar() {
   )
 }
 
-function ContextUsageRing({ percentage }: { percentage: number }) {
-  const size = 22
-  const stroke = 3
-  const r = (size - stroke) / 2
-  const c = 2 * Math.PI * r
-  const color = percentage >= 90 ? "var(--destructive)" : percentage >= 70 ? "var(--muted-foreground)" : "var(--foreground)"
+const compact = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 })
+
+/** Fill ratio of the model's context window, and the colour and wording that go with it. */
+function useContextUsage({ used, limit }: { used: number; limit: number }) {
+  const { t } = useTranslation()
+  const percentage = Math.min(100, (used / limit) * 100)
+  return {
+    percentage,
+    tone: percentage >= 90 ? "text-destructive" : percentage >= 70 ? "text-amber-500" : "text-muted-foreground",
+    label: t("components.chatInput.contextUsage", { used: compact.format(used), limit: compact.format(limit), percent: Math.round(percentage) }),
+  }
+}
+
+/** A hairline along the input's bottom edge that fills as the context window does. */
+function ContextUsageBar(usage: { used: number; limit: number }) {
+  const { percentage, tone } = useContextUsage(usage)
+  return (
+    <div aria-hidden className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-0.5", tone)}>
+      <div className="h-full origin-left bg-current opacity-40 transition-[transform,color] duration-300 ease-out motion-reduce:transition-none" style={{ transform: `scaleX(${percentage / 100})` }} />
+    </div>
+  )
+}
+
+/** Appears once the window is mostly full, with the figure the bar only hints at. */
+function ContextUsagePill(usage: { used: number; limit: number }) {
+  const { percentage, tone, label } = useContextUsage(usage)
+  if (percentage < 70) return null
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums" />}>
+      <TooltipTrigger
+        render={<span role="img" aria-label={label} className={cn("flex h-6 shrink-0 items-center rounded-full bg-current/10 px-2 text-xs font-medium tabular-nums starting:scale-95 starting:opacity-0 transition-[opacity,scale] duration-150 ease-out motion-reduce:transition-none", tone)} />}
+      >
         {Math.round(percentage)}%
-        <svg width={size} height={size} className="-rotate-90" aria-hidden>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="opacity-20" />
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={c} strokeDashoffset={c - (Math.min(100, percentage) / 100) * c} />
-        </svg>
       </TooltipTrigger>
-      <TooltipContent>{`${Math.round(percentage)}%`}</TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   )
 }

@@ -296,6 +296,15 @@ export const translateSchema = z.object({
 })
 export type TranslateInput = z.input<typeof translateSchema>
 
+export const explainSchema = z.object({
+  model: modelRefSchema,
+  text: z.string().trim().min(1).max(2_000),
+  /** The message the text was selected from, so the explanation fits its subject. */
+  context: z.string().max(6_000).default(''),
+  language: z.string().min(1).max(64),
+})
+export type ExplainInput = z.input<typeof explainSchema>
+
 // ---------- shares ----------
 
 export interface Share {

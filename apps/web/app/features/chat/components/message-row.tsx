@@ -1,7 +1,7 @@
 import type { FlaiUIMessage, MessageRecord } from "@flai/shared"
 import { textOf } from "@flai/shared"
 import { cn } from "cn"
-import { memo, useCallback, useMemo, useState } from "react"
+import { memo, useCallback, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import TextareaAutosize from "react-textarea-autosize"
 import { Button } from "~/components/ui/button"
@@ -9,6 +9,7 @@ import { Message, MessageContent } from "~/components/ui/message"
 import { answerQuestion, deleteLastMessage, editMessage, regenerate, sendMessage, switchSibling } from "../chat-store"
 import { MessageActions } from "./message-actions"
 import { MessageBody } from "./message-body"
+import { SelectionPopover } from "./selection-popover"
 
 interface MessageRowProps {
   /** The turn's latest record; actions apply to it. */
@@ -31,6 +32,7 @@ export const MessageRow = memo(function MessageRow({ message, earlier = NONE, co
   const { t } = useTranslation()
   const [editing, setEditing] = useState<string | null>(null)
   const isUser = message.role === "user"
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   // Stable props let the memoized action bars skip the renders of a streaming reply.
   const turn = useMemo(() => [...earlier, message], [earlier, message])
@@ -74,7 +76,7 @@ export const MessageRow = memo(function MessageRow({ message, earlier = NONE, co
           </div>
         ) : (
           // One turn: consecutive records sit as close together as the parts within each one.
-          <div className="flex w-full min-w-0 flex-col gap-2">
+          <div ref={bodyRef} className="flex w-full min-w-0 flex-col gap-2">
             {earlier.map((record) => (
               <MessageBody key={record.id} role={record.role} parts={record.parts} metadata={record.metadata} onSend={busy ? undefined : sendFollowUp} />
             ))}
@@ -89,6 +91,7 @@ export const MessageRow = memo(function MessageRow({ message, earlier = NONE, co
             {continuation && (
               <MessageBody role="assistant" parts={continuation.parts} metadata={continuation.metadata} streaming onSend={sendFollowUp} />
             )}
+            {!streaming && <SelectionPopover containerRef={bodyRef} context={textOf(message.parts)} />}
           </div>
         )}
         {/* Hidden rather than unmounted while busy: remounting every row's actions stalls the frame a reply finishes in.

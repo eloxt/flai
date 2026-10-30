@@ -20,6 +20,7 @@ import { meRoutes } from './routes/me'
 import { messageRoutes } from './routes/messages'
 import { notificationRoutes } from './routes/notifications'
 import { publicShareRoutes, shareRoutes } from './routes/shares'
+import { explainRoutes } from './routes/explain'
 import { translateRoutes } from './routes/translate'
 import { listPublicProviders } from './services/providers'
 
@@ -61,6 +62,7 @@ export function createApp() {
   authed.route('/', shareRoutes)
   authed.route('/', notificationRoutes)
   authed.route('/', translateRoutes)
+  authed.route('/', explainRoutes)
   authed.route('/mcp-servers', mcpRoutes)
   authed.use('/admin/*', requireAdmin)
   authed.route('/admin', adminRoutes)
