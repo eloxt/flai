@@ -17,6 +17,8 @@ interface MessageRowProps {
   earlier?: MessageRecord[]
   /** A continuation still streaming after the turn's answered question. */
   continuation?: FlaiUIMessage
+  /** The message itself is a reply still streaming in. */
+  streaming?: boolean
   isLast: boolean
   /** Actions are hidden while a reply is streaming. */
   busy: boolean
@@ -24,7 +26,7 @@ interface MessageRowProps {
 
 const sendFollowUp = (text: string) => void sendMessage({ text })
 
-export const MessageRow = memo(function MessageRow({ message, earlier = [], continuation, isLast, busy }: MessageRowProps) {
+export const MessageRow = memo(function MessageRow({ message, earlier = [], continuation, streaming = false, isLast, busy }: MessageRowProps) {
   const { t } = useTranslation()
   const [editing, setEditing] = useState<string | null>(null)
   const isUser = message.role === "user"
@@ -74,7 +76,8 @@ export const MessageRow = memo(function MessageRow({ message, earlier = [], cont
               role={message.role}
               parts={message.parts}
               metadata={message.metadata}
-              onSend={busy ? undefined : sendFollowUp}
+              streaming={streaming}
+              onSend={busy && !streaming ? undefined : sendFollowUp}
               onAnswer={isLast && !busy ? (toolCallId, answer) => answerQuestion(message.id, toolCallId, answer) : undefined}
             />
             {continuation && (

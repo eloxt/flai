@@ -1,5 +1,5 @@
+import type { FlaiPart, MessageRecord } from "@flai/shared"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { Message, MessageContent } from "~/components/ui/message"
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -10,13 +10,11 @@ import {
   useMessageScrollerScrollable,
 } from "~/components/ui/message-scroller"
 import { Skeleton } from "~/components/ui/skeleton"
-import { sendMessage, useChatStore, useVisibleMessages } from "../chat-store"
+import { useChatStore, useVisibleMessages } from "../chat-store"
 import { asksUser, groupTurns } from "../turns"
 import { ConversationNav } from "./conversation-nav"
-import { MessageBody } from "./message-body"
 import { MessageRow } from "./message-row"
 
-const sendFollowUp = (text: string) => void sendMessage({ text })
 const SCROLL_UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"])
 const SCROLL_DOWN_KEYS = new Set(["ArrowDown", "PageDown", "End"])
 
@@ -36,6 +34,18 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
   // Continuing after an answered question: stream into the question's turn.
   const lastMessage = messages.at(-1)
   const streamingJoinsTurn = Boolean(streaming && lastMessage?.id === streaming.parentId && asksUser(lastMessage))
+  // A new reply streams as the turn it becomes: same key, same row, so finishing it changes no
+  // scroller item. Swapping the item makes MessageScroller re-anchor and jump the reader away.
+  const reply: MessageRecord | null = streaming && !streamingJoinsTurn
+    ? {
+        id: streaming.assistantId,
+        parentId: streaming.parentId,
+        role: "assistant",
+        parts: streaming.message.parts as FlaiPart[],
+        metadata: streaming.message.metadata ?? {},
+        createdAt: "",
+      }
+    : null
   const { collapsed, expand, viewportProps, onScrollToEnd } = useCollapseWhileReading()
 
   return (
@@ -48,48 +58,27 @@ export function ChatThread({ footer }: { footer: (state: FooterState) => React.R
                 <ThreadSkeleton />
               </MessageScrollerItem>
             ) : (
-              <>
-                {turns.map((turn, index) => {
-                  const last = index === turns.length - 1
-                  const message = turn.at(-1)!
-                  return (
-                    <MessageScrollerItem
-                      key={turn[0]!.id}
-                      messageId={turn[0]!.id}
-                      scrollAnchor={message.role === "user"}
-                    >
-                      <MessageRow
-                        message={message}
-                        earlier={turn.slice(0, -1)}
-                        continuation={last && streamingJoinsTurn ? streaming!.message : undefined}
-                        isLast={!streaming && last}
-                        busy={Boolean(streaming) || answering}
-                      />
-                    </MessageScrollerItem>
-                  )
-                })}
-                {streaming && !streamingJoinsTurn && (
+              (reply ? [...turns, [reply]] : turns).map((turn, index, all) => {
+                const last = index === all.length - 1
+                const message = turn.at(-1)!
+                const streamingReply = message === reply
+                return (
                   <MessageScrollerItem
-                    key={streaming.assistantId}
-                    messageId={streaming.assistantId}
+                    key={turn[0]!.id}
+                    messageId={turn[0]!.id}
+                    scrollAnchor={message.role === "user"}
                   >
-                    <Message
-                      align="start"
-                      data-message-id={streaming.assistantId}
-                    >
-                      <MessageContent className="w-full">
-                        <MessageBody
-                          role="assistant"
-                          parts={streaming.message.parts}
-                          metadata={streaming.message.metadata}
-                          streaming
-                          onSend={sendFollowUp}
-                        />
-                      </MessageContent>
-                    </Message>
+                    <MessageRow
+                      message={message}
+                      earlier={turn.slice(0, -1)}
+                      continuation={last && streamingJoinsTurn ? streaming!.message : undefined}
+                      streaming={streamingReply}
+                      isLast={!streaming && last}
+                      busy={Boolean(streaming) || answering}
+                    />
                   </MessageScrollerItem>
-                )}
-              </>
+                )
+              })
             )}
           </MessageScrollerContent>
         </MessageScrollerViewport>
