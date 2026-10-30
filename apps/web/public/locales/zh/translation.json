@@ -730,7 +730,6 @@
       "copy": "复制链接"
     },
     "chatInput": {
-      "contextUsage": "上下文已用 {{used}} / {{limit}}（{{percent}}%）",
       "mcpTools": "MCP 工具",
       "thinkingIntensity": "思考强度",
       "default": "默认",

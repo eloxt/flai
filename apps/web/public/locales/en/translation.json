@@ -735,7 +735,6 @@
       "copy": "Copy link"
     },
     "chatInput": {
-      "contextUsage": "Context used: {{used}} of {{limit}} ({{percent}}%)",
       "mcpTools": "MCP Tools",
       "thinkingIntensity": "Thinking",
       "default": "Default",
