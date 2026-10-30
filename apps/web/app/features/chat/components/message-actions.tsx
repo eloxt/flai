@@ -101,37 +101,66 @@ export function MessageActions({ message, turn = [message], isLast, onRegenerate
   )
 }
 
+/** A label and its value; `sub` rows break down the row above them. Rows without a value are left out. */
+type UsageRow = { label: string; value: string | undefined; sub?: boolean }
+
 function UsagePopover({ message }: { message: MessageRecord }) {
   const { t } = useTranslation()
   const { metadata } = message
   const usage = metadata.usage
-  const rows: Array<[string, string | undefined]> = [
-    [t("components.modelSelector.provider"), metadata.providerName],
-    [t("components.modelSelector.name"), metadata.modelId],
-    [t("components.modelSelector.input"), formatNumber(usage?.inputTokens)],
-    [t("components.modelSelector.badge.reasoning"), usage?.reasoningTokens ? formatNumber(usage.reasoningTokens) : undefined],
-    [t("components.modelSelector.output"), formatNumber(usage?.outputTokens)],
-    [t("components.modelSelector.cached"), usage?.cachedInputTokens ? formatNumber(usage.cachedInputTokens) : undefined],
-    [t("components.modelSelector.toolUse"), usage?.toolUseTokens ? formatNumber(usage.toolUseTokens) : undefined],
+  const timing = metadata.timing
+  const input = usage?.inputTokens
+  const share = (n: number | undefined) =>
+    n ? `${formatNumber(n)}${input ? ` (${Math.round((n / input) * 100)}%)` : ""}` : undefined
+  const generatingMs = timing?.firstTokenMs === undefined ? undefined : timing.durationMs - timing.firstTokenMs
+  const speed = usage?.outputTokens && generatingMs && generatingMs > 0 ? usage.outputTokens / (generatingMs / 1000) : undefined
+
+  const sections: UsageRow[][] = [
+    [
+      { label: t("components.modelSelector.provider"), value: metadata.providerName },
+      { label: t("components.modelSelector.name"), value: metadata.modelId },
+    ],
+    [
+      { label: t("pages.chat.usage.input"), value: usage && formatNumber(input) },
+      { label: t("pages.chat.usage.cacheRead"), value: share(usage?.cachedInputTokens), sub: true },
+      { label: t("pages.chat.usage.cacheWrite"), value: share(usage?.cacheWriteTokens), sub: true },
+      { label: t("pages.chat.usage.output"), value: usage && formatNumber(usage.outputTokens) },
+      { label: t("pages.chat.usage.reasoning"), value: usage?.reasoningTokens ? formatNumber(usage.reasoningTokens) : undefined, sub: true },
+      { label: t("components.modelSelector.toolUse"), value: usage?.toolUseTokens ? formatNumber(usage.toolUseTokens) : undefined },
+      { label: t("pages.chat.usage.total"), value: usage?.totalTokens ? formatNumber(usage.totalTokens) : undefined },
+      { label: t("pages.chat.usage.cost"), value: usage?.cost === undefined ? undefined : formatUsd(usage.cost) },
+    ],
+    [
+      { label: t("pages.chat.usage.firstToken"), value: timing?.firstTokenMs === undefined ? undefined : formatDuration(timing.firstTokenMs) },
+      { label: t("pages.chat.usage.duration"), value: timing && formatDuration(timing.durationMs) },
+      { label: t("pages.chat.usage.speed"), value: speed ? t("pages.chat.usage.tokensPerSecond", { value: speed.toFixed(1) }) : undefined },
+    ],
   ]
+    .map((rows) => rows.filter((row) => row.value))
+    .filter((rows) => rows.length > 0)
+
   return (
     <Popover>
       <PopoverTrigger render={<Button variant="ghost" size="icon-sm" aria-label={t("pages.chat.actions.info")} />}>
         <InfoIcon />
       </PopoverTrigger>
-      <PopoverContent className="w-64">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm tabular-nums">
-          {rows
-            .filter(([, value]) => value !== undefined && value !== "")
-            .map(([label, value]) => (
+      <PopoverContent className="w-72 gap-0 divide-y divide-border p-0">
+        {sections.map((rows, i) => (
+          <dl key={i} className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 px-4 py-3 text-sm tabular-nums">
+            {rows.map(({ label, value, sub }) => (
               <div key={label} className="contents">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="truncate text-right">{value}</dd>
+                <dt className={cn("text-muted-foreground", sub && "pl-3 text-xs")}>{label}</dt>
+                <dd className={cn("truncate text-right", sub && "text-xs text-muted-foreground")}>{value}</dd>
               </div>
             ))}
-          {metadata.aborted && <dd className="col-span-2 text-xs text-muted-foreground">{t("pages.chat.stopped")}</dd>}
-        </dl>
+          </dl>
+        ))}
+        {metadata.aborted && <p className="px-4 py-3 text-xs text-muted-foreground">{t("pages.chat.stopped")}</p>}
       </PopoverContent>
     </Popover>
   )
 }
+
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumSignificantDigits: 3 })
+const formatUsd = (n: number) => (n > 0 && n < 0.0001 ? "< $0.0001" : usd.format(n))
+const formatDuration = (ms: number) => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`)

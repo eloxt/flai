@@ -1,5 +1,5 @@
-import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, ModelConfig } from '@flai/shared'
-import { resolvePreferences, textOf } from '@flai/shared'
+import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, MessageUsage, ModelConfig } from '@flai/shared'
+import { estimateCost, resolvePreferences, textOf } from '@flai/shared'
 import { toAISdkStream } from '@mastra/ai-sdk'
 import { askUserTool } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
@@ -210,6 +210,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       chatHistory, memoryWrite, pastChats,
       memories: selection && { rows: selection.core, partial: selection.partial, label },
     })
+    const requestedAt = performance.now()
     const stream = await getChatAgent().stream(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)) as never, {
       requestContext: chatContext({ model: resolved.model, instructions }),
       providerOptions: resolved.providerOptions as never,
@@ -232,6 +233,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
 
     const webCalls = new Set<string>()
     const sourceUrls = new Set<string>()
+    let firstTokenAt: number | undefined
     for await (const chunk of uiStream) {
       // Errors are reported once, after persistence, below.
       if (chunk.type === 'error') {
@@ -239,6 +241,7 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
         continue
       }
       if (chunk.type === 'start' || chunk.type === 'finish' || chunk.type === 'abort') continue
+      if (firstTokenAt === undefined && (chunk.type === 'text-delta' || chunk.type === 'reasoning-delta')) firstTokenAt = performance.now()
       forward(chunk)
       if (chunk.type === 'tool-input-available' && (chunk.toolName === 'web_search' || chunk.toolName === 'web_fetch')) webCalls.add(chunk.toolCallId)
       if (chunk.type === 'source-url') sourceUrls.add(chunk.url)
@@ -256,8 +259,12 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
         }
       }
     }
+    const timing = {
+      firstTokenMs: firstTokenAt === undefined ? undefined : Math.round(firstTokenAt - requestedAt),
+      durationMs: Math.round(performance.now() - requestedAt),
+    }
     if (!generation.controller.signal.aborted && !failure) {
-      metadata = { ...metadata, ...(await collectMetadata(stream)) }
+      metadata = { ...metadata, ...(await collectMetadata(stream, model)), timing }
     }
   } catch (error) {
     if (!generation.controller.signal.aborted) failure = error
@@ -320,23 +327,35 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
 }
 
 async function collectMetadata(stream: {
-  totalUsage: Promise<{ inputTokens?: number; outputTokens?: number; reasoningTokens?: number; cachedInputTokens?: number }>
+  totalUsage: Promise<{
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+    reasoningTokens?: number
+    cachedInputTokens?: number
+    cacheCreationInputTokens?: number
+  }>
   providerMetadata: Promise<Record<string, Record<string, unknown>> | undefined>
-}): Promise<MessageMetadata> {
-  const [usage, providerMetadata] = await Promise.all([
+}, model: ModelConfig): Promise<MessageMetadata> {
+  const [total, providerMetadata] = await Promise.all([
     stream.totalUsage.catch(() => undefined),
     stream.providerMetadata.catch(() => undefined),
   ])
   const grounding = providerMetadata?.google?.groundingMetadata as GoogleGrounding | null | undefined
+  let usage: MessageUsage | undefined
+  if (total) {
+    usage = {
+      inputTokens: total.inputTokens,
+      outputTokens: total.outputTokens,
+      totalTokens: total.totalTokens,
+      reasoningTokens: total.reasoningTokens,
+      cachedInputTokens: total.cachedInputTokens,
+      cacheWriteTokens: total.cacheCreationInputTokens,
+    }
+    if (model.cost) usage.cost = estimateCost(model.cost, usage)
+  }
   return {
-    usage: usage
-      ? {
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-          reasoningTokens: usage.reasoningTokens,
-          cachedInputTokens: usage.cachedInputTokens,
-        }
-      : undefined,
+    usage,
     ...(grounding ? { googleGrounding: grounding } : {}),
   }
 }

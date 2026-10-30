@@ -141,6 +141,21 @@
         "description": "这条消息将被删除，其下方的回复仍会保留在对话中。"
       },
       "stopped": "生成已中途停止",
+      "usage": {
+        "tokens": "Token",
+        "input": "输入",
+        "cacheRead": "缓存命中",
+        "cacheWrite": "缓存写入",
+        "output": "输出",
+        "reasoning": "推理",
+        "total": "合计",
+        "cost": "预估费用",
+        "timing": "耗时",
+        "firstToken": "首字延迟",
+        "duration": "总耗时",
+        "speed": "输出速度",
+        "tokensPerSecond": "{{value}} tokens/s"
+      },
       "streamInterrupted": "回复中断，请重试。",
       "navLabel": "会话导航",
       "navAttachmentOnly": "附件消息",

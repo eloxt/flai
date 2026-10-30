@@ -143,6 +143,21 @@
         "description": "The message will be removed; any replies below it stay in the conversation."
       },
       "stopped": "Stopped before finishing",
+      "usage": {
+        "tokens": "Tokens",
+        "input": "Input",
+        "cacheRead": "Cache read",
+        "cacheWrite": "Cache write",
+        "output": "Output",
+        "reasoning": "Reasoning",
+        "total": "Total",
+        "cost": "Est. cost",
+        "timing": "Timing",
+        "firstToken": "First token",
+        "duration": "Duration",
+        "speed": "Output speed",
+        "tokensPerSecond": "{{value}} tokens/s"
+      },
       "streamInterrupted": "The reply was interrupted. Please try again.",
       "navLabel": "Conversation navigation",
       "navAttachmentOnly": "Attachment message",

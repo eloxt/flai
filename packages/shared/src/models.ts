@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { MessageUsage } from './messages'
 
 export const THINKING_LEVELS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 export const thinkingLevelSchema = z.enum(THINKING_LEVELS)
@@ -24,6 +25,27 @@ const costBaseSchema = z.object({
 export const modelCostSchema = costBaseSchema.extend({
   contextOver200k: costBaseSchema.optional(),
 })
+export type ModelCost = z.infer<typeof modelCostSchema>
+
+/**
+ * USD for one reply at per-million-token prices. Cache reads and writes fall back to the input
+ * price when the model lists none; prompts over 200k tokens use that tier when it is set.
+ */
+export function estimateCost(cost: ModelCost, usage: MessageUsage): number | undefined {
+  const input = usage.inputTokens ?? 0
+  const output = usage.outputTokens ?? 0
+  if (input === 0 && output === 0) return undefined
+  const prices = (input > 200_000 && cost.contextOver200k) || cost
+  const cacheRead = usage.cachedInputTokens ?? 0
+  const cacheWrite = usage.cacheWriteTokens ?? 0
+  const uncached = Math.max(0, input - cacheRead - cacheWrite)
+  return (
+    uncached * prices.input +
+    cacheRead * (prices.cacheRead ?? prices.input) +
+    cacheWrite * (prices.cacheWrite ?? prices.input) +
+    output * prices.output
+  ) / 1_000_000
+}
 
 export const modelConfigSchema = z.object({
   id: z.string().trim().min(1),

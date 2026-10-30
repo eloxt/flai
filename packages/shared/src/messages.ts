@@ -33,12 +33,26 @@ export interface GoogleGrounding {
 }
 
 export interface MessageUsage {
+  /** All input tokens, cached ones included. */
   inputTokens?: number
+  /** All output tokens, reasoning included. */
   outputTokens?: number
   reasoningTokens?: number
+  /** Input tokens read from the provider's prompt cache. */
   cachedInputTokens?: number
+  /** Input tokens written to the provider's prompt cache. */
+  cacheWriteTokens?: number
+  totalTokens?: number
+  /** Estimated USD, from the model's prices when the reply was generated. */
+  cost?: number
   /** Legacy (Go backend) only: tokens spent on tool use prompts. */
   toolUseTokens?: number
+}
+
+export interface MessageTiming {
+  /** From sending the request to the first reasoning or text token. */
+  firstTokenMs?: number
+  durationMs: number
 }
 
 export interface MessageMetadata {
@@ -48,6 +62,7 @@ export interface MessageMetadata {
   /** Retain the original settings when continuing after a question. */
   chatOptions?: ChatOptions
   usage?: MessageUsage
+  timing?: MessageTiming
   googleGrounding?: GoogleGrounding
   /** Base64 Gemini thought signature carried over from the legacy backend. */
   thoughtSignature?: string
