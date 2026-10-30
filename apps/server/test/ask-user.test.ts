@@ -2,6 +2,7 @@ import { askUserResultSchema, isAskUserPart, type FlaiUIMessage } from '@flai/sh
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { toAISdkStream } from '@mastra/ai-sdk'
 import { Agent } from '@mastra/core/agent'
+import type { MastraModelConfig } from '@mastra/core/llm'
 import { askUserTool, formatQuestionAnswer } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
@@ -26,7 +27,8 @@ describe('ask_user client tool', () => {
       return new Response(`${chunks}data: [DONE]\n\n`, { headers: { 'content-type': 'text/event-stream' } })
     })
     const provider = createOpenAICompatible({ name: 'test', apiKey: 'test', baseURL: 'https://llm.example.com/v1', fetch })
-    const agent = new Agent({ id: 'test', name: 'Test', instructions: 'Ask the user.', model: provider.chatModel('test') })
+    // Mastra bundles an older @ai-sdk/provider spec in its types; the runtime model is the same
+    const agent = new Agent({ id: 'test', name: 'Test', instructions: 'Ask the user.', model: provider.chatModel('test') as unknown as MastraModelConfig })
     const stream = await agent.stream('Help me.', { clientTools: { ask_user: askUserTool }, maxSteps: 10 })
     let message: FlaiUIMessage | undefined
     for await (const snapshot of readUIMessageStream<FlaiUIMessage>({

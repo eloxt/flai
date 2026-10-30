@@ -1,5 +1,6 @@
 import { modelConfigSchema, settingSchemas } from '@flai/shared'
 import { Agent } from '@mastra/core/agent'
+import type { MastraModelConfig } from '@mastra/core/llm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildModel, chatTools, geminiBaseUrl } from '../src/llm/models'
 import type { ProviderRow } from '../src/services/providers'
@@ -41,7 +42,8 @@ describe('provider-native tools', () => {
       requestId: 'test-request',
     })
     if (resolved.model.specificationVersion !== 'v4') throw new Error('Expected an AI SDK v7 model')
-    const agent = new Agent({ id: 'test', name: 'Test', instructions: 'Use search.', model: resolved.model })
+    // Mastra bundles an older @ai-sdk/provider spec in its types; the runtime model is the same
+    const agent = new Agent({ id: 'test', name: 'Test', instructions: 'Use search.', model: resolved.model as unknown as MastraModelConfig })
     const result = await agent.generate('Search the web.', {
       toolsets: { builtin: resolved.tools },
       maxSteps: 1,
