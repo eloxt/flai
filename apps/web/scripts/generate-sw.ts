@@ -32,6 +32,19 @@ const { count, size, warnings } = await generateSW({
   navigateFallbackDenylist: [/^\/api\//],
   runtimeCaching: [
     {
+      // The conversation list, each opened conversation and the model list, so past chats can
+      // still be read offline. Always fresh when online; app/lib/service-worker.ts clears this
+      // cache on logout, since it holds one user's data.
+      urlPattern: ({ url, sameOrigin }) =>
+        sameOrigin && /^\/api\/v1\/(?:conversations(?:\/[^/]+)?|models)$/.test(url.pathname),
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "flai-history",
+        cacheableResponse: { statuses: [200] },
+        expiration: { maxEntries: 300 },
+      },
+    },
+    {
       urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
       handler: "CacheFirst",
       options: {
