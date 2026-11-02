@@ -35,6 +35,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body className="overflow-hidden antialiased">
+        {/* In the installed desktop app the window controls float over the page; this strip drags the window. */}
+        <div aria-hidden="true" className="titlebar-drag pointer-events-none fixed inset-x-0 top-0 h-(--titlebar)" />
         {children}
         <ScrollRestoration />
         <Scripts />

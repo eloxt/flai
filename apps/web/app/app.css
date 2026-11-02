@@ -5,6 +5,8 @@
 @source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
+/* The installed desktop app with its title bar folded into the page (display_override in the manifest). */
+@custom-variant wco (@media (display-mode: window-controls-overlay));
 
 @theme inline {
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -71,6 +73,9 @@
 }
 
 :root {
+    /* The strip the window controls sit in; 0 outside window-controls-overlay mode. */
+    --titlebar: env(titlebar-area-height, 0px);
+    --titlebar-x: env(titlebar-area-x, 0px);
     --genui-font: var(--font-sans);
     --genui-ink: #111111;
     --genui-surface: #f2f2f2;
@@ -229,6 +234,17 @@
   body {
     @apply bg-background text-foreground;
     }
+  /* The title bar strip drags the window; controls that reach into it stay clickable. */
+  @media (display-mode: window-controls-overlay) {
+    .titlebar-drag {
+      -webkit-app-region: drag;
+      app-region: drag;
+    }
+    :is(button, a, input, textarea, select, [role="button"], [role="menuitem"]) {
+      -webkit-app-region: no-drag;
+      app-region: no-drag;
+    }
+  }
   html {
     @apply font-sans;
     font-kerning: normal;

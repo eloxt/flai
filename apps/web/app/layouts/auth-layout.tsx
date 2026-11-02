@@ -5,7 +5,7 @@ import { BrandMark } from "~/components/brand-mark"
 export default function AuthLayout() {
   const { t } = useTranslation()
   return (
-    <div className="relative grid h-svh grid-cols-12 overflow-y-auto bg-sidebar">
+    <div className="relative grid h-svh grid-cols-12 overflow-y-auto bg-sidebar wco:pt-(--titlebar)">
       <div aria-hidden="true" className="material-grid pointer-events-none absolute inset-x-0 top-0 h-[70svh]" />
       {/* Poster column: only on wide screens, where there is room for horizontal tension. */}
       <aside className="relative hidden flex-col justify-between gap-16 p-8 lg:col-span-5 lg:flex xl:p-16">

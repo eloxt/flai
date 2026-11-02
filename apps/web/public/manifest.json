@@ -28,5 +28,6 @@
     ],
     "theme_color": "#ebebeb",
     "background_color": "#ebebeb",
-    "display": "standalone"
+    "display": "standalone",
+    "display_override": ["window-controls-overlay"]
 }

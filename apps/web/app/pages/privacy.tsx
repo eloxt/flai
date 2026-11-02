@@ -11,7 +11,7 @@ const SECTIONS = ["collect", "use", "models", "sharing", "retention", "rights"] 
 export default function Privacy() {
   const { t } = useTranslation()
   return (
-    <div className="h-svh overflow-y-auto bg-background">
+    <div className="h-svh overflow-y-auto bg-background wco:pt-(--titlebar)">
       <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-12 md:py-20">
         <header className="flex flex-col gap-6">
           <BrandMark className="text-base" />

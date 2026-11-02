@@ -127,9 +127,11 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
-          <div className="flex h-8 items-center gap-2 overflow-hidden">
+      {/* With the title bar folded in, the expanded sidebar's top row sits in it, clear of the window
+          controls; the collapsed rail is too narrow for that and starts below. */}
+      <Sidebar collapsible="icon" variant="inset" className="wco:pt-(--titlebar) wco:group-data-[state=expanded]:pt-0">
+        <SidebarHeader className="wco:group-data-[state=expanded]:pt-0">
+          <div className="flex h-8 items-center gap-2 overflow-hidden wco:group-data-[state=expanded]:h-(--titlebar) wco:group-data-[state=expanded]:pl-[max(0px,calc(var(--titlebar-x)-1rem))]">
             {/* Expanded: the logo is static and the collapse button sits on the right (desktop only).
                 Collapsed: the logo itself is the expand button and shows the panel icon on hover. */}
             <span className="flex size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:hidden">

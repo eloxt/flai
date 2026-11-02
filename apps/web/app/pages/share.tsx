@@ -35,7 +35,7 @@ export default function SharePage() {
   }, [id, t])
 
   return (
-    <div className="flex h-dvh flex-col overflow-y-auto">
+    <div className="flex h-dvh flex-col overflow-y-auto wco:pt-(--titlebar)">
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-4xl items-center gap-4 px-4 md:px-8">
           <span className="text-xl">{share?.icon}</span>
