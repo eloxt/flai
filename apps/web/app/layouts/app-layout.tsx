@@ -15,7 +15,7 @@ export default function AppLayout() {
       className="h-dvh overflow-hidden"
     >
       <AppSidebar />
-      <SidebarInset className="h-dvh min-h-0 min-w-0 overflow-hidden md:h-[calc(100dvh-1rem)] md:peer-data-[variant=inset]:rounded-[calc(var(--radius-window)-0.5rem)] max-md:wco:pt-(--titlebar) md:wco:mt-(--titlebar)! md:wco:h-[calc(100dvh-var(--titlebar)-0.5rem)]">
+      <SidebarInset className="h-dvh min-h-0 min-w-0 overflow-hidden md:h-[calc(100dvh-1rem)] md:peer-data-[variant=inset]:rounded-[calc(var(--radius-window)-0.5rem)] max-md:wco:pt-(--titlebar) md:wco:mt-[calc(var(--titlebar)+0.5rem)]! md:wco:h-[calc(100dvh-var(--titlebar)-1rem)]">
         <div aria-hidden="true" className="material-grid pointer-events-none absolute inset-x-0 top-0 h-90" />
         <ChatHeader />
         <div className="relative flex min-h-0 flex-1 flex-col">
