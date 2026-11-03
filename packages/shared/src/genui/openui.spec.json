@@ -3,7 +3,7 @@
     "root": "Stack",
     "components": {
       "Card": {
-        "signature": "Card(children: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Tabs | Carousel | Stack | Svg | HtmlView | MediaCard)[], variant?: \"card\" | \"sunk\" | \"clear\", direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
+        "signature": "Card(children: (Block | Tabs | Carousel | Stack | Svg | HtmlView)[], variant?: \"card\" | \"sunk\" | \"clear\", direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
         "description": "Styled container. variant: \"card\" (default, elevated) | \"sunk\" (recessed) | \"clear\" (transparent). Always full width. Accepts all Stack flex params (default: direction \"column\"). Cards flex to share space in row/wrap layouts."
       },
       "CardHeader": {
@@ -18,17 +18,9 @@
         "signature": "Callout(variant: \"info\" | \"warning\" | \"error\" | \"success\" | \"neutral\", title: string, description: string, visible?: $binding<boolean>)",
         "description": "Callout banner. Optional visible is a reactive $boolean — auto-dismisses after 3s by setting $visible to false."
       },
-      "Image": {
-        "signature": "Image(alt: string, src?: string)",
-        "description": "Image with alt text and optional URL"
-      },
       "ImageGallery": {
         "signature": "ImageGallery(images: {src: string, alt?: string, details?: string}[])",
         "description": "Gallery grid of images with modal preview"
-      },
-      "CodeBlock": {
-        "signature": "CodeBlock(language: string, codeString: string)",
-        "description": "Syntax-highlighted code block"
       },
       "Table": {
         "signature": "Table(columns: Col[])",
@@ -46,6 +38,18 @@
         "signature": "LineChart(labels: string[], series: Series[], variant?: \"linear\" | \"natural\" | \"step\", xLabel?: string, yLabel?: string, height?: number)",
         "description": "Lines over categories; use for trends and continuous data over time"
       },
+      "AreaChart": {
+        "signature": "AreaChart(labels: string[], series: Series[], variant?: \"linear\" | \"natural\" | \"step\", xLabel?: string, yLabel?: string, height?: number)",
+        "description": "Filled area under lines; use for cumulative totals or volume trends over time"
+      },
+      "RadarChart": {
+        "signature": "RadarChart(labels: string[], series: Series[])",
+        "description": "Spider/web chart; use for comparing multiple variables across one or more entities"
+      },
+      "HorizontalBarChart": {
+        "signature": "HorizontalBarChart(labels: string[], series: Series[], variant?: \"grouped\" | \"stacked\", xLabel?: string, yLabel?: string)",
+        "description": "Horizontal bars; prefer when category labels are long or for ranked lists"
+      },
       "Series": {
         "signature": "Series(category: string, values: number[])",
         "description": "One data series"
@@ -54,24 +58,36 @@
         "signature": "PieChart(labels: string[], values: number[], variant?: \"pie\" | \"donut\", appearance?: \"circular\" | \"semiCircular\")",
         "description": "Circular slices; use plucked arrays: PieChart(data.categories, data.values)"
       },
+      "ScatterChart": {
+        "signature": "ScatterChart(datasets: ScatterSeries[], xLabel?: string, yLabel?: string)",
+        "description": "X/Y scatter plot; use for correlations, distributions, and clustering"
+      },
+      "ScatterSeries": {
+        "signature": "ScatterSeries(name: string, points: Point[])",
+        "description": "Named dataset"
+      },
+      "Point": {
+        "signature": "Point(x: number, y: number, z?: number)",
+        "description": "Data point with numeric coordinates"
+      },
       "Form": {
         "signature": "Form(name: string, buttons: Buttons, fields?: FormControl[])",
         "description": "Form container with fields and explicit action buttons"
       },
       "FormControl": {
-        "signature": "FormControl(label: string, input: Input | TextArea | Select | DatePicker | CheckBoxGroup | RadioGroup, hint?: string)",
+        "signature": "FormControl(label: string, input: Input | TextArea | Select | DatePicker | Slider | Chips | OptionCards, hint?: string)",
         "description": "Field with label, input component, and optional hint text"
       },
       "Input": {
-        "signature": "Input(name: string, placeholder?: string, type?: \"text\" | \"email\" | \"password\" | \"number\" | \"url\", rules?: {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}, value?: $binding<string>)",
+        "signature": "Input(name: string, placeholder?: string, type?: \"text\" | \"email\" | \"password\" | \"number\" | \"url\", rules?: Rules, value?: $binding<string>)",
         "description": ""
       },
       "TextArea": {
-        "signature": "TextArea(name: string, placeholder?: string, rows?: number, rules?: {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}, value?: $binding<string>)",
+        "signature": "TextArea(name: string, placeholder?: string, rows?: number, rules?: Rules, value?: $binding<string>)",
         "description": ""
       },
       "Select": {
-        "signature": "Select(name: string, items: SelectItem[], placeholder?: string, rules?: {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}, value?: $binding<string>, size?: \"small\" | \"medium\" | \"large\")",
+        "signature": "Select(name: string, items: SelectItem[], placeholder?: string, rules?: Rules, value?: $binding<string>, size?: \"small\" | \"medium\" | \"large\")",
         "description": ""
       },
       "SelectItem": {
@@ -79,24 +95,36 @@
         "description": "Option for Select"
       },
       "DatePicker": {
-        "signature": "DatePicker(name: string, mode?: \"single\" | \"range\", rules?: {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}, value?: $binding<any>)",
+        "signature": "DatePicker(name: string, mode?: \"single\" | \"range\", rules?: Rules, value?: $binding<any>)",
         "description": ""
       },
-      "CheckBoxGroup": {
-        "signature": "CheckBoxGroup(name: string, items: CheckBoxItem[], rules?: {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}, value?: $binding<Record<string, boolean>>)",
-        "description": ""
+      "Slider": {
+        "signature": "Slider(name: string, variant: \"continuous\" | \"discrete\", min: number, max: number, step?: number, defaultValue?: number[], label?: string, rules?: Rules, value?: $binding<number[]>)",
+        "description": "Numeric slider input; supports continuous and discrete (stepped) variants"
       },
-      "CheckBoxItem": {
-        "signature": "CheckBoxItem(label: string, description: string, name: string, defaultChecked?: boolean)",
-        "description": ""
+      "SwitchGroup": {
+        "signature": "SwitchGroup(name: string, items: SwitchItem[], variant?: \"clear\" | \"card\" | \"sunk\", value?: $binding<Record<string, boolean>>)",
+        "description": "Group of switch toggles"
       },
-      "RadioGroup": {
-        "signature": "RadioGroup(name: string, items: RadioItem[], defaultValue?: string, rules?: {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}, value?: $binding<string>)",
-        "description": ""
+      "SwitchItem": {
+        "signature": "SwitchItem(label?: string, description?: string, name: string, defaultChecked?: boolean)",
+        "description": "Individual switch toggle"
       },
-      "RadioItem": {
-        "signature": "RadioItem(label: string, description: string, value: string)",
-        "description": ""
+      "ChipItem": {
+        "signature": "ChipItem(value: string, label: string, icon?: Icon, disabled?: boolean)",
+        "description": "A single selectable chip inside a Chips group, with a value, label and optional icon."
+      },
+      "Chips": {
+        "signature": "Chips(name: string, type?: \"single\" | \"multiple\", items?: ChipItem[], rules?: Rules, defaultValue?: string | string[])",
+        "description": "A form field of compact selectable chips for choosing one or many short options; the selection is stored under `name`."
+      },
+      "OptionCard": {
+        "signature": "OptionCard(value: string, title: string, subtitle?: string, topContent?: Icon, disabled?: boolean)",
+        "description": "A single selectable card inside an OptionCards group, with a value, title, optional subtitle and an optional Icon or Image on top."
+      },
+      "OptionCards": {
+        "signature": "OptionCards(name: string, type?: \"single\" | \"multiple\", items?: OptionCard[], rules?: Rules, defaultValue?: string | string[])",
+        "description": "A form field of selectable cards (title, optional subtitle, optional icon or image) laid out in a responsive grid for choosing one or many options; the selection is stored under `name`."
       },
       "Button": {
         "signature": "Button(label: string, action?: ActionExpression, variant?: \"primary\" | \"secondary\" | \"tertiary\", type?: \"normal\" | \"destructive\", size?: \"extra-small\" | \"small\" | \"medium\" | \"large\")",
@@ -105,6 +133,10 @@
       "Buttons": {
         "signature": "Buttons(buttons: Button[], direction?: \"row\" | \"column\")",
         "description": "Group of Button components. direction: \"row\" (default) | \"column\"."
+      },
+      "IconButton": {
+        "signature": "IconButton(name: string, icon: Icon, action?: ActionExpression, variant?: \"primary\" | \"secondary\" | \"tertiary\", size?: \"extra-small\" | \"small\" | \"medium\" | \"large\", shape?: \"square\" | \"circle\")",
+        "description": "Icon-only button. name is the accessible label and the action label; icon is an Icon; action fires on click."
       },
       "Stack": {
         "signature": "Stack(children: any[], direction?: \"row\" | \"column\", gap?: \"none\" | \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"2xl\", align?: \"start\" | \"center\" | \"end\" | \"stretch\" | \"baseline\", justify?: \"start\" | \"center\" | \"end\" | \"between\" | \"around\" | \"evenly\", wrap?: boolean)",
@@ -115,7 +147,7 @@
         "description": "Tabbed container"
       },
       "TabItem": {
-        "signature": "TabItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg | HtmlView | MediaCard)[])",
+        "signature": "TabItem(value: string, trigger: string, content: (Block | Svg | HtmlView)[])",
         "description": "value is unique id, trigger is tab label, content is array of components"
       },
       "Accordion": {
@@ -123,16 +155,40 @@
         "description": "Collapsible sections"
       },
       "AccordionItem": {
-        "signature": "AccordionItem(value: string, trigger: string, content: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | Svg | HtmlView | MediaCard)[])",
+        "signature": "AccordionItem(value: string, trigger: string, content: (Block | Svg | HtmlView)[])",
         "description": "value is unique id, trigger is section title"
       },
+      "Steps": {
+        "signature": "Steps(items: StepsItem[])",
+        "description": "Step-by-step guide"
+      },
+      "StepsItem": {
+        "signature": "StepsItem(title: string, details: string)",
+        "description": "title and details text for one step"
+      },
       "Carousel": {
-        "signature": "Carousel(children: (TextContent | CardHeader | Callout | CodeBlock | Image | ImageGallery | Separator | PieChart | BarChart | LineChart | Table | Form | Buttons | MediaCard)[][], variant?: \"card\" | \"sunk\")",
+        "signature": "Carousel(children: (Block)[][], variant?: \"card\" | \"sunk\")",
         "description": "Horizontal scrollable carousel"
       },
       "Separator": {
         "signature": "Separator(orientation?: \"horizontal\" | \"vertical\", decorative?: boolean)",
         "description": "Visual divider between content sections"
+      },
+      "TagBlock": {
+        "signature": "TagBlock(tags: string[], size?: \"sm\" | \"md\" | \"lg\")",
+        "description": "tags is an array of strings; optional size sm | md | lg"
+      },
+      "Tag": {
+        "signature": "Tag(text: string, icon?: Icon, size?: \"sm\" | \"md\" | \"lg\", variant?: \"neutral\" | \"info\" | \"success\" | \"warning\" | \"danger\")",
+        "description": "Styled tag/badge with optional Icon and variant"
+      },
+      "Icon": {
+        "signature": "Icon(name: string, category?: string)",
+        "description": "A lucide icon by kebab-case name (e.g. 'circle-check'). Optional category picks a topical fallback when the name doesn't resolve."
+      },
+      "EntityList": {
+        "signature": "EntityList(rows?: {left: string, right: string, rightVariant?: \"text\" | \"number\"}[], size?: \"small\" | \"default\", header?: {left: string, right: string, rightVariant?: \"text\" | \"number\"}, footer?: {left: string, right: string, rightVariant?: \"text\" | \"number\"})",
+        "description": "Two-column key/value rows (left label, right value). size 'default' supports optional header and footer rows; rightVariant 'number' uses tabular numbers."
       },
       "ListBlock": {
         "signature": "ListBlock(items: ListItem[], variant?: \"number\" | \"image\", size?: \"default\" | \"small\")",
@@ -141,6 +197,46 @@
       "ListItem": {
         "signature": "ListItem(title: string, subtitle?: string, image?: {src: string, alt: string}, actionLabel?: string, action?: ActionExpression)",
         "description": "Item in a ListBlock — displays a title with an optional subtitle and image. When action is provided, the item becomes clickable."
+      },
+      "Text": {
+        "signature": "Text(variant?: \"text\" | \"number\", value: string, subtext?: string, subtextVariant?: \"text\" | \"number\" | \"metric\", size?: \"xs\" | \"sm\" | \"md\" | \"lg\")",
+        "description": "Plain text line with optional subtext. variant 'number' uses tabular number styling; subtextVariant 'metric' colors a leading +/- subtext green/red."
+      },
+      "BoldText": {
+        "signature": "BoldText(variant?: \"text\" | \"number\", value: string, subtext?: string, subtextVariant?: \"text\" | \"number\" | \"metric\", size?: \"xs\" | \"sm\" | \"md\" | \"lg\")",
+        "description": "Emphasized (bold) text line with optional subtext. variant 'number' uses tabular number styling; subtextVariant 'metric' colors a leading +/- subtext green/red."
+      },
+      "IconText": {
+        "signature": "IconText(icon: Icon, iconVariant?: \"neutral\" | \"info\" | \"success\" | \"warning\" | \"danger\" | \"inverted\" | \"filled\" | \"soft\", iconSize?: \"xs\" | \"s\" | \"m\" | \"l\" | \"xl\" | \"sm\" | \"md\" | \"lg\", title: string, subtitle?: string, bold?: boolean, layout?: \"horizontal\" | \"vertical\")",
+        "description": "An icon badge with a title and optional subtitle, laid out horizontally or vertically. iconVariant sets the badge color."
+      },
+      "MetricIndicatorInline": {
+        "signature": "MetricIndicatorInline(value: string, subtext?: string, trend?: {direction: \"up\" | \"down\", value: number})",
+        "description": "Headline metric value with an optional +/- percentage trend and subtext, all on one line."
+      },
+      "SnippetCardItem": {
+        "signature": "SnippetCardItem(id?: string, lhs: IconText, rhs?: Text | BoldText)",
+        "description": "One row-style snippet card: a label on the left (IconText or ImageText) and an optional value on the right (Text or BoldText)."
+      },
+      "SnippetCardBlock": {
+        "signature": "SnippetCardBlock(items: SnippetCardItem[], layout?: \"grid\", responsive?: boolean, action?: ActionExpression, gap?: number | string)",
+        "description": "A responsive grid of compact label/value cards (2 per row) for showing several short facts side by side; optionally clickable with a shared action."
+      },
+      "OverviewCardItem": {
+        "signature": "OverviewCardItem(id?: string, top: IconText | Text, bottom?: MetricIndicatorInline)",
+        "description": "One overview card: a heading slot at the top (IconText, ImageText or Text) and an optional MetricIndicatorInline at the bottom."
+      },
+      "OverviewCardBlock": {
+        "signature": "OverviewCardBlock(items: OverviewCardItem[], layout?: \"grid\" | \"carousel\", responsive?: boolean, action?: ActionExpression, gap?: number | string)",
+        "description": "A grid or horizontal carousel of compact overview cards, each with a heading (icon/image/text) on top and an inline metric below; optionally clickable with a shared action."
+      },
+      "ContextCardItem": {
+        "signature": "ContextCardItem(id?: string, title: string | Tag, body?: string, bgColor?: \"gray\", bgImageSrc?: string, bgImageAlt?: string)",
+        "description": "A single card inside a ContextCardBlock: a title (plain string or Tag), an optional markdown body, and an optional gray tint or background image."
+      },
+      "ContextCardBlock": {
+        "signature": "ContextCardBlock(items: ContextCardItem[], layout?: \"grid\" | \"carousel\", responsive?: boolean, action?: ActionExpression, gap?: number | string)",
+        "description": "A grid or carousel of compact tinted context cards (title or tag plus a short bold body); an optional action makes every card clickable."
       },
       "Svg": {
         "signature": "Svg(children: Node[], viewBox: string, width?: number | string, height?: number | string)",
@@ -202,7 +298,27 @@
           "TabItem",
           "Accordion",
           "AccordionItem",
+          "Steps",
+          "StepsItem",
           "Separator"
+        ],
+        "notes": [
+          "- Block = TextContent | CardHeader | Callout | ImageGallery | Separator | HorizontalBarChart | RadarChart | PieChart | ScatterChart | AreaChart | BarChart | LineChart | Table | TagBlock | Form | Buttons | IconButton | Steps | EntityList | SnippetCardBlock | OverviewCardBlock | ContextCardBlock | MediaCard"
+        ]
+      },
+      {
+        "name": "Card grids",
+        "components": [
+          "OverviewCardBlock",
+          "OverviewCardItem",
+          "SnippetCardBlock",
+          "SnippetCardItem",
+          "ContextCardBlock",
+          "ContextCardItem",
+          "Text",
+          "BoldText",
+          "IconText",
+          "MetricIndicatorInline"
         ]
       },
       {
@@ -210,20 +326,33 @@
         "components": [
           "TextContent",
           "Callout",
-          "CodeBlock",
-          "Image",
-          "ImageGallery"
+          "ImageGallery",
+          "EntityList",
+          "TagBlock",
+          "Tag",
+          "Icon"
         ]
       },
       {
-        "name": "Data",
+        "name": "Charts",
+        "components": [
+          "BarChart",
+          "HorizontalBarChart",
+          "LineChart",
+          "AreaChart",
+          "RadarChart",
+          "Series",
+          "PieChart",
+          "ScatterChart",
+          "ScatterSeries",
+          "Point"
+        ]
+      },
+      {
+        "name": "Tables",
         "components": [
           "Table",
-          "Col",
-          "BarChart",
-          "LineChart",
-          "PieChart",
-          "Series"
+          "Col"
         ]
       },
       {
@@ -236,17 +365,24 @@
           "Select",
           "SelectItem",
           "DatePicker",
-          "CheckBoxGroup",
-          "CheckBoxItem",
-          "RadioGroup",
-          "RadioItem"
+          "Slider",
+          "SwitchGroup",
+          "SwitchItem",
+          "Chips",
+          "ChipItem",
+          "OptionCards",
+          "OptionCard"
+        ],
+        "notes": [
+          "- Rules = {required?: boolean, email?: boolean, url?: boolean, numeric?: boolean, min?: number, max?: number, minLength?: number, maxLength?: number, pattern?: string}"
         ]
       },
       {
         "name": "Actions",
         "components": [
           "Button",
-          "Buttons"
+          "Buttons",
+          "IconButton"
         ]
       },
       {
@@ -284,17 +420,13 @@
         "signature": "Append(list: any[], item: any) → any[]",
         "description": "Copy of the list with item added at the end"
       },
-      "Prepend": {
-        "signature": "Prepend(list: any[], item: any) → any[]",
-        "description": "Copy of the list with item added at the start"
-      },
       "Concat": {
         "signature": "Concat(list: any[], more: any[]) → any[]",
         "description": "Joins two lists"
       },
       "Remove": {
         "signature": "Remove(list: any[], field: string, value: any) → any[]",
-        "description": "Copy without the items whose field equals value; field \"\" compares the items themselves"
+        "description": "Copy without the items whose field equals value; field \"\" compares the items"
       },
       "RemoveAt": {
         "signature": "RemoveAt(list: any[], index: number) → any[]",
@@ -316,45 +448,33 @@
         "signature": "Find(list: any[], field: string, value: any) → any",
         "description": "First item whose field equals value, or null"
       },
-      "IndexOf": {
-        "signature": "IndexOf(list: any[], item: any) → number",
-        "description": "Index of item in the list, or -1"
-      },
       "Take": {
         "signature": "Take(list: any[], n: number) → any[]",
         "description": "The first n items; a negative n takes the last n"
       },
       "SliceOf": {
         "signature": "SliceOf(list: any[] | string, start: number, end?: number) → any[] | string",
-        "description": "Items, or characters of text, from start up to end (not included); negative counts from the end"
+        "description": "Items or characters from start up to end (not included); negative counts from the end"
       },
       "Unique": {
         "signature": "Unique(list: any[]) → any[]",
         "description": "Distinct items in first-seen order"
       },
-      "Reverse": {
-        "signature": "Reverse(list: any[]) → any[]",
-        "description": "Copy in reverse order"
-      },
       "Range": {
         "signature": "Range(start: number, end: number, step?: number) → number[]",
-        "description": "Numbers from start up to end (not included) by step (default 1), e.g. @Range(0, 3) is [0, 1, 2]"
+        "description": "Numbers from start up to end (not included) by step (default 1)"
       },
       "Pick": {
         "signature": "Pick(list: any[]) → any",
-        "description": "A random item, or null for an empty list; draws anew each time, so call it inside @Set"
+        "description": "A random item, or null for an empty list"
       },
       "Shuffle": {
         "signature": "Shuffle(list: any[]) → any[]",
-        "description": "Copy in random order; call it inside @Set"
-      },
-      "Flatten": {
-        "signature": "Flatten(list: any[]) → any[]",
-        "description": "One list from a list of lists, e.g. [[1, 2], [3]] is [1, 2, 3]"
+        "description": "Copy in random order"
       },
       "Chunk": {
         "signature": "Chunk(list: any[], size: number) → any[][]",
-        "description": "The list cut into lists of size items, e.g. for weeks of 7 days or pages"
+        "description": "The list cut into lists of size items, e.g. weeks of 7 days"
       },
       "Pow": {
         "signature": "Pow(base: number, exponent: number) → number",
@@ -366,7 +486,7 @@
       },
       "Random": {
         "signature": "Random(min: number, max: number, integer?: boolean) → number",
-        "description": "Random number from min to max (integer true: a whole number, max included); draws anew each time, so call it inside @Set"
+        "description": "Random number from min to max; integer true gives a whole number, max included"
       },
       "Clamp": {
         "signature": "Clamp(number: number, min: number, max: number) → number",
@@ -374,19 +494,15 @@
       },
       "Percent": {
         "signature": "Percent(part: number, total: number) → number",
-        "description": "part / total * 100, e.g. @Percent(3, 4) is 75; 0 when total is 0"
-      },
-      "Lerp": {
-        "signature": "Lerp(a: number, b: number, t: number) → number",
-        "description": "The value a fraction t of the way from a to b"
+        "description": "part / total * 100; 0 when total is 0"
       },
       "Allocate": {
         "signature": "Allocate(total: number, weights: number[], decimals?: number) → number[]",
-        "description": "Splits total in proportion to weights, rounded to decimals (default 2), so the parts add up to exactly total, e.g. @Allocate(100, [1, 1, 1]) is [33.34, 33.33, 33.33]"
+        "description": "Splits total by weights, rounded to decimals (default 2), parts adding up to exactly total"
       },
       "Payment": {
         "signature": "Payment(principal: number, rate: number, periods: number) → number",
-        "description": "Payment per period that repays principal over periods at rate percent per period, e.g. a 30-year loan at 6% a year: @Payment(300000, 6 / 12, 360)"
+        "description": "Payment per period repaying principal at rate percent per period, e.g. @Payment(300000, 6 / 12, 360)"
       },
       "Convert": {
         "signature": "Convert(value: number, from: string, to: string) → number",
@@ -394,51 +510,31 @@
       },
       "Format": {
         "signature": "Format(value: number, kind?: \"number\" | \"currency\" | \"percent\" | \"compact\", decimals?: number, currency?: string) → string",
-        "description": "Number as text: \"number\" 12,345.6, \"currency\" $12,345.68 (currency is a code like \"EUR\"), \"percent\" 45 -> 45%, \"compact\" 1.2M ($1.2M with a currency)"
+        "description": "Number as text: \"number\" 12,345.6, \"currency\" $12,345.68 (currency code like \"EUR\"), \"percent\" 45 -> 45%, \"compact\" 1.2M"
       },
       "Join": {
         "signature": "Join(list: any[], sep?: string, field?: string) → string",
-        "description": "Joins the items (or their field) into text with sep (default \", \"), skipping nulls"
+        "description": "Joins the items (or their field) with sep (default \", \")"
       },
       "Plural": {
         "signature": "Plural(n: number, word: string, plural?: string) → string",
-        "description": "Count and word: @Plural(1, \"guest\") is \"1 guest\", 3 gives \"3 guests\"; plural defaults to word + \"s\""
-      },
-      "Pad": {
-        "signature": "Pad(value: string | number, length: number, char?: string) → string",
-        "description": "Pads the start of value to length with char (default \"0\"), e.g. 7 -> \"07\""
-      },
-      "Upper": {
-        "signature": "Upper(text: string) → string",
-        "description": "Text in upper case"
-      },
-      "Lower": {
-        "signature": "Lower(text: string) → string",
-        "description": "Text in lower case"
-      },
-      "Trim": {
-        "signature": "Trim(text: string) → string",
-        "description": "Text without spaces at the start and end"
+        "description": "Count and word: 1 \"guest\", 3 \"guests\"; plural defaults to word + \"s\""
       },
       "Capitalize": {
         "signature": "Capitalize(text: string) → string",
-        "description": "Each word with a capital first letter, e.g. \"new york\" is \"New York\""
+        "description": "Each word with a capital first letter"
       },
       "Split": {
         "signature": "Split(text: string, sep?: string) → string[]",
-        "description": "List of the parts of text between sep (default \",\"), each trimmed, empty parts dropped, e.g. @Split(\"a, b,,c\") is [\"a\", \"b\", \"c\"]"
-      },
-      "Replace": {
-        "signature": "Replace(text: string, find: string, replacement: string) → string",
-        "description": "Text with every find replaced by replacement"
+        "description": "Trimmed, non-empty parts of text between sep (default \",\")"
       },
       "Duration": {
         "signature": "Duration(seconds: number, style?: \"short\" | \"clock\") → string",
-        "description": "Seconds as text: \"short\" 1h 20m, 4m 05s, 45s (default); \"clock\" 1:20:00, 4:05"
+        "description": "Seconds as text: \"short\" 1h 20m (default), \"clock\" 1:20:00"
       },
       "Default": {
         "signature": "Default(value?: any, fallback: any) → any",
-        "description": "value, or fallback when value is null, \"\" or not a number, e.g. an empty number input: @Default($weight, 0)"
+        "description": "value, or fallback when value is null, \"\" or not a number"
       },
       "Now": {
         "signature": "Now() → string",
@@ -450,7 +546,7 @@
       },
       "FormatDate": {
         "signature": "FormatDate(date: string | number, style?: \"date\" | \"short\" | \"long\" | \"weekday\" | \"month\" | \"time\" | \"datetime\" | \"iso\") → string",
-        "description": "A date as text: \"date\" Oct 9, 2026 (default), \"short\" Oct 9, \"long\" Friday, October 9, 2026, \"weekday\" Fri, \"month\" Oct 2026, \"time\" 9:30 PM, \"datetime\", \"iso\" 2026-10-09. Dates are \"YYYY-MM-DD\", ISO or a timestamp"
+        "description": "A date as text: \"date\" Oct 9, 2026 (default), \"short\" Oct 9, \"long\", \"weekday\" Fri, \"month\" Oct 2026, \"time\" 9:30 PM, \"datetime\", \"iso\""
       },
       "AddDays": {
         "signature": "AddDays(date: string | number, days: number) → string",
@@ -458,15 +554,15 @@
       },
       "AddMonths": {
         "signature": "AddMonths(date: string | number, months: number) → string",
-        "description": "The date months later (negative: earlier), kept within the month (Jan 31 + 1 is Feb 28), as \"YYYY-MM-DD\"; 12 months is a year"
+        "description": "The date months later (negative: earlier), kept within the month, as \"YYYY-MM-DD\""
       },
       "DaysBetween": {
         "signature": "DaysBetween(from: string | number, to: string | number) → number",
-        "description": "Calendar days from one date to another (negative if to is earlier)"
+        "description": "Calendar days from one date to another"
       },
       "MonthsBetween": {
         "signature": "MonthsBetween(from: string | number, to: string | number) → number",
-        "description": "Whole months from one date to another (negative if to is earlier); @Floor(@MonthsBetween(birthday, @Today()) / 12) is an age"
+        "description": "Whole months from one date to another (negative if to is earlier)"
       },
       "StartOf": {
         "signature": "StartOf(date: string | number, unit: \"week\" | \"month\" | \"year\") → string",
@@ -489,14 +585,8 @@
         "Callout": {
           "$ref": "#/$defs/Callout"
         },
-        "Image": {
-          "$ref": "#/$defs/Image"
-        },
         "ImageGallery": {
           "$ref": "#/$defs/ImageGallery"
-        },
-        "CodeBlock": {
-          "$ref": "#/$defs/CodeBlock"
         },
         "Table": {
           "$ref": "#/$defs/Table"
@@ -510,11 +600,29 @@
         "LineChart": {
           "$ref": "#/$defs/LineChart"
         },
+        "AreaChart": {
+          "$ref": "#/$defs/AreaChart"
+        },
+        "RadarChart": {
+          "$ref": "#/$defs/RadarChart"
+        },
+        "HorizontalBarChart": {
+          "$ref": "#/$defs/HorizontalBarChart"
+        },
         "Series": {
           "$ref": "#/$defs/Series"
         },
         "PieChart": {
           "$ref": "#/$defs/PieChart"
+        },
+        "ScatterChart": {
+          "$ref": "#/$defs/ScatterChart"
+        },
+        "ScatterSeries": {
+          "$ref": "#/$defs/ScatterSeries"
+        },
+        "Point": {
+          "$ref": "#/$defs/Point"
         },
         "Form": {
           "$ref": "#/$defs/Form"
@@ -537,23 +645,35 @@
         "DatePicker": {
           "$ref": "#/$defs/DatePicker"
         },
-        "CheckBoxGroup": {
-          "$ref": "#/$defs/CheckBoxGroup"
+        "Slider": {
+          "$ref": "#/$defs/Slider"
         },
-        "CheckBoxItem": {
-          "$ref": "#/$defs/CheckBoxItem"
+        "SwitchGroup": {
+          "$ref": "#/$defs/SwitchGroup"
         },
-        "RadioGroup": {
-          "$ref": "#/$defs/RadioGroup"
+        "SwitchItem": {
+          "$ref": "#/$defs/SwitchItem"
         },
-        "RadioItem": {
-          "$ref": "#/$defs/RadioItem"
+        "ChipItem": {
+          "$ref": "#/$defs/ChipItem"
+        },
+        "Chips": {
+          "$ref": "#/$defs/Chips"
+        },
+        "OptionCard": {
+          "$ref": "#/$defs/OptionCard"
+        },
+        "OptionCards": {
+          "$ref": "#/$defs/OptionCards"
         },
         "Button": {
           "$ref": "#/$defs/Button"
         },
         "Buttons": {
           "$ref": "#/$defs/Buttons"
+        },
+        "IconButton": {
+          "$ref": "#/$defs/IconButton"
         },
         "Stack": {
           "$ref": "#/$defs/Stack"
@@ -570,17 +690,65 @@
         "AccordionItem": {
           "$ref": "#/$defs/AccordionItem"
         },
+        "Steps": {
+          "$ref": "#/$defs/Steps"
+        },
+        "StepsItem": {
+          "$ref": "#/$defs/StepsItem"
+        },
         "Carousel": {
           "$ref": "#/$defs/Carousel"
         },
         "Separator": {
           "$ref": "#/$defs/Separator"
         },
+        "TagBlock": {
+          "$ref": "#/$defs/TagBlock"
+        },
+        "Tag": {
+          "$ref": "#/$defs/Tag"
+        },
+        "Icon": {
+          "$ref": "#/$defs/Icon"
+        },
+        "EntityList": {
+          "$ref": "#/$defs/EntityList"
+        },
         "ListBlock": {
           "$ref": "#/$defs/ListBlock"
         },
         "ListItem": {
           "$ref": "#/$defs/ListItem"
+        },
+        "Text": {
+          "$ref": "#/$defs/Text"
+        },
+        "BoldText": {
+          "$ref": "#/$defs/BoldText"
+        },
+        "IconText": {
+          "$ref": "#/$defs/IconText"
+        },
+        "MetricIndicatorInline": {
+          "$ref": "#/$defs/MetricIndicatorInline"
+        },
+        "SnippetCardItem": {
+          "$ref": "#/$defs/SnippetCardItem"
+        },
+        "SnippetCardBlock": {
+          "$ref": "#/$defs/SnippetCardBlock"
+        },
+        "OverviewCardItem": {
+          "$ref": "#/$defs/OverviewCardItem"
+        },
+        "OverviewCardBlock": {
+          "$ref": "#/$defs/OverviewCardBlock"
+        },
+        "ContextCardItem": {
+          "$ref": "#/$defs/ContextCardItem"
+        },
+        "ContextCardBlock": {
+          "$ref": "#/$defs/ContextCardBlock"
         },
         "Svg": {
           "$ref": "#/$defs/Svg"
@@ -624,15 +792,19 @@
         "CardHeader",
         "TextContent",
         "Callout",
-        "Image",
         "ImageGallery",
-        "CodeBlock",
         "Table",
         "Col",
         "BarChart",
         "LineChart",
+        "AreaChart",
+        "RadarChart",
+        "HorizontalBarChart",
         "Series",
         "PieChart",
+        "ScatterChart",
+        "ScatterSeries",
+        "Point",
         "Form",
         "FormControl",
         "Input",
@@ -640,21 +812,41 @@
         "Select",
         "SelectItem",
         "DatePicker",
-        "CheckBoxGroup",
-        "CheckBoxItem",
-        "RadioGroup",
-        "RadioItem",
+        "Slider",
+        "SwitchGroup",
+        "SwitchItem",
+        "ChipItem",
+        "Chips",
+        "OptionCard",
+        "OptionCards",
         "Button",
         "Buttons",
+        "IconButton",
         "Stack",
         "Tabs",
         "TabItem",
         "Accordion",
         "AccordionItem",
+        "Steps",
+        "StepsItem",
         "Carousel",
         "Separator",
+        "TagBlock",
+        "Tag",
+        "Icon",
+        "EntityList",
         "ListBlock",
         "ListItem",
+        "Text",
+        "BoldText",
+        "IconText",
+        "MetricIndicatorInline",
+        "SnippetCardItem",
+        "SnippetCardBlock",
+        "OverviewCardItem",
+        "OverviewCardBlock",
+        "ContextCardItem",
+        "ContextCardBlock",
         "Svg",
         "G",
         "Circle",
@@ -687,19 +879,25 @@
                     "$ref": "#/$defs/Callout"
                   },
                   {
-                    "$ref": "#/$defs/CodeBlock"
-                  },
-                  {
-                    "$ref": "#/$defs/Image"
-                  },
-                  {
                     "$ref": "#/$defs/ImageGallery"
                   },
                   {
                     "$ref": "#/$defs/Separator"
                   },
                   {
+                    "$ref": "#/$defs/HorizontalBarChart"
+                  },
+                  {
+                    "$ref": "#/$defs/RadarChart"
+                  },
+                  {
                     "$ref": "#/$defs/PieChart"
+                  },
+                  {
+                    "$ref": "#/$defs/ScatterChart"
+                  },
+                  {
+                    "$ref": "#/$defs/AreaChart"
                   },
                   {
                     "$ref": "#/$defs/BarChart"
@@ -711,10 +909,31 @@
                     "$ref": "#/$defs/Table"
                   },
                   {
+                    "$ref": "#/$defs/TagBlock"
+                  },
+                  {
                     "$ref": "#/$defs/Form"
                   },
                   {
                     "$ref": "#/$defs/Buttons"
+                  },
+                  {
+                    "$ref": "#/$defs/IconButton"
+                  },
+                  {
+                    "$ref": "#/$defs/Steps"
+                  },
+                  {
+                    "$ref": "#/$defs/EntityList"
+                  },
+                  {
+                    "$ref": "#/$defs/SnippetCardBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/OverviewCardBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/ContextCardBlock"
                   },
                   {
                     "$ref": "#/$defs/Tabs"
@@ -862,39 +1081,6 @@
           "additionalProperties": false,
           "description": "Callout banner. Optional visible is a reactive $boolean — auto-dismisses after 3s by setting $visible to false."
         },
-        "CodeBlock": {
-          "type": "object",
-          "properties": {
-            "language": {
-              "type": "string"
-            },
-            "codeString": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "language",
-            "codeString"
-          ],
-          "additionalProperties": false,
-          "description": "Syntax-highlighted code block"
-        },
-        "Image": {
-          "type": "object",
-          "properties": {
-            "alt": {
-              "type": "string"
-            },
-            "src": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "alt"
-          ],
-          "additionalProperties": false,
-          "description": "Image with alt text and optional URL"
-        },
         "ImageGallery": {
           "type": "object",
           "properties": {
@@ -943,6 +1129,85 @@
           "additionalProperties": false,
           "description": "Visual divider between content sections"
         },
+        "HorizontalBarChart": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "series": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Series"
+              }
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "grouped",
+                "stacked"
+              ]
+            },
+            "xLabel": {
+              "type": "string"
+            },
+            "yLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "labels",
+            "series"
+          ],
+          "additionalProperties": false,
+          "description": "Horizontal bars; prefer when category labels are long or for ranked lists"
+        },
+        "Series": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "required": [
+            "category",
+            "values"
+          ],
+          "additionalProperties": false,
+          "description": "One data series"
+        },
+        "RadarChart": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "series": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Series"
+              }
+            }
+          },
+          "required": [
+            "labels",
+            "series"
+          ],
+          "additionalProperties": false,
+          "description": "Spider/web chart; use for comparing multiple variables across one or more entities"
+        },
         "PieChart": {
           "type": "object",
           "properties": {
@@ -979,6 +1244,108 @@
           ],
           "additionalProperties": false,
           "description": "Circular slices; use plucked arrays: PieChart(data.categories, data.values)"
+        },
+        "ScatterChart": {
+          "type": "object",
+          "properties": {
+            "datasets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ScatterSeries"
+              }
+            },
+            "xLabel": {
+              "type": "string"
+            },
+            "yLabel": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "datasets"
+          ],
+          "additionalProperties": false,
+          "description": "X/Y scatter plot; use for correlations, distributions, and clustering"
+        },
+        "ScatterSeries": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Point"
+              }
+            }
+          },
+          "required": [
+            "name",
+            "points"
+          ],
+          "additionalProperties": false,
+          "description": "Named dataset"
+        },
+        "Point": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false,
+          "description": "Data point with numeric coordinates"
+        },
+        "AreaChart": {
+          "type": "object",
+          "properties": {
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "series": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Series"
+              }
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "linear",
+                "natural",
+                "step"
+              ]
+            },
+            "xLabel": {
+              "type": "string"
+            },
+            "yLabel": {
+              "type": "string"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "labels",
+            "series"
+          ],
+          "additionalProperties": false,
+          "description": "Filled area under lines; use for cumulative totals or volume trends over time"
         },
         "BarChart": {
           "type": "object",
@@ -1018,26 +1385,6 @@
           ],
           "additionalProperties": false,
           "description": "Vertical bars; use for comparing values across categories with one or more series"
-        },
-        "Series": {
-          "type": "object",
-          "properties": {
-            "category": {
-              "type": "string"
-            },
-            "values": {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          },
-          "required": [
-            "category",
-            "values"
-          ],
-          "additionalProperties": false,
-          "description": "One data series"
         },
         "LineChart": {
           "type": "object",
@@ -1117,6 +1464,30 @@
           ],
           "additionalProperties": false,
           "description": "Column definition — holds label + data array"
+        },
+        "TagBlock": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "sm",
+                "md",
+                "lg"
+              ]
+            }
+          },
+          "required": [
+            "tags"
+          ],
+          "additionalProperties": false,
+          "description": "tags is an array of strings; optional size sm | md | lg"
         },
         "Form": {
           "type": "object",
@@ -1283,10 +1654,13 @@
                   "$ref": "#/$defs/DatePicker"
                 },
                 {
-                  "$ref": "#/$defs/CheckBoxGroup"
+                  "$ref": "#/$defs/Slider"
                 },
                 {
-                  "$ref": "#/$defs/RadioGroup"
+                  "$ref": "#/$defs/Chips"
+                },
+                {
+                  "$ref": "#/$defs/OptionCards"
                 }
               ]
             },
@@ -1552,17 +1926,36 @@
           ],
           "additionalProperties": false
         },
-        "CheckBoxGroup": {
+        "Slider": {
           "type": "object",
           "properties": {
             "name": {
               "type": "string"
             },
-            "items": {
+            "variant": {
+              "type": "string",
+              "enum": [
+                "continuous",
+                "discrete"
+              ]
+            },
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "step": {
+              "type": "number"
+            },
+            "defaultValue": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/CheckBoxItem"
+                "type": "number"
               }
+            },
+            "label": {
+              "type": "string"
             },
             "rules": {
               "type": "object",
@@ -1598,58 +1991,156 @@
               "additionalProperties": false
             },
             "value": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "type": "boolean"
+              "type": "array",
+              "items": {
+                "type": "number"
               }
             }
           },
           "required": [
             "name",
-            "items"
+            "variant",
+            "min",
+            "max"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Numeric slider input; supports continuous and discrete (stepped) variants"
         },
-        "CheckBoxItem": {
+        "Chips": {
           "type": "object",
           "properties": {
-            "label": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
             "name": {
               "type": "string"
             },
-            "defaultChecked": {
+            "type": {
+              "default": "multiple",
+              "type": "string",
+              "enum": [
+                "single",
+                "multiple"
+              ]
+            },
+            "items": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ChipItem"
+              }
+            },
+            "rules": {
+              "type": "object",
+              "properties": {
+                "required": {
+                  "type": "boolean"
+                },
+                "email": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "type": "boolean"
+                },
+                "numeric": {
+                  "type": "boolean"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                },
+                "minLength": {
+                  "type": "number"
+                },
+                "maxLength": {
+                  "type": "number"
+                },
+                "pattern": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "defaultValue": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "type",
+            "items"
+          ],
+          "additionalProperties": false,
+          "description": "A form field of compact selectable chips for choosing one or many short options; the selection is stored under `name`."
+        },
+        "ChipItem": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "icon": {
+              "$ref": "#/$defs/Icon"
+            },
+            "disabled": {
               "type": "boolean"
             }
           },
           "required": [
-            "label",
-            "description",
-            "name"
+            "value",
+            "label"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "A single selectable chip inside a Chips group, with a value, label and optional icon."
         },
-        "RadioGroup": {
+        "Icon": {
           "type": "object",
           "properties": {
             "name": {
               "type": "string"
             },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false,
+          "description": "A lucide icon by kebab-case name (e.g. 'circle-check'). Optional category picks a topical fallback when the name doesn't resolve."
+        },
+        "OptionCards": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "default": "single",
+              "type": "string",
+              "enum": [
+                "single",
+                "multiple"
+              ]
+            },
             "items": {
+              "default": [],
               "type": "array",
               "items": {
-                "$ref": "#/$defs/RadioItem"
+                "$ref": "#/$defs/OptionCard"
               }
-            },
-            "defaultValue": {
-              "type": "string"
             },
             "rules": {
               "type": "object",
@@ -1684,35 +2175,671 @@
               },
               "additionalProperties": false
             },
-            "value": {
-              "type": "string"
+            "defaultValue": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
             }
           },
           "required": [
             "name",
+            "type",
             "items"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "A form field of selectable cards (title, optional subtitle, optional icon or image) laid out in a responsive grid for choosing one or many options; the selection is stored under `name`."
         },
-        "RadioItem": {
+        "OptionCard": {
           "type": "object",
           "properties": {
-            "label": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
             "value": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "topContent": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Icon"
+                }
+              ]
+            },
+            "disabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "value",
+            "title"
+          ],
+          "additionalProperties": false,
+          "description": "A single selectable card inside an OptionCards group, with a value, title, optional subtitle and an optional Icon or Image on top."
+        },
+        "IconButton": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "icon": {
+              "$ref": "#/$defs/Icon"
+            },
+            "action": {
+              "$ref": "#/$defs/ActionExpression"
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "primary",
+                "secondary",
+                "tertiary"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "extra-small",
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            "shape": {
+              "type": "string",
+              "enum": [
+                "square",
+                "circle"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "icon"
+          ],
+          "additionalProperties": false,
+          "description": "Icon-only button. name is the accessible label and the action label; icon is an Icon; action fires on click."
+        },
+        "Steps": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/StepsItem"
+              }
+            }
+          },
+          "required": [
+            "items"
+          ],
+          "additionalProperties": false,
+          "description": "Step-by-step guide"
+        },
+        "StepsItem": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "details": {
               "type": "string"
             }
           },
           "required": [
-            "label",
-            "description",
+            "title",
+            "details"
+          ],
+          "additionalProperties": false,
+          "description": "title and details text for one step"
+        },
+        "EntityList": {
+          "type": "object",
+          "properties": {
+            "rows": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "left": {
+                    "type": "string"
+                  },
+                  "right": {
+                    "type": "string"
+                  },
+                  "rightVariant": {
+                    "default": "text",
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "number"
+                    ]
+                  }
+                },
+                "required": [
+                  "left",
+                  "right",
+                  "rightVariant"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "size": {
+              "default": "default",
+              "type": "string",
+              "enum": [
+                "small",
+                "default"
+              ]
+            },
+            "header": {
+              "type": "object",
+              "properties": {
+                "left": {
+                  "type": "string"
+                },
+                "right": {
+                  "type": "string"
+                },
+                "rightVariant": {
+                  "default": "text",
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "number"
+                  ]
+                }
+              },
+              "required": [
+                "left",
+                "right",
+                "rightVariant"
+              ],
+              "additionalProperties": false
+            },
+            "footer": {
+              "type": "object",
+              "properties": {
+                "left": {
+                  "type": "string"
+                },
+                "right": {
+                  "type": "string"
+                },
+                "rightVariant": {
+                  "default": "text",
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "number"
+                  ]
+                }
+              },
+              "required": [
+                "left",
+                "right",
+                "rightVariant"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "rows",
+            "size"
+          ],
+          "additionalProperties": false,
+          "description": "Two-column key/value rows (left label, right value). size 'default' supports optional header and footer rows; rightVariant 'number' uses tabular numbers."
+        },
+        "SnippetCardBlock": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "minItems": 2,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SnippetCardItem"
+              }
+            },
+            "layout": {
+              "default": "grid",
+              "type": "string",
+              "enum": [
+                "grid"
+              ]
+            },
+            "responsive": {
+              "default": true,
+              "type": "boolean"
+            },
+            "action": {
+              "$ref": "#/$defs/ActionExpression"
+            },
+            "gap": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "layout",
+            "responsive"
+          ],
+          "additionalProperties": false,
+          "description": "A responsive grid of compact label/value cards (2 per row) for showing several short facts side by side; optionally clickable with a shared action."
+        },
+        "SnippetCardItem": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "lhs": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/IconText"
+                }
+              ]
+            },
+            "rhs": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Text"
+                },
+                {
+                  "$ref": "#/$defs/BoldText"
+                }
+              ]
+            }
+          },
+          "required": [
+            "lhs"
+          ],
+          "additionalProperties": false,
+          "description": "One row-style snippet card: a label on the left (IconText or ImageText) and an optional value on the right (Text or BoldText)."
+        },
+        "IconText": {
+          "type": "object",
+          "properties": {
+            "icon": {
+              "$ref": "#/$defs/Icon"
+            },
+            "iconVariant": {
+              "default": "neutral",
+              "type": "string",
+              "enum": [
+                "neutral",
+                "info",
+                "success",
+                "warning",
+                "danger",
+                "inverted",
+                "filled",
+                "soft"
+              ]
+            },
+            "iconSize": {
+              "default": "m",
+              "type": "string",
+              "enum": [
+                "xs",
+                "s",
+                "m",
+                "l",
+                "xl",
+                "sm",
+                "md",
+                "lg"
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            },
+            "bold": {
+              "default": false,
+              "type": "boolean"
+            },
+            "layout": {
+              "default": "horizontal",
+              "type": "string",
+              "enum": [
+                "horizontal",
+                "vertical"
+              ]
+            }
+          },
+          "required": [
+            "icon",
+            "iconVariant",
+            "iconSize",
+            "title",
+            "bold",
+            "layout"
+          ],
+          "additionalProperties": false,
+          "description": "An icon badge with a title and optional subtitle, laid out horizontally or vertically. iconVariant sets the badge color."
+        },
+        "Text": {
+          "type": "object",
+          "properties": {
+            "variant": {
+              "default": "text",
+              "type": "string",
+              "enum": [
+                "text",
+                "number"
+              ]
+            },
+            "value": {
+              "type": "string"
+            },
+            "subtext": {
+              "type": "string"
+            },
+            "subtextVariant": {
+              "default": "text",
+              "type": "string",
+              "enum": [
+                "text",
+                "number",
+                "metric"
+              ]
+            },
+            "size": {
+              "default": "sm",
+              "type": "string",
+              "enum": [
+                "xs",
+                "sm",
+                "md",
+                "lg"
+              ]
+            }
+          },
+          "required": [
+            "variant",
+            "value",
+            "subtextVariant",
+            "size"
+          ],
+          "additionalProperties": false,
+          "description": "Plain text line with optional subtext. variant 'number' uses tabular number styling; subtextVariant 'metric' colors a leading +/- subtext green/red."
+        },
+        "BoldText": {
+          "type": "object",
+          "properties": {
+            "variant": {
+              "default": "text",
+              "type": "string",
+              "enum": [
+                "text",
+                "number"
+              ]
+            },
+            "value": {
+              "type": "string"
+            },
+            "subtext": {
+              "type": "string"
+            },
+            "subtextVariant": {
+              "default": "text",
+              "type": "string",
+              "enum": [
+                "text",
+                "number",
+                "metric"
+              ]
+            },
+            "size": {
+              "default": "sm",
+              "type": "string",
+              "enum": [
+                "xs",
+                "sm",
+                "md",
+                "lg"
+              ]
+            }
+          },
+          "required": [
+            "variant",
+            "value",
+            "subtextVariant",
+            "size"
+          ],
+          "additionalProperties": false,
+          "description": "Emphasized (bold) text line with optional subtext. variant 'number' uses tabular number styling; subtextVariant 'metric' colors a leading +/- subtext green/red."
+        },
+        "OverviewCardBlock": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "minItems": 2,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/OverviewCardItem"
+              }
+            },
+            "layout": {
+              "default": "grid",
+              "type": "string",
+              "enum": [
+                "grid",
+                "carousel"
+              ]
+            },
+            "responsive": {
+              "default": true,
+              "type": "boolean"
+            },
+            "action": {
+              "$ref": "#/$defs/ActionExpression"
+            },
+            "gap": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "layout",
+            "responsive"
+          ],
+          "additionalProperties": false,
+          "description": "A grid or horizontal carousel of compact overview cards, each with a heading (icon/image/text) on top and an inline metric below; optionally clickable with a shared action."
+        },
+        "OverviewCardItem": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "top": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/IconText"
+                },
+                {
+                  "$ref": "#/$defs/Text"
+                }
+              ]
+            },
+            "bottom": {
+              "$ref": "#/$defs/MetricIndicatorInline"
+            }
+          },
+          "required": [
+            "top"
+          ],
+          "additionalProperties": false,
+          "description": "One overview card: a heading slot at the top (IconText, ImageText or Text) and an optional MetricIndicatorInline at the bottom."
+        },
+        "MetricIndicatorInline": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "subtext": {
+              "type": "string"
+            },
+            "trend": {
+              "type": "object",
+              "properties": {
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "up",
+                    "down"
+                  ]
+                },
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "direction",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
             "value"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Headline metric value with an optional +/- percentage trend and subtext, all on one line."
+        },
+        "ContextCardBlock": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "minItems": 2,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ContextCardItem"
+              }
+            },
+            "layout": {
+              "default": "grid",
+              "type": "string",
+              "enum": [
+                "grid",
+                "carousel"
+              ]
+            },
+            "responsive": {
+              "default": true,
+              "type": "boolean"
+            },
+            "action": {
+              "$ref": "#/$defs/ActionExpression"
+            },
+            "gap": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "layout",
+            "responsive"
+          ],
+          "additionalProperties": false,
+          "description": "A grid or carousel of compact tinted context cards (title or tag plus a short bold body); an optional action makes every card clickable."
+        },
+        "ContextCardItem": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/Tag"
+                }
+              ]
+            },
+            "body": {
+              "type": "string"
+            },
+            "bgColor": {
+              "type": "string",
+              "enum": [
+                "gray"
+              ]
+            },
+            "bgImageSrc": {
+              "type": "string"
+            },
+            "bgImageAlt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false,
+          "description": "A single card inside a ContextCardBlock: a title (plain string or Tag), an optional markdown body, and an optional gray tint or background image."
+        },
+        "Tag": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "icon": {
+              "$ref": "#/$defs/Icon"
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "sm",
+                "md",
+                "lg"
+              ]
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "neutral",
+                "info",
+                "success",
+                "warning",
+                "danger"
+              ]
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false,
+          "description": "Styled tag/badge with optional Icon and variant"
         },
         "Tabs": {
           "type": "object",
@@ -1753,19 +2880,25 @@
                     "$ref": "#/$defs/Callout"
                   },
                   {
-                    "$ref": "#/$defs/CodeBlock"
-                  },
-                  {
-                    "$ref": "#/$defs/Image"
-                  },
-                  {
                     "$ref": "#/$defs/ImageGallery"
                   },
                   {
                     "$ref": "#/$defs/Separator"
                   },
                   {
+                    "$ref": "#/$defs/HorizontalBarChart"
+                  },
+                  {
+                    "$ref": "#/$defs/RadarChart"
+                  },
+                  {
                     "$ref": "#/$defs/PieChart"
+                  },
+                  {
+                    "$ref": "#/$defs/ScatterChart"
+                  },
+                  {
+                    "$ref": "#/$defs/AreaChart"
                   },
                   {
                     "$ref": "#/$defs/BarChart"
@@ -1777,10 +2910,31 @@
                     "$ref": "#/$defs/Table"
                   },
                   {
+                    "$ref": "#/$defs/TagBlock"
+                  },
+                  {
                     "$ref": "#/$defs/Form"
                   },
                   {
                     "$ref": "#/$defs/Buttons"
+                  },
+                  {
+                    "$ref": "#/$defs/IconButton"
+                  },
+                  {
+                    "$ref": "#/$defs/Steps"
+                  },
+                  {
+                    "$ref": "#/$defs/EntityList"
+                  },
+                  {
+                    "$ref": "#/$defs/SnippetCardBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/OverviewCardBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/ContextCardBlock"
                   },
                   {
                     "$ref": "#/$defs/Svg"
@@ -1911,19 +3065,25 @@
                       "$ref": "#/$defs/Callout"
                     },
                     {
-                      "$ref": "#/$defs/CodeBlock"
-                    },
-                    {
-                      "$ref": "#/$defs/Image"
-                    },
-                    {
                       "$ref": "#/$defs/ImageGallery"
                     },
                     {
                       "$ref": "#/$defs/Separator"
                     },
                     {
+                      "$ref": "#/$defs/HorizontalBarChart"
+                    },
+                    {
+                      "$ref": "#/$defs/RadarChart"
+                    },
+                    {
                       "$ref": "#/$defs/PieChart"
+                    },
+                    {
+                      "$ref": "#/$defs/ScatterChart"
+                    },
+                    {
+                      "$ref": "#/$defs/AreaChart"
                     },
                     {
                       "$ref": "#/$defs/BarChart"
@@ -1935,10 +3095,31 @@
                       "$ref": "#/$defs/Table"
                     },
                     {
+                      "$ref": "#/$defs/TagBlock"
+                    },
+                    {
                       "$ref": "#/$defs/Form"
                     },
                     {
                       "$ref": "#/$defs/Buttons"
+                    },
+                    {
+                      "$ref": "#/$defs/IconButton"
+                    },
+                    {
+                      "$ref": "#/$defs/Steps"
+                    },
+                    {
+                      "$ref": "#/$defs/EntityList"
+                    },
+                    {
+                      "$ref": "#/$defs/SnippetCardBlock"
+                    },
+                    {
+                      "$ref": "#/$defs/OverviewCardBlock"
+                    },
+                    {
+                      "$ref": "#/$defs/ContextCardBlock"
                     },
                     {
                       "$ref": "#/$defs/MediaCard"
@@ -2018,6 +3199,65 @@
           "additionalProperties": false,
           "description": "Flex container. direction: \"row\"|\"column\" (default \"column\"). gap: \"none\"|\"xs\"|\"s\"|\"m\"|\"l\"|\"xl\"|\"2xl\" (default \"m\"). align: \"start\"|\"center\"|\"end\"|\"stretch\"|\"baseline\". justify: \"start\"|\"center\"|\"end\"|\"between\"|\"around\"|\"evenly\"."
         },
+        "SwitchGroup": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SwitchItem"
+              }
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "clear",
+                "card",
+                "sunk"
+              ]
+            },
+            "value": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "boolean"
+              }
+            }
+          },
+          "required": [
+            "name",
+            "items"
+          ],
+          "additionalProperties": false,
+          "description": "Group of switch toggles"
+        },
+        "SwitchItem": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "defaultChecked": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false,
+          "description": "Individual switch toggle"
+        },
         "Accordion": {
           "type": "object",
           "properties": {
@@ -2057,19 +3297,25 @@
                     "$ref": "#/$defs/Callout"
                   },
                   {
-                    "$ref": "#/$defs/CodeBlock"
-                  },
-                  {
-                    "$ref": "#/$defs/Image"
-                  },
-                  {
                     "$ref": "#/$defs/ImageGallery"
                   },
                   {
                     "$ref": "#/$defs/Separator"
                   },
                   {
+                    "$ref": "#/$defs/HorizontalBarChart"
+                  },
+                  {
+                    "$ref": "#/$defs/RadarChart"
+                  },
+                  {
                     "$ref": "#/$defs/PieChart"
+                  },
+                  {
+                    "$ref": "#/$defs/ScatterChart"
+                  },
+                  {
+                    "$ref": "#/$defs/AreaChart"
                   },
                   {
                     "$ref": "#/$defs/BarChart"
@@ -2081,10 +3327,31 @@
                     "$ref": "#/$defs/Table"
                   },
                   {
+                    "$ref": "#/$defs/TagBlock"
+                  },
+                  {
                     "$ref": "#/$defs/Form"
                   },
                   {
                     "$ref": "#/$defs/Buttons"
+                  },
+                  {
+                    "$ref": "#/$defs/IconButton"
+                  },
+                  {
+                    "$ref": "#/$defs/Steps"
+                  },
+                  {
+                    "$ref": "#/$defs/EntityList"
+                  },
+                  {
+                    "$ref": "#/$defs/SnippetCardBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/OverviewCardBlock"
+                  },
+                  {
+                    "$ref": "#/$defs/ContextCardBlock"
                   },
                   {
                     "$ref": "#/$defs/Svg"
@@ -2521,7 +3788,7 @@
           }
         },
         "Remove": {
-          "description": "Copy without the items whose field equals value; field \"\" compares the items themselves",
+          "description": "Copy without the items whose field equals value; field \"\" compares the items",
           "params": {
             "type": "object",
             "properties": {
@@ -2721,7 +3988,7 @@
           }
         },
         "SliceOf": {
-          "description": "Items, or characters of text, from start up to end (not included); negative counts from the end",
+          "description": "Items or characters from start up to end (not included); negative counts from the end",
           "params": {
             "type": "object",
             "properties": {
@@ -2802,7 +4069,7 @@
           }
         },
         "Range": {
-          "description": "Numbers from start up to end (not included) by step (default 1), e.g. @Range(0, 3) is [0, 1, 2]",
+          "description": "Numbers from start up to end (not included) by step (default 1)",
           "params": {
             "type": "object",
             "properties": {
@@ -2830,7 +4097,7 @@
           }
         },
         "Pick": {
-          "description": "A random item, or null for an empty list; draws anew each time, so call it inside @Set",
+          "description": "A random item, or null for an empty list",
           "params": {
             "type": "object",
             "properties": {
@@ -2847,7 +4114,7 @@
           "returns": {}
         },
         "Shuffle": {
-          "description": "Copy in random order; call it inside @Set",
+          "description": "Copy in random order",
           "params": {
             "type": "object",
             "properties": {
@@ -2867,7 +4134,7 @@
           }
         },
         "Flatten": {
-          "description": "One list from a list of lists, e.g. [[1, 2], [3]] is [1, 2, 3]",
+          "description": "One list from a list of lists",
           "params": {
             "type": "object",
             "properties": {
@@ -2887,7 +4154,7 @@
           }
         },
         "Chunk": {
-          "description": "The list cut into lists of size items, e.g. for weeks of 7 days or pages",
+          "description": "The list cut into lists of size items, e.g. weeks of 7 days",
           "params": {
             "type": "object",
             "properties": {
@@ -2954,7 +4221,7 @@
           }
         },
         "Random": {
-          "description": "Random number from min to max (integer true: a whole number, max included); draws anew each time, so call it inside @Set",
+          "description": "Random number from min to max; integer true gives a whole number, max included",
           "params": {
             "type": "object",
             "properties": {
@@ -3005,7 +4272,7 @@
           }
         },
         "Percent": {
-          "description": "part / total * 100, e.g. @Percent(3, 4) is 75; 0 when total is 0",
+          "description": "part / total * 100; 0 when total is 0",
           "params": {
             "type": "object",
             "properties": {
@@ -3053,7 +4320,7 @@
           }
         },
         "Allocate": {
-          "description": "Splits total in proportion to weights, rounded to decimals (default 2), so the parts add up to exactly total, e.g. @Allocate(100, [1, 1, 1]) is [33.34, 33.33, 33.33]",
+          "description": "Splits total by weights, rounded to decimals (default 2), parts adding up to exactly total",
           "params": {
             "type": "object",
             "properties": {
@@ -3084,7 +4351,7 @@
           }
         },
         "Payment": {
-          "description": "Payment per period that repays principal over periods at rate percent per period, e.g. a 30-year loan at 6% a year: @Payment(300000, 6 / 12, 360)",
+          "description": "Payment per period repaying principal at rate percent per period, e.g. @Payment(300000, 6 / 12, 360)",
           "params": {
             "type": "object",
             "properties": {
@@ -3136,7 +4403,7 @@
           }
         },
         "Format": {
-          "description": "Number as text: \"number\" 12,345.6, \"currency\" $12,345.68 (currency is a code like \"EUR\"), \"percent\" 45 -> 45%, \"compact\" 1.2M ($1.2M with a currency)",
+          "description": "Number as text: \"number\" 12,345.6, \"currency\" $12,345.68 (currency code like \"EUR\"), \"percent\" 45 -> 45%, \"compact\" 1.2M",
           "params": {
             "type": "object",
             "properties": {
@@ -3169,7 +4436,7 @@
           }
         },
         "Join": {
-          "description": "Joins the items (or their field) into text with sep (default \", \"), skipping nulls",
+          "description": "Joins the items (or their field) with sep (default \", \")",
           "params": {
             "type": "object",
             "properties": {
@@ -3194,7 +4461,7 @@
           }
         },
         "Plural": {
-          "description": "Count and word: @Plural(1, \"guest\") is \"1 guest\", 3 gives \"3 guests\"; plural defaults to word + \"s\"",
+          "description": "Count and word: 1 \"guest\", 3 \"guests\"; plural defaults to word + \"s\"",
           "params": {
             "type": "object",
             "properties": {
@@ -3301,7 +4568,7 @@
           }
         },
         "Capitalize": {
-          "description": "Each word with a capital first letter, e.g. \"new york\" is \"New York\"",
+          "description": "Each word with a capital first letter",
           "params": {
             "type": "object",
             "properties": {
@@ -3319,7 +4586,7 @@
           }
         },
         "Split": {
-          "description": "List of the parts of text between sep (default \",\"), each trimmed, empty parts dropped, e.g. @Split(\"a, b,,c\") is [\"a\", \"b\", \"c\"]",
+          "description": "Trimmed, non-empty parts of text between sep (default \",\")",
           "params": {
             "type": "object",
             "properties": {
@@ -3369,7 +4636,7 @@
           }
         },
         "Duration": {
-          "description": "Seconds as text: \"short\" 1h 20m, 4m 05s, 45s (default); \"clock\" 1:20:00, 4:05",
+          "description": "Seconds as text: \"short\" 1h 20m (default), \"clock\" 1:20:00",
           "params": {
             "type": "object",
             "properties": {
@@ -3394,7 +4661,7 @@
           }
         },
         "Default": {
-          "description": "value, or fallback when value is null, \"\" or not a number, e.g. an empty number input: @Default($weight, 0)",
+          "description": "value, or fallback when value is null, \"\" or not a number",
           "params": {
             "type": "object",
             "properties": {
@@ -3431,7 +4698,7 @@
           }
         },
         "FormatDate": {
-          "description": "A date as text: \"date\" Oct 9, 2026 (default), \"short\" Oct 9, \"long\" Friday, October 9, 2026, \"weekday\" Fri, \"month\" Oct 2026, \"time\" 9:30 PM, \"datetime\", \"iso\" 2026-10-09. Dates are \"YYYY-MM-DD\", ISO or a timestamp",
+          "description": "A date as text: \"date\" Oct 9, 2026 (default), \"short\" Oct 9, \"long\", \"weekday\" Fri, \"month\" Oct 2026, \"time\" 9:30 PM, \"datetime\", \"iso\"",
           "params": {
             "type": "object",
             "properties": {
@@ -3490,7 +4757,7 @@
           }
         },
         "AddMonths": {
-          "description": "The date months later (negative: earlier), kept within the month (Jan 31 + 1 is Feb 28), as \"YYYY-MM-DD\"; 12 months is a year",
+          "description": "The date months later (negative: earlier), kept within the month, as \"YYYY-MM-DD\"",
           "params": {
             "type": "object",
             "properties": {
@@ -3515,7 +4782,7 @@
           }
         },
         "DaysBetween": {
-          "description": "Calendar days from one date to another (negative if to is earlier)",
+          "description": "Calendar days from one date to another",
           "params": {
             "type": "object",
             "properties": {
@@ -3543,7 +4810,7 @@
           }
         },
         "MonthsBetween": {
-          "description": "Whole months from one date to another (negative if to is earlier); @Floor(@MonthsBetween(birthday, @Today()) / 12) is an age",
+          "description": "Whole months from one date to another (negative if to is earlier)",
           "params": {
             "type": "object",
             "properties": {
@@ -3605,19 +4872,21 @@
   },
   "promptOptions": {
     "examples": [
-      "Example 1 — Table (column-oriented):\n\nroot = Stack([title, tbl])\ntitle = TextContent(\"Top Languages\", \"large-heavy\")\ntbl = Table([Col(\"Language\", langs), Col(\"Users (M)\", users), Col(\"Year\", years)])\nlangs = [\"Python\", \"JavaScript\", \"Java\", \"TypeScript\", \"Go\"]\nusers = [15.7, 14.2, 12.1, 8.5, 5.2]\nyears = [1991, 1995, 1995, 2012, 2009]",
-      "Example 2 — Bar chart:\n\nroot = Stack([title, chart])\ntitle = TextContent(\"Q4 Revenue\", \"large-heavy\")\nchart = BarChart(labels, [s1, s2], \"grouped\")\nlabels = [\"Oct\", \"Nov\", \"Dec\"]\ns1 = Series(\"Product A\", [120, 150, 180])\ns2 = Series(\"Product B\", [90, 110, 140])",
-      "Example 3 — A working tool with state and @functions:\n\nroot = Stack([title, controls, tbl, total, ask])\n$people = 2\n$nights = \"3\"\ntitle = TextContent(\"Lisbon weekend for \" + @Plural($people, \"person\", \"people\"), \"large-heavy\")\ncontrols = Stack([Buttons([Button(\"−\", @Set($people, @Clamp($people - 1, 1, 8)), \"secondary\"), Button(\"+\", @Set($people, @Clamp($people + 1, 1, 8)), \"secondary\")]), Input(\"nights\", \"Nights\", \"number\", null, $nights)], \"row\", \"m\", \"center\")\nnights = @Clamp(@Default($nights * 1, 1), 1, 14)\nrows = @Each(items, \"i\", {name: i.name, cost: i.perNight * nights * (i.shared ? 1 : $people)})\ntbl = Table([Col(\"Item\", rows.name), Col(\"Cost\", @Each(rows, \"r\", @Format(r.cost, \"currency\", 0, \"EUR\")))])\ntotal = Callout(\"info\", @Format(@Sum(rows.cost), \"currency\", 0, \"EUR\") + \" in total\", @Format(@Sum(rows.cost) / $people, \"currency\", 0, \"EUR\") + \" each for \" + @Plural(nights, \"night\"))\nask = Buttons([Button(\"Plan the days\", @ToAssistant(\"Plan my days in Lisbon\", {people: $people, nights: nights}))])\nitems = [{name: \"Hotel\", perNight: 140, shared: true}, {name: \"Food\", perNight: 45, shared: false}, {name: \"Transport\", perNight: 12, shared: false}]"
+      "Example — A working tool with state and @functions:\n\nroot = Stack([title, controls, tbl, total, ask])\n$people = 2\n$nights = \"3\"\ntitle = TextContent(\"Lisbon weekend for \" + @Plural($people, \"person\", \"people\"), \"large-heavy\")\ncontrols = Stack([Buttons([Button(\"−\", @Set($people, @Clamp($people - 1, 1, 8)), \"secondary\"), Button(\"+\", @Set($people, @Clamp($people + 1, 1, 8)), \"secondary\")]), Input(\"nights\", \"Nights\", \"number\", null, $nights)], \"row\", \"m\", \"center\")\nnights = @Clamp(@Default($nights * 1, 1), 1, 14)\nrows = @Each(items, \"i\", {name: i.name, cost: i.perNight * nights * (i.shared ? 1 : $people)})\ntbl = Table([Col(\"Item\", rows.name), Col(\"Cost\", @Each(rows, \"r\", @Format(r.cost, \"currency\", 0, \"EUR\")))])\ntotal = Callout(\"info\", @Format(@Sum(rows.cost), \"currency\", 0, \"EUR\") + \" in total\", @Format(@Sum(rows.cost) / $people, \"currency\", 0, \"EUR\") + \" each for \" + @Plural(nights, \"night\"))\nask = Buttons([Button(\"Plan the days\", @ToAssistant(\"Plan my days in Lisbon\", {people: $people, nights: nights}))])\nitems = [{name: \"Hotel\", perNight: 140, shared: true}, {name: \"Food\", perNight: 45, shared: false}, {name: \"Transport\", perNight: 12, shared: false}]"
     ],
     "additionalRules": [
       "For grid-like layouts, use Stack with direction \"row\" and wrap=true; avoid large gutters.",
-      "Use Tabs or Accordion for alternative views or collapsible details.",
-      "For forms, define one FormControl reference per field and always provide Buttons as the second Form argument. Never nest Form inside Form.",
+      "Never use openui-lang for what markdown already shows well: plain text, lists, code, quotes or a static table. Write those as markdown outside the fence.",
+      "Pick the layout from the content instead of defaulting to Tabs: OverviewCardBlock for headline metrics, SnippetCardBlock or EntityList for short facts, ContextCardBlock for tinted notes, Steps for a sequence, a row Stack of Cards to compare side by side, Accordion for optional details. Use Tabs only for two to four genuinely alternative views of the same subject.",
+      "Prefer the input that fits the value: Slider for a number in a range, SwitchGroup for on/off settings, Chips for short options, OptionCards for a few rich choices.",
+      "Card blocks need at least 2 items, all with the same structure. Text, BoldText, IconText and MetricIndicatorInline go only inside card items.",
+      "Always pass a category to Icon — it enables a topical fallback when the exact icon name is unavailable.",
+      "Define one FormControl reference per field. Never nest Form inside Form.",
       "When the request involves numbers, choices, lists or steps, make the page a working tool: keep inputs in $variables, compute everything shown from them with expressions and @functions, and change them with @Set, so it works without another message. Every input either changes something shown or sits in a submitted Form.",
       "Use @ToAssistant only for what the page cannot compute: submitting a Form or a new request. Its message is short and first person, as if the user typed it (\"Plan my days\"); form values are sent with it, so never repeat them.",
       "Input, TextArea and Select values are text: convert with $x * 1 before number @functions, and guard counts with @Clamp(@Default($x * 1, 1), 1, 50) so empty or 0 cannot break the page.",
       "$variable defaults are literals, never expressions or @calls. @Random, @Pick and @Shuffle draw anew on every evaluation, so call them inside @Set.",
-      "cond ? a : b also picks between components; there is no @If, and only the listed @functions exist.",
+      "cond ? a : b also picks between components; there is no @If.",
       "Derive rows once in a statement with @Each(list, \"x\", {...}), then reuse them in Table, charts, @Sum(rows.field) and @Join.",
       "Format money and percentages with @Format, counts with @Plural and dates with @FormatDate. Relative dates start from @Today(); compare dates with @DaysBetween, since < and > compare numbers only.",
       "Image URLs must come from the user or tool results; never invent them. When the image_search tool is available, call it for a place, dish, product or other thing with a look, naming the exact subject in English (\"Belém Tower Lisbon\", not \"old tower by the sea\"), and show a result whose title matches.",

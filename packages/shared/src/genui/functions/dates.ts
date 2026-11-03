@@ -53,7 +53,7 @@ export const Now = defineFunction({
 export const FormatDate = defineFunction({
   name: 'FormatDate',
   description:
-    'A date as text: "date" Oct 9, 2026 (default), "short" Oct 9, "long" Friday, October 9, 2026, "weekday" Fri, "month" Oct 2026, "time" 9:30 PM, "datetime", "iso" 2026-10-09. Dates are "YYYY-MM-DD", ISO or a timestamp',
+    'A date as text: "date" Oct 9, 2026 (default), "short" Oct 9, "long", "weekday" Fri, "month" Oct 2026, "time" 9:30 PM, "datetime", "iso"',
   params: z.object({
     date: date(),
     style: z.enum(['date', 'short', 'long', 'weekday', 'month', 'time', 'datetime', 'iso']).optional(),
@@ -78,7 +78,7 @@ export const AddDays = defineFunction({
 
 export const DaysBetween = defineFunction({
   name: 'DaysBetween',
-  description: 'Calendar days from one date to another (negative if to is earlier)',
+  description: 'Calendar days from one date to another',
   params: z.object({ from: date(), to: date() }),
   returns: z.number(),
   fn: ({ from, to }) => parseDate(to).day - parseDate(from).day,
@@ -101,7 +101,7 @@ function ymd(day: number): [number, number, number] {
 export const AddMonths = defineFunction({
   name: 'AddMonths',
   description:
-    'The date months later (negative: earlier), kept within the month (Jan 31 + 1 is Feb 28), as "YYYY-MM-DD"; 12 months is a year',
+    'The date months later (negative: earlier), kept within the month, as "YYYY-MM-DD"',
   params: z.object({ date: date(), months: z.number() }),
   returns: z.string(),
   fn: ({ date, months }) => {
@@ -115,7 +115,7 @@ export const AddMonths = defineFunction({
 export const MonthsBetween = defineFunction({
   name: 'MonthsBetween',
   description:
-    'Whole months from one date to another (negative if to is earlier); @Floor(@MonthsBetween(birthday, @Today()) / 12) is an age',
+    'Whole months from one date to another (negative if to is earlier)',
   params: z.object({ from: date(), to: date() }),
   returns: z.number(),
   fn: ({ from, to }) => {

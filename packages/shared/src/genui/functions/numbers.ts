@@ -20,7 +20,7 @@ export const Sqrt = defineFunction({
 
 export const Random = defineFunction({
   name: 'Random',
-  description: 'Random number from min to max (integer true: a whole number, max included); draws anew each time, so call it inside @Set',
+  description: 'Random number from min to max; integer true gives a whole number, max included',
   params: z.object({ min: z.number(), max: z.number(), integer: z.boolean().optional() }),
   returns: z.number(),
   fn: ({ min, max, integer }) => {
@@ -44,7 +44,7 @@ export const Clamp = defineFunction({
 
 export const Percent = defineFunction({
   name: 'Percent',
-  description: 'part / total * 100, e.g. @Percent(3, 4) is 75; 0 when total is 0',
+  description: 'part / total * 100; 0 when total is 0',
   params: z.object({ part: z.number(), total: z.number() }),
   returns: z.number(),
   fn: ({ part, total }) => (total === 0 ? 0 : finite((part / total) * 100)),
@@ -61,7 +61,7 @@ export const Lerp = defineFunction({
 export const Allocate = defineFunction({
   name: 'Allocate',
   description:
-    'Splits total in proportion to weights, rounded to decimals (default 2), so the parts add up to exactly total, e.g. @Allocate(100, [1, 1, 1]) is [33.34, 33.33, 33.33]',
+    'Splits total by weights, rounded to decimals (default 2), parts adding up to exactly total',
   params: z.object({ total: z.number(), weights: numbers(), decimals: z.number().optional() }),
   returns: z.array(z.number()),
   fn: ({ total, weights, decimals }) => {
@@ -88,7 +88,7 @@ export const Allocate = defineFunction({
 export const Payment = defineFunction({
   name: 'Payment',
   description:
-    'Payment per period that repays principal over periods at rate percent per period, e.g. a 30-year loan at 6% a year: @Payment(300000, 6 / 12, 360)',
+    'Payment per period repaying principal at rate percent per period, e.g. @Payment(300000, 6 / 12, 360)',
   params: z.object({ principal: z.number(), rate: z.number(), periods: z.number() }),
   returns: z.number(),
   fn: ({ principal, rate, periods }) => {

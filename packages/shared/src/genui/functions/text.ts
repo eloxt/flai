@@ -21,7 +21,7 @@ function format(value: number, options: Intl.NumberFormatOptions): string {
 export const Format = defineFunction({
   name: 'Format',
   description:
-    'Number as text: "number" 12,345.6, "currency" $12,345.68 (currency is a code like "EUR"), "percent" 45 -> 45%, "compact" 1.2M ($1.2M with a currency)',
+    'Number as text: "number" 12,345.6, "currency" $12,345.68 (currency code like "EUR"), "percent" 45 -> 45%, "compact" 1.2M',
   params: z.object({
     value: z.number(),
     kind: z.enum(['number', 'currency', 'percent', 'compact']).optional(),
@@ -56,7 +56,7 @@ export const Format = defineFunction({
 
 export const Join = defineFunction({
   name: 'Join',
-  description: 'Joins the items (or their field) into text with sep (default ", "), skipping nulls',
+  description: 'Joins the items (or their field) with sep (default ", ")',
   params: z.object({ list: list(), sep: z.string().optional(), field: z.string().optional() }),
   returns: z.string(),
   fn: ({ list, sep = ', ', field = '' }) =>
@@ -69,7 +69,7 @@ export const Join = defineFunction({
 
 export const Plural = defineFunction({
   name: 'Plural',
-  description: 'Count and word: @Plural(1, "guest") is "1 guest", 3 gives "3 guests"; plural defaults to word + "s"',
+  description: 'Count and word: 1 "guest", 3 "guests"; plural defaults to word + "s"',
   params: z.object({ n: z.number(), word: z.string(), plural: z.string().optional() }),
   returns: z.string(),
   fn: ({ n, word, plural }) => `${format(n, { maximumFractionDigits: 2 })} ${Math.abs(n) === 1 ? word : (plural ?? `${word}s`)}`,
@@ -109,7 +109,7 @@ export const Trim = defineFunction({
 
 export const Capitalize = defineFunction({
   name: 'Capitalize',
-  description: 'Each word with a capital first letter, e.g. "new york" is "New York"',
+  description: 'Each word with a capital first letter',
   params: z.object({ text: z.string() }),
   returns: z.string(),
   fn: ({ text }) => text.replace(/(^|[\s\-(/"])(\p{L})/gu, (_, before: string, letter: string) => before + letter.toUpperCase()),
@@ -118,7 +118,7 @@ export const Capitalize = defineFunction({
 export const Split = defineFunction({
   name: 'Split',
   description:
-    'List of the parts of text between sep (default ","), each trimmed, empty parts dropped, e.g. @Split("a, b,,c") is ["a", "b", "c"]',
+    'Trimmed, non-empty parts of text between sep (default ",")',
   params: z.object({ text: z.string(), sep: z.string().optional() }),
   returns: z.array(z.string()),
   fn: ({ text, sep = ',' }) => {
@@ -141,7 +141,7 @@ export const Replace = defineFunction({
 
 export const Duration = defineFunction({
   name: 'Duration',
-  description: 'Seconds as text: "short" 1h 20m, 4m 05s, 45s (default); "clock" 1:20:00, 4:05',
+  description: 'Seconds as text: "short" 1h 20m (default), "clock" 1:20:00',
   params: z.object({ seconds: z.number(), style: z.enum(['short', 'clock']).optional() }),
   returns: z.string(),
   fn: ({ seconds, style = 'short' }) => {
@@ -159,7 +159,7 @@ export const Duration = defineFunction({
 
 export const Default = defineFunction({
   name: 'Default',
-  description: 'value, or fallback when value is null, "" or not a number, e.g. an empty number input: @Default($weight, 0)',
+  description: 'value, or fallback when value is null, "" or not a number',
   params: z.object({ value: z.any().optional(), fallback: z.any() }),
   returns: z.any(),
   fn: ({ value, fallback }) => (value == null || value === '' || (typeof value === 'number' && Number.isNaN(value)) ? fallback : value),

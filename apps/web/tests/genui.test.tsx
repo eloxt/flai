@@ -1,7 +1,7 @@
 import { buildGenuiPrompt } from "@flai/shared/genui"
 import { genuiFunctions } from "@flai/shared/genui/functions"
 import spec from "../../../packages/shared/src/genui/openui.spec.json"
-import { openuiLibrary, openuiPromptOptions } from "@openuidev/react-ui"
+import { openuiLibrary } from "@openuidev/react-ui"
 import { createParser } from "@openuidev/react-lang"
 import {
   cleanup,
@@ -19,9 +19,9 @@ import {
   it,
   vi,
 } from "vitest"
-import { genuiExtension } from "~/components/genui/extensions"
 import { GenuiBlock } from "~/components/genui/genui-block"
 import { workingToolExample } from "~/components/genui/prompt-examples"
+import { buildGenuiSpec, curatedLibrary } from "~/components/genui/prompt-spec"
 import { ThemeProvider } from "~/components/theme-provider"
 
 beforeAll(() => {
@@ -51,17 +51,15 @@ afterEach(() => {
 
 describe("official OpenUI library", () => {
   it("advertises a compact subset with official signatures and keeps the full renderer available", () => {
-    const names = Object.keys(spec.library.components)
-    const extended = openuiLibrary.extend(genuiExtension)
-    const curated = extended.extend({
-      components: { remove: Object.keys(extended.components).filter((name) => !names.includes(name)) },
-    })
-    expect(names).toHaveLength(47)
-    expect(Object.keys(spec.library.functions)).toEqual(genuiFunctions.map((fn) => fn.name))
-    expect(spec.library).toEqual({ ...curated.toSpec(), componentGroups: spec.library.componentGroups })
-    expect(spec.promptOptions.examples.slice(0, 2)).toEqual(openuiPromptOptions.examples?.slice(0, 2))
-    expect(spec.promptOptions.examples[2]).toContain(workingToolExample)
-    const parser = createParser(curated.toJSONSchema(), curated.root)
+    // The committed JSON must match what the generator builds today.
+    expect(spec).toEqual(JSON.parse(JSON.stringify(buildGenuiSpec())))
+    expect(Object.keys(spec.library.components)).toHaveLength(71)
+    const listed = Object.keys(spec.library.functions)
+    expect(listed.length).toBeLessThan(genuiFunctions.length)
+    expect(listed.every((name) => genuiFunctions.some((fn) => fn.name === name))).toBe(true)
+    expect(spec.promptOptions.examples).toHaveLength(1)
+    expect(spec.promptOptions.examples[0]).toContain(workingToolExample)
+    const parser = createParser(curatedLibrary.toJSONSchema(), curatedLibrary.root)
     for (const example of spec.promptOptions.examples) {
       const parsed = parser.parse(example.slice(example.indexOf("root = ")))
       expect(parsed.root).not.toBeNull()
@@ -82,10 +80,13 @@ describe("official OpenUI library", () => {
       "Your ENTIRE response must be valid openui-lang"
     )
     expect(prompt).not.toContain("generate realistic/plausible data")
-    for (const name of ["VisualCardBlock", "CompositeCardBlock", "EditableTable", "RadarChart", "Modal"]) {
+    for (const name of ["VisualCardBlock", "CompositeCardBlock", "EditableTable", "CodeBlock", "ImageBlock", "Modal("]) {
       expect(prompt).not.toContain(name)
     }
-    expect(prompt.length).toBeLessThan(28_000)
+    // Shared child unions and form rules are named once instead of repeated.
+    expect(prompt).toContain("- Block = TextContent | ")
+    expect(prompt.match(/required\?: boolean/g)).toHaveLength(1)
+    expect(prompt.length).toBeLessThan(33_000)
   })
 
   it("renders official card and column-oriented table signatures", () => {

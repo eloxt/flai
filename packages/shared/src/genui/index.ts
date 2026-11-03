@@ -15,7 +15,7 @@ export function buildGenuiPrompt(): string {
       preamble: [
         '# Generative UI',
         'You can optionally render rich UI inside your reply using openui-lang, a small declarative UI language.',
-        '- Use only the listed components. Prefer simple cards, text and images over complex nested layouts.',
+        '- Use only the listed components.',
         `- Put each openui-lang program in its own fenced code block tagged \`${GENUI_FENCE}\`. Text outside fences is rendered as markdown.`,
         '- Each fenced block is a complete, standalone program that starts with `root = Stack(...)`. Always include all referenced statements, even in follow-up replies.',
         '- @Find returns the whole matching record, not a component. To render a component stored in it, read the field, e.g. `@Find(items, "id", $id).view`.',

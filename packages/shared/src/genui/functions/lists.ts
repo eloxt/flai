@@ -33,7 +33,7 @@ export const Concat = defineFunction({
 
 export const Remove = defineFunction({
   name: 'Remove',
-  description: 'Copy without the items whose field equals value; field "" compares the items themselves',
+  description: 'Copy without the items whose field equals value; field "" compares the items',
   params: z.object({ list: list(), field: z.string(), value: z.any() }),
   returns: list(),
   fn: ({ list, field, value }) => list.filter((item) => !same(read(item, field), value)),
@@ -106,7 +106,7 @@ export const Take = defineFunction({
 
 export const SliceOf = defineFunction({
   name: 'SliceOf',
-  description: 'Items, or characters of text, from start up to end (not included); negative counts from the end',
+  description: 'Items or characters from start up to end (not included); negative counts from the end',
   params: z.object({ list: z.union([list(), z.string()]), start: z.number(), end: z.number().optional() }),
   returns: z.union([list(), z.string()]),
   fn: ({ list, start, end }) => {
@@ -141,7 +141,7 @@ export const Reverse = defineFunction({
 
 export const Range = defineFunction({
   name: 'Range',
-  description: 'Numbers from start up to end (not included) by step (default 1), e.g. @Range(0, 3) is [0, 1, 2]',
+  description: 'Numbers from start up to end (not included) by step (default 1)',
   params: z.object({ start: z.number(), end: z.number(), step: z.number().optional() }),
   returns: z.array(z.number()),
   fn: ({ start, end, step = 1 }) => {
@@ -156,7 +156,7 @@ export const Range = defineFunction({
 
 export const Pick = defineFunction({
   name: 'Pick',
-  description: 'A random item, or null for an empty list; draws anew each time, so call it inside @Set',
+  description: 'A random item, or null for an empty list',
   params: z.object({ list: list() }),
   returns: z.any(),
   fn: ({ list }) => (list.length ? list[Math.floor(Math.random() * list.length)] : null),
@@ -164,7 +164,7 @@ export const Pick = defineFunction({
 
 export const Shuffle = defineFunction({
   name: 'Shuffle',
-  description: 'Copy in random order; call it inside @Set',
+  description: 'Copy in random order',
   params: z.object({ list: list() }),
   returns: list(),
   fn: ({ list }) => {
@@ -179,7 +179,7 @@ export const Shuffle = defineFunction({
 
 export const Flatten = defineFunction({
   name: 'Flatten',
-  description: 'One list from a list of lists, e.g. [[1, 2], [3]] is [1, 2, 3]',
+  description: 'One list from a list of lists',
   params: z.object({ list: list() }),
   returns: list(),
   fn: ({ list }) => {
@@ -191,7 +191,7 @@ export const Flatten = defineFunction({
 
 export const Chunk = defineFunction({
   name: 'Chunk',
-  description: 'The list cut into lists of size items, e.g. for weeks of 7 days or pages',
+  description: 'The list cut into lists of size items, e.g. weeks of 7 days',
   params: z.object({ list: list(), size: z.number() }),
   returns: z.array(list()),
   fn: ({ list, size }) => {
