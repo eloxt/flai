@@ -60,8 +60,8 @@ export const conversations = pgTable(
     /** A few sentences on what the chat covers, kept up to date by the background memory job. */
     summary: text('summary'),
     summaryTsv: tsvector('summary_tsv').generatedAlwaysAs(sql`to_tsvector('zhcfg', coalesce(summary, ''))`),
-    /** Other chats related to this one's first message, picked once when it was sent. */
-    relatedChatIds: text('related_chat_ids').array(),
+    /** Summaries of other chats related to this one's first message, picked and kept when it was sent. */
+    relatedChats: jsonb('related_chats').$type<{ id: string; title: string; date: string; summary: string }[]>(),
     /** Messages created up to this time have been summarized and mined for memories. */
     extractedAt: timestamp('extracted_at', { withTimezone: true }),
     /** Set while an instance processes the chat in the background, so others skip it. */

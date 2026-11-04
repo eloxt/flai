@@ -10,11 +10,11 @@ import type { MessageRow } from '../services/conversations'
 import { touchConversation } from '../services/conversations'
 import type { ProviderRow } from '../services/providers'
 import { chatContext, chatInstructions, getChatAgent } from './agent'
-import { createChatHistoryTools, loadPastChats } from './chat-history'
+import { createChatHistoryTools, loadRelatedChats, relatedChatsPrompt } from './chat-history'
 import { nudgeEmbeddingIndexer } from './embedding-index'
 import { alertLlmError } from './error-alert'
 import { toModelMessages } from './history'
-import { loadMemories, queryEmbedding, withContext } from './memory-retrieval'
+import { loadMemories, queryEmbedding, withContext, withPrelude } from './memory-retrieval'
 import { buildMcpToolset } from './mcp'
 import { buildModel, chatTools } from './models'
 import { exaResponseSchema } from './exa'
@@ -196,9 +196,9 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
     const query = textOf(input.path.findLast((m) => m.role === 'user')?.parts ?? [])
     const embedQuery = queryEmbedding(query)
     const firstTurn = input.path.filter((m) => m.role === 'user').length === 1
-    const [selection, pastChats] = await Promise.all([
+    const [selection, relatedChats] = await Promise.all([
       memoryMode === 'off' ? undefined : loadMemories(userId, embedQuery),
-      preferences.chatHistory ? loadPastChats(userId, input.conversationId, { firstTurn, query, embedQuery }) : undefined,
+      preferences.chatHistory ? loadRelatedChats(userId, input.conversationId, { firstTurn, query, embedQuery }) : [],
     ])
     const shown = selection ? [...selection.core, ...selection.relevant] : []
     const label = memoryLabels(shown)
@@ -207,11 +207,12 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       ...(memoryWrite && createMemoryTools(scope)),
     }
     const instructions = chatInstructions(model, {
-      chatHistory, memoryWrite, pastChats,
+      chatHistory, memoryWrite,
       memories: selection && { rows: selection.core, partial: selection.partial, label },
     })
     const requestedAt = performance.now()
-    const stream = await getChatAgent().stream(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)) as never, {
+    const context = withPrelude(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)), relatedChatsPrompt(relatedChats))
+    const stream = await getChatAgent().stream(context as never, {
       requestContext: chatContext({ model: resolved.model, instructions }),
       providerOptions: resolved.providerOptions as never,
       toolsets: { builtin: chatTools({ provider, model, options }), memory, mcp: model.toolCall ? mcp.tools : {} },

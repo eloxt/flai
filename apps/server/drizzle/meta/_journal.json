@@ -71,6 +71,20 @@
       "when": 1793180930744,
       "tag": "0009_related_chats",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793706812433,
+      "tag": "0010_related_chat_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793706813008,
+      "tag": "0011_drop_related_chat_ids",
+      "breakpoints": true
     }
   ]
 }

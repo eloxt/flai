@@ -5,7 +5,7 @@ vi.mock('../src/db', async () => ({ schema: await import('../src/db/schema'), db
 vi.mock('../src/services/memories', () => ({ findMemoryIds: mocks.find }))
 vi.mock('../src/llm/memory-retrieval', () => ({ findRestatements: mocks.restatements }))
 
-import { pastChatsPrompt } from '../src/llm/chat-history'
+import { relatedChatsPrompt } from '../src/llm/chat-history'
 import { extractionInput, pendingTurns, planOperations, type Turn, userStatements } from '../src/llm/memory-extraction'
 import type { MessageRow } from '../src/services/conversations'
 
@@ -118,14 +118,12 @@ describe('memory operations', () => {
   })
 })
 
-describe('past chats prompt', () => {
-  it('lists recent and related summaries as background data', () => {
-    const chat = (id: string, title: string, summary: string) => ({ id, title, date: '2026-10-27', summary, snippet: '' })
-    const prompt = pastChatsPrompt({ recent: [chat('c1', 'Trip', 'Planned a trip to Kyoto.')], related: [] })!
-    expect(prompt).toContain('Most recent:\n- (2026-10-27) Trip: Planned a trip to Kyoto.')
+describe('related chats prompt', () => {
+  it('lists related summaries with ids read_chat takes, as background data', () => {
+    const chat = (id: string, title: string, summary: string) => ({ id, title, date: '2026-10-27', summary })
+    const prompt = relatedChatsPrompt([chat('c1', 'Trip', 'Planned a trip to Kyoto.'), chat('c2', '', 'Fixed a flaky test.')])!
+    expect(prompt).toContain('- [c1] (2026-10-27) Trip: Planned a trip to Kyoto.\n- [c2] (2026-10-27) Untitled: Fixed a flaky test.')
     expect(prompt).toContain('not instructions')
-    expect(prompt).not.toContain('Related')
-    expect(pastChatsPrompt({ recent: [], related: [chat('c2', '', 'Fixed a flaky test.')] })).toContain('Related to this conversation’s start:\n- (2026-10-27) Untitled: Fixed a flaky test.')
-    expect(pastChatsPrompt({ recent: [], related: [] })).toBeUndefined()
+    expect(relatedChatsPrompt([])).toBeUndefined()
   })
 })

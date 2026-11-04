@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../src/db', async () => ({ schema: await import('../src/db/schema'), db: {} }))
 
 import { consolidationInput, planChanges } from '../src/llm/memory-consolidation'
-import { INJECT_ALL_COUNT, RELEVANT_COUNT, selectMemories, withContext } from '../src/llm/memory-retrieval'
+import { INJECT_ALL_COUNT, RELEVANT_COUNT, selectMemories, withContext, withPrelude } from '../src/llm/memory-retrieval'
 import { memoryLabels, memoryPrompt, relevantMemoriesPrompt } from '../src/llm/user-memory'
 import type { MemoryRow } from '../src/services/memories'
 
@@ -66,6 +66,17 @@ describe('memory prompts', () => {
     expect(out[2]!.content).toEqual([{ type: 'text', text: '<relevant_memories>m</relevant_memories>' }, { type: 'text', text: 'second' }])
     expect(messages[2]!.content).toHaveLength(1)
     expect(withContext(messages, undefined)).toBe(messages)
+  })
+
+  it('put a prelude in its own message before the first user message', () => {
+    const messages = [
+      { role: 'user' as const, content: 'first' },
+      { role: 'assistant' as const, content: 'reply' },
+    ]
+    const out = withPrelude(messages, '<related_chats>c</related_chats>')
+    expect(out).toEqual([{ role: 'user', content: [{ type: 'text', text: '<related_chats>c</related_chats>' }] }, ...messages])
+    expect(messages).toHaveLength(2)
+    expect(withPrelude(messages, undefined)).toBe(messages)
   })
 })
 

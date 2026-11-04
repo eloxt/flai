@@ -379,7 +379,7 @@ suite('API integration', () => {
     const { noopObserve } = await import('@mastra/core/tools')
     const { claimIdleConversations, processConversation } = await import('../src/llm/memory-extraction')
     const { indexPendingSummaries } = await import('../src/llm/embedding-index')
-    const { createChatHistoryTools, recentSummaries } = await import('../src/llm/chat-history')
+    const { createChatHistoryTools } = await import('../src/llm/chat-history')
     const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
     expect((await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed' } })).status).toBe(200)
     const userId = (await call('/me', { token: alice })).data.id as string
@@ -455,29 +455,30 @@ suite('API integration', () => {
     expect((await call('/me/preferences', { token: alice, method: 'PATCH', body: { theme: 'dark' } })).status).toBe(422)
     expect((await call('/me/preferences', { token: alice, method: 'PATCH', body: { memory: 'off' } })).status).toBe(422)
 
-    // Summaries are searchable by keyword and by meaning, and shown as recent chats.
+    // Summaries are searchable by keyword and by meaning.
     while (await indexPendingSummaries());
     const tools = createChatHistoryTools({ userId, conversationId: 'none' })
     const found = await run(tools.search_chats, { query: '上海' })
     expect(found.chats[0]).toMatchObject({ id: chat, summary: '用户聊了猫和自己住在上海。' })
-    expect((await recentSummaries(userId, 'none')).map((c) => c.id)).toContain(chat)
-    expect((await recentSummaries(userId, chat)).map((c) => c.id)).not.toContain(chat)
 
-    // A new chat gets the latest summaries, plus older ones related to its first message, kept for later turns.
-    const { loadPastChats } = await import('../src/llm/chat-history')
+    // A new chat gets the summaries related to its first message, kept as they were for later turns.
+    const { loadRelatedChats } = await import('../src/llm/chat-history')
     const { queryEmbedding } = await import('../src/llm/memory-retrieval')
     const others = await db.insert(schema.conversations)
       .values(['用户问了周末天气。', '用户在学做饭。'].map((summary) => ({ id: crypto.randomUUID(), userId, summary })))
       .returning({ id: schema.conversations.id })
     while (await indexPendingSummaries());
     const fresh = (await call('/conversations', { token: alice, body: {} })).data.id as string
-    const past = (firstTurn: boolean, query: string) => loadPastChats(userId, fresh, { firstTurn, query, embedQuery: queryEmbedding(query) })
-    const first = await past(true, '我的猫最近不爱吃饭')
-    expect(first.recent.map((c) => c.id).toSorted()).toEqual(others.map((c) => c.id).toSorted())
-    expect(first.related.map((c) => c.id)).toEqual([chat])
-    expect((await past(false, '它是英短')).related.map((c) => c.id)).toEqual([chat])
-    // A first message too short to go by finds nothing.
-    expect((await past(true, '继续')).related).toEqual([])
+    const related = (firstTurn: boolean, query: string) => loadRelatedChats(userId, fresh, { firstTurn, query, embedQuery: queryEmbedding(query) })
+    const first = await related(true, '我的猫最近不爱吃饭')
+    expect(first).toEqual([expect.objectContaining({ id: chat, summary: '用户聊了猫和自己住在上海。' })])
+    await db.update(schema.conversations).set({ summary: '用户后来聊了别的。' }).where(eq(schema.conversations.id, chat))
+    expect(await related(false, '它是英短')).toEqual(first)
+    // Chats deleted since drop out; a first message too short to go by finds nothing.
+    await db.update(schema.conversations).set({ deletedAt: new Date() }).where(eq(schema.conversations.id, chat))
+    expect(await related(false, '它是英短')).toEqual([])
+    await db.update(schema.conversations).set({ deletedAt: null, summary: first[0]!.summary }).where(eq(schema.conversations.id, chat))
+    expect(await related(true, '继续')).toEqual([])
     await db.update(schema.conversations).set({ deletedAt: new Date() }).where(inArray(schema.conversations.id, [...others.map((c) => c.id), fresh]))
 
     await call('/me/memories', { token: alice, method: 'DELETE' })

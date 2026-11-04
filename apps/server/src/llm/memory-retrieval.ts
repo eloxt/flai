@@ -157,3 +157,14 @@ export function withContext(messages: ModelMessage[], block: string | undefined)
   const parts = typeof message.content === 'string' ? [{ type: 'text' as const, text: message.content }] : message.content
   return messages.with(index, { ...message, content: [{ type: 'text', text: block }, ...parts] })
 }
+
+/**
+ * Put `block` in its own user message before the first one, for the model only. It is the same on
+ * every turn, so everything after it stays cached; the chat itself never shows it.
+ */
+export function withPrelude(messages: ModelMessage[], block: string | undefined): ModelMessage[] {
+  if (!block) return messages
+  const index = messages.findIndex((m) => m.role === 'user')
+  if (index < 0) return messages
+  return messages.toSpliced(index, 0, { role: 'user', content: [{ type: 'text', text: block }] })
+}
