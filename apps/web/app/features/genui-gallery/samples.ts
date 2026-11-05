@@ -575,6 +575,11 @@ tier = FormControl("Tier", OptionCards("tier", "single", [OptionCard("basic", "B
         code: `root = Stack([OverviewCardBlock([OverviewCardItem("a", Text("text", "Revenue", "this month"), MetricIndicatorInline("$12.4k", "", {direction: "up", value: 14})), OverviewCardItem("b", Text("text", "Churn", "this month"), MetricIndicatorInline("2.1%", "", {direction: "down", value: 3}))])])`,
       },
       {
+        title: "OverviewCardBlock with icons",
+        components: ["OverviewCardBlock", "OverviewCardItem"],
+        code: `root = Stack([OverviewCardBlock([OverviewCardItem("a", IconText(Icon("zap"), "info", "md", "Requests", "served from the edge"), MetricIndicatorInline("1.2M", "", {direction: "up", value: 9})), OverviewCardItem("b", IconText(Icon("refresh-cw"), "neutral", "md", "Cache", "refreshed hourly"), MetricIndicatorInline("Healthy"))])])`,
+      },
+      {
         title: "ContextCardBlock",
         components: ["ContextCardBlock", "ContextCardItem"],
         code: `root = Stack([ContextCardBlock([ContextCardItem("a", "Plain context", "Body text for the card.", "gray"), ContextCardItem("b", Tag("Featured", null, "sm", "info"), "With an image background.", null, "${img("flai-ctx")}", "Background")])])`,

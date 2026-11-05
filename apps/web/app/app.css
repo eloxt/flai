@@ -1025,6 +1025,28 @@ code {
         color: var(--openui-text-neutral-secondary);
     }
 
+    [data-slot="genui"] .openui-overview-card {
+        padding: var(--openui-space-m);
+    }
+
+    [data-slot="genui"] .openui-overview-card__vertical {
+        gap: var(--openui-space-s);
+    }
+
+    [data-slot="genui"] .openui-overview-card .openui-text-block__primary {
+        font-weight: 500;
+    }
+
+    /* Status backgrounds match the card, so every badge uses the neutral tint. */
+    [data-slot="genui"] .openui-overview-card .openui-icon-tag {
+        background-color: var(--openui-highlight);
+    }
+
+    /* The metric lines up with the title, leaving the badge alone in its gutter. */
+    [data-slot="genui"] .openui-overview-card__vertical:has(.openui-icon-text--horizontal) .openui-overview-card__slot--bottom {
+        padding-inline-start: calc(36px + var(--openui-space-m));
+    }
+
     /* Library popovers render in portals outside the message container. */
     .openui-select-content {
         border: 0;
