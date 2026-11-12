@@ -225,8 +225,10 @@
     @apply border-border outline-ring/50;
     }
   /* Continuous ("squircle") corners where supported, like macOS windows. Circles and pills keep
-     plain arcs: a squircle of full radius turns a circle into a rounded square. */
-  @supports (corner-shape: squircle) {
+     plain arcs: a squircle of full radius turns a circle into a rounded square.
+     Not in WebKit (detected by its -apple-system fonts): iOS 27.3 beta drops the background,
+     shadow and some children of squircle-cornered elements, emptying the chat input. */
+  @supports (corner-shape: squircle) and (not (font: -apple-system-body)) {
     [class*="rounded"]:not([class*="rounded-full"]):not([class*="rounded-none"]) {
       corner-shape: squircle;
     }
