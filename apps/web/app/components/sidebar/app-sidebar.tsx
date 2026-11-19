@@ -174,7 +174,7 @@ export function AppSidebar() {
 
         <SidebarContent onScroll={onScroll}>
           {favourites.length > 0 && (
-            <Collapsible defaultOpen>
+            <Collapsible>
               <SidebarGroup className={FADE_ON_COLLAPSE}>
                 <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0" render={<CollapsibleTrigger className="group/fav" />}>
                   {t("components.sidebar.favourites")}
