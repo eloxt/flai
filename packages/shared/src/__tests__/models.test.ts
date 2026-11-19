@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateCost, modelCostSchema } from '../models'
+import { estimateCost, estimateStepsCost, modelCostSchema } from '../models'
 
 describe('estimateCost', () => {
   const cost = modelCostSchema.parse({ input: 2, output: 10, cacheRead: 0.5, cacheWrite: 2.5 })
@@ -22,5 +22,30 @@ describe('estimateCost', () => {
 
   it('has nothing to say without usage', () => {
     expect(estimateCost(cost, {})).toBeUndefined()
+  })
+})
+
+describe('estimateStepsCost', () => {
+  const tiered = modelCostSchema.parse({ input: 2, output: 10, contextOver200k: { input: 4, output: 20 } })
+
+  it('picks the price tier per step, not from the summed input', () => {
+    const steps = [
+      { inputTokens: 150_000, outputTokens: 100 },
+      { inputTokens: 160_000, outputTokens: 1_000 },
+    ]
+    expect(estimateStepsCost(tiered, steps)).toBeCloseTo((310_000 * 2 + 1_100 * 10) / 1e6)
+  })
+
+  it('uses the long-context tier only for the steps past 200k', () => {
+    const steps = [
+      { inputTokens: 190_000, outputTokens: 100 },
+      { inputTokens: 210_000, outputTokens: 1_000 },
+    ]
+    expect(estimateStepsCost(tiered, steps)).toBeCloseTo((190_000 * 2 + 100 * 10 + 210_000 * 4 + 1_000 * 20) / 1e6)
+  })
+
+  it('has nothing to say without usage', () => {
+    expect(estimateStepsCost(tiered, [])).toBeUndefined()
+    expect(estimateStepsCost(tiered, [{}])).toBeUndefined()
   })
 })

@@ -1,5 +1,5 @@
 import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, MessageUsage, ModelConfig } from '@flai/shared'
-import { estimateCost, resolvePreferences, textOf } from '@flai/shared'
+import { estimateCost, estimateStepsCost, resolvePreferences, textOf } from '@flai/shared'
 import { toAISdkStream } from '@mastra/ai-sdk'
 import { askUserTool } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
@@ -331,33 +331,47 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
   }
 }
 
+interface StreamUsage {
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  reasoningTokens?: number
+  cachedInputTokens?: number
+  cacheCreationInputTokens?: number
+}
+
+function toMessageUsage(usage: StreamUsage): MessageUsage {
+  return {
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    totalTokens: usage.totalTokens,
+    reasoningTokens: usage.reasoningTokens,
+    cachedInputTokens: usage.cachedInputTokens,
+    cacheWriteTokens: usage.cacheCreationInputTokens,
+  }
+}
+
 async function collectMetadata(stream: {
-  totalUsage: Promise<{
-    inputTokens?: number
-    outputTokens?: number
-    totalTokens?: number
-    reasoningTokens?: number
-    cachedInputTokens?: number
-    cacheCreationInputTokens?: number
-  }>
+  totalUsage: Promise<StreamUsage>
+  steps: Promise<Array<{ usage?: StreamUsage }>>
   providerMetadata: Promise<Record<string, Record<string, unknown>> | undefined>
 }, model: ModelConfig): Promise<MessageMetadata> {
-  const [total, providerMetadata] = await Promise.all([
+  const [total, steps, providerMetadata] = await Promise.all([
     stream.totalUsage.catch(() => undefined),
+    stream.steps.catch(() => undefined),
     stream.providerMetadata.catch(() => undefined),
   ])
   const grounding = providerMetadata?.google?.groundingMetadata as GoogleGrounding | null | undefined
   let usage: MessageUsage | undefined
   if (total) {
-    usage = {
-      inputTokens: total.inputTokens,
-      outputTokens: total.outputTokens,
-      totalTokens: total.totalTokens,
-      reasoningTokens: total.reasoningTokens,
-      cachedInputTokens: total.cachedInputTokens,
-      cacheWriteTokens: total.cacheCreationInputTokens,
+    usage = toMessageUsage(total)
+    if (model.cost) {
+      // Tool use makes several model calls; each is priced on its own so long-context tiers apply per request.
+      const stepUsages = steps?.map((step) => step.usage)
+      usage.cost = stepUsages?.length && stepUsages.every((u) => u !== undefined)
+        ? estimateStepsCost(model.cost, stepUsages.map(toMessageUsage))
+        : estimateCost(model.cost, usage)
     }
-    if (model.cost) usage.cost = estimateCost(model.cost, usage)
   }
   return {
     usage,

@@ -47,6 +47,19 @@ export function estimateCost(cost: ModelCost, usage: MessageUsage): number | und
   ) / 1_000_000
 }
 
+/**
+ * USD for a reply made of several model calls (tool-use steps). Each call is priced on its own,
+ * because providers pick the long-context tier per request, not from the reply's summed input.
+ */
+export function estimateStepsCost(cost: ModelCost, steps: MessageUsage[]): number | undefined {
+  let total: number | undefined
+  for (const step of steps) {
+    const usd = estimateCost(cost, step)
+    if (usd !== undefined) total = (total ?? 0) + usd
+  }
+  return total
+}
+
 export const modelConfigSchema = z.object({
   id: z.string().trim().min(1),
   name: z.string().trim().default(''),
