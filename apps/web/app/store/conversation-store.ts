@@ -26,6 +26,7 @@ interface ConversationState {
   add: (conversation: Conversation) => void
   patchLocal: (id: string, patch: Partial<ConversationItem>) => void
   generateTitle: (id: string, content?: string) => Promise<void>
+  rename: (id: string, title: string) => Promise<void>
   remove: (id: string) => Promise<void>
   setFavourite: (id: string, favourite: boolean) => Promise<void>
 }
@@ -95,6 +96,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     get().patchLocal(id, { generating: true })
     const updated = await guarded(() => api<Conversation>(`/conversations/${id}/title`, { method: "POST", body: { content } }))
     get().patchLocal(id, { ...(updated ?? {}), generating: false })
+  },
+  rename: async (id, title) => {
+    const previous = get().conversations.concat(get().favourites).find((c) => c.id === id)
+    if (!previous || previous.title === title) return
+    get().patchLocal(id, { title })
+    const updated = await guarded(() => api<Conversation>(`/conversations/${id}`, { method: "PATCH", body: { title } }))
+    get().patchLocal(id, updated ?? { title: previous.title })
   },
   remove: async (id) => {
     const ok = await guarded(() => api(`/conversations/${id}`, { method: "DELETE" }).then(() => true))

@@ -677,6 +677,7 @@
       "logout": "注销",
       "addFavourite": "添加收藏",
       "removeFavourite": "取消收藏",
+      "rename": "重命名",
       "regenerateTitle": "重新生成标题",
       "delete": "删除",
       "dialog": {

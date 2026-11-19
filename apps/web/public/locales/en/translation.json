@@ -682,6 +682,7 @@
       "logout": "Logout",
       "addFavourite": "Add to Favorites",
       "removeFavourite": "Remove from Favorites",
+      "rename": "Rename",
       "regenerateTitle": "Regenerate Title",
       "delete": "Delete",
       "dialog": {

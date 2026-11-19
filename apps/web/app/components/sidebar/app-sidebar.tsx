@@ -7,6 +7,7 @@ import {
   MonitorIcon,
   MoonIcon,
   PanelLeftIcon,
+  PencilIcon,
   PlusIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -49,6 +50,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarInput,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -260,6 +262,8 @@ function ConversationRow({
   const location = useLocation()
   const setFavourite = useConversationStore((s) => s.setFavourite)
   const generateTitle = useConversationStore((s) => s.generateTitle)
+  const rename = useConversationStore((s) => s.rename)
+  const [editing, setEditing] = useState(false)
   const replying = useConversationStore((s) => Boolean(s.replying[item.id]))
   const busy = item.generating || replying
   const title = item.title || t("components.sidebar.untitled")
@@ -268,6 +272,36 @@ function ConversationRow({
   useEffect(() => {
     if (item.generating) setTitleArrives(true)
   }, [item.generating])
+  if (editing) {
+    const finish = (input: HTMLInputElement, save: boolean) => {
+      // Escape unmounts the input, which can fire one last blur.
+      if (input.dataset.done) return
+      input.dataset.done = "true"
+      setEditing(false)
+      const next = input.value.trim()
+      if (save && next) void rename(item.id, next)
+    }
+    return (
+      <SidebarMenuItem>
+        <SidebarInput
+          autoFocus
+          defaultValue={item.title}
+          maxLength={200}
+          aria-label={t("components.sidebar.rename")}
+          onFocus={(e) => e.currentTarget.select()}
+          onBlur={(e) => finish(e.currentTarget, true)}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return
+            if (e.key === "Enter") e.currentTarget.blur()
+            else if (e.key === "Escape") {
+              e.preventDefault()
+              finish(e.currentTarget, false)
+            }
+          }}
+        />
+      </SidebarMenuItem>
+    )
+  }
   return (
     <SidebarMenuItem>
       <SidebarMenuButton isActive={location.pathname === `/chat/${item.id}`} render={<NavLink to={`/chat/${item.id}`} title={title} />}>
@@ -289,6 +323,10 @@ function ConversationRow({
               <DropdownMenuItem onClick={() => void setFavourite(item.id, !favourite)}>
                 {favourite ? <StarOffIcon /> : <StarIcon />}
                 {favourite ? t("components.sidebar.removeFavourite") : t("components.sidebar.addFavourite")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEditing(true)}>
+                <PencilIcon />
+                {t("components.sidebar.rename")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void generateTitle(item.id)}>
                 <RefreshCwIcon />
