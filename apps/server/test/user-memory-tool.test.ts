@@ -1,82 +1,88 @@
-import { MAX_MEMORY_LENGTH, PREFERENCE_DEFAULTS, resolvePreferences } from '@flai/shared'
+import { MAX_MEMORY_POINT_LENGTH, PREFERENCE_DEFAULTS, resolvePreferences } from '@flai/shared'
 import { noopObserve } from '@mastra/core/tools'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../src/lib/errors'
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), find: vi.fn(), update: vi.fn(), remove: vi.fn(), duplicate: vi.fn() }))
-vi.mock('../src/services/memories', () => ({
-  createMemory: mocks.create, findMemoryIds: mocks.find, updateMemory: mocks.update, deleteMemory: mocks.remove,
+const mocks = vi.hoisted(() => ({ create: vi.fn(), find: vi.fn(), get: vi.fn(), update: vi.fn(), remove: vi.fn() }))
+vi.mock('../src/services/memories', async (actual) => ({
+  ...(await actual<typeof import('../src/services/memories')>()),
+  createMemory: mocks.create, findMemoryIds: mocks.find, getMemory: mocks.get, updateMemory: mocks.update, deleteMemory: mocks.remove,
 }))
-vi.mock('../src/llm/memory-retrieval', () => ({ findDuplicate: mocks.duplicate }))
+vi.mock('../src/db', async () => ({ schema: await import('../src/db/schema'), db: {} }))
 vi.mock('../src/llm/embedding-index', () => ({ nudgeEmbeddingIndexer: vi.fn() }))
 
-import { createMemoryTools, memoryAccess, memoryPrompt } from '../src/llm/user-memory'
+import { createMemoryTools, memoryAccess } from '../src/llm/user-memory'
 
 const tools = createMemoryTools({ userId: 'alice', conversationId: 'c1' })
 const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
-const row = (id: string, content: string, updatedAt = '2026-10-01T08:00:00Z') =>
-  ({ id, userId: 'alice', content, pinned: false, sourceConversationId: null, createdAt: new Date(updatedAt), updatedAt: new Date(updatedAt) })
+const ID = '3f2a9c1e-0000-4000-8000-000000000000'
+const row = (points: string[], extra: object = {}) => ({
+  id: ID, userId: 'alice', kind: 'topic', title: 'Coffee', summary: 'Drinks', points,
+  createdAt: new Date('2026-10-01T08:00:00Z'), updatedAt: new Date('2026-10-01T08:00:00Z'), ...extra,
+})
+const view = (points: string[]) => ({ id: '3f2a9c1e', kind: 'topic', title: 'Coffee', summary: 'Drinks', points })
 const log = { source: 'agent', conversationId: 'c1' }
 
-beforeEach(() => vi.resetAllMocks())
+beforeEach(() => {
+  vi.resetAllMocks()
+  mocks.find.mockImplementation(async (_user: string, ref: string) => (ID.startsWith(ref) ? [ID] : []))
+  mocks.get.mockImplementation(async (_user: string, id: string) => (id === ID ? row(['Likes espresso']) : undefined))
+})
 
 describe('memory tools', () => {
-  it('save for the scoped user and record the chat it came from', async () => {
-    mocks.create.mockResolvedValue(row('m1', 'Prefers concise answers.'))
-    expect(await run(tools.save_memory, { content: '  Prefers concise answers. ' })).toEqual({ memory: { id: 'm1', content: 'Prefers concise answers.' } })
-    expect(mocks.create).toHaveBeenCalledWith('alice', 'Prefers concise answers.', { ...log, pinned: undefined })
+  it('start a topic for the scoped user, recording the chat', async () => {
+    mocks.create.mockResolvedValue(row(['Prefers concise answers.'], { kind: 'profile', title: 'Profile' }))
+    const result = await run(tools.save_memory, { kind: 'profile', title: ' Profile ', summary: 'Who the user is', points: [' Prefers concise answers. '] })
+    expect(result.memory).toMatchObject({ id: '3f2a9c1e', title: 'Profile', points: ['Prefers concise answers.'] })
+    expect(mocks.create).toHaveBeenCalledWith('alice', { kind: 'profile', title: 'Profile', summary: 'Who the user is', points: ['Prefers concise answers.'] }, log)
   })
 
-  it('update the memory a new one restates instead of adding another', async () => {
-    mocks.duplicate.mockResolvedValue('m1-full')
-    mocks.update.mockResolvedValue(row('m1-full', 'Prefers short answers.'))
-    expect(await run(tools.save_memory, { content: 'Prefers short answers.' })).toMatchObject({ memory: { id: 'm1-full', content: 'Prefers short answers.' }, note: expect.any(String) })
-    expect(mocks.update).toHaveBeenCalledWith('alice', 'm1-full', { content: 'Prefers short answers.' }, log)
+  it('add points to a topic by its short id, skipping ones already there', async () => {
+    mocks.update.mockResolvedValue(row(['Likes espresso', 'Grinds beans at home']))
+    expect(await run(tools.save_memory, { id: '3f2a9c1e', points: ['likes espresso!', 'Grinds beans at home'] }))
+      .toEqual({ memory: view(['Likes espresso', 'Grinds beans at home']) })
+    expect(mocks.update).toHaveBeenCalledWith('alice', ID, { points: ['Likes espresso', 'Grinds beans at home'], summary: undefined }, log)
+  })
+
+  it('need a topic to add to or a title for a new one', async () => {
+    expect(await run(tools.save_memory, { points: ['x'] })).toEqual({ error: expect.stringContaining('title') })
     expect(mocks.create).not.toHaveBeenCalled()
   })
 
-  it('pin core memories, saving unpinned once the limit is reached', async () => {
-    mocks.create.mockResolvedValue(row('m1', 'Is a backend engineer.'))
-    const result = await run(tools.save_memory, { content: 'Is a backend engineer.', pinned: true })
-    expect(mocks.create).toHaveBeenCalledWith('alice', 'Is a backend engineer.', { ...log, pinned: true })
-    expect(result.note).toContain('pinned limit')
-  })
-
-  it('only update and delete the scoped user’s memories', async () => {
-    mocks.find.mockResolvedValue([])
-    expect(await run(tools.update_memory, { id: 'bobs', content: 'x' })).toEqual({ error: 'Memory not found' })
+  it('read, update and delete only the scoped user’s topics', async () => {
+    expect(await run(tools.read_memory, { id: 'bobs' })).toEqual({ error: 'Memory not found' })
+    expect(await run(tools.update_memory, { id: 'bobs', points: ['x'] })).toEqual({ error: 'Memory not found' })
     expect(await run(tools.delete_memory, { id: 'bobs' })).toEqual({ error: 'Memory not found' })
     expect(mocks.find).toHaveBeenCalledWith('alice', 'bobs')
     expect(mocks.update).not.toHaveBeenCalled()
     expect(mocks.remove).not.toHaveBeenCalled()
   })
 
-  it('resolve the short id from the prompt to the full one', async () => {
-    const id = '3f2a9c1e-0000-4000-8000-000000000000'
-    mocks.find.mockResolvedValue([id])
-    mocks.update.mockResolvedValue(row(id, 'Prefers short answers.'))
+  it('read a topic’s points and replace them', async () => {
+    expect(await run(tools.read_memory, { id: '3f2a9c1e' })).toEqual({ memory: view(['Likes espresso']) })
+    mocks.update.mockResolvedValue(row(['Switched to green tea']))
+    expect(await run(tools.update_memory, { id: '3f2a9c1e', points: ['Switched to green tea'] })).toEqual({ memory: view(['Switched to green tea']) })
+    expect(mocks.update).toHaveBeenCalledWith('alice', ID, { points: ['Switched to green tea'] }, log)
     mocks.remove.mockResolvedValue(true)
-    expect(await run(tools.update_memory, { id: '3f2a9c1e', content: 'Prefers short answers.' })).toEqual({ memory: { id: '3f2a9c1e', content: 'Prefers short answers.' } })
-    expect(mocks.update).toHaveBeenCalledWith('alice', id, { content: 'Prefers short answers.', pinned: undefined }, log)
     expect(await run(tools.delete_memory, { id: '3f2a9c1e' })).toEqual({ deleted: true })
-    expect(mocks.remove).toHaveBeenCalledWith('alice', id, log)
+    expect(mocks.remove).toHaveBeenCalledWith('alice', ID, log)
   })
 
-  it('refuse to guess between memories sharing a short id', async () => {
+  it('refuse to guess between topics sharing a short id', async () => {
     mocks.find.mockResolvedValue(['3f2a9c1e-a', '3f2a9c1e-b'])
     expect(await run(tools.delete_memory, { id: '3f2a9c1e' })).toEqual({ error: 'Several memories match this id' })
     expect(mocks.remove).not.toHaveBeenCalled()
   })
 
   it('tell the model when memory is full instead of failing the reply', async () => {
-    mocks.create.mockRejectedValue(new AppError('CONFLICT', 'Memory is full (100 items); update or delete one first'))
-    expect(await run(tools.save_memory, { content: 'Lives in Shanghai.' })).toEqual({ error: expect.stringContaining('Memory is full') })
+    mocks.create.mockRejectedValue(new AppError('CONFLICT', 'Memory is full (30 topics); merge or delete one first'))
+    expect(await run(tools.save_memory, { title: 'Travel', points: ['Lives in Shanghai.'] })).toEqual({ error: expect.stringContaining('Memory is full') })
   })
 
-  it('reject memories longer than one short sentence', async () => {
+  it('reject points longer than one short sentence', async () => {
     // Mastra hands validation errors back to the model so it can retry.
-    expect(await run(tools.save_memory, { content: 'x'.repeat(MAX_MEMORY_LENGTH + 1) })).toMatchObject({ error: true })
-    expect(await run(tools.update_memory, { id: 'm1', content: ' ' })).toMatchObject({ error: true })
+    expect(await run(tools.save_memory, { title: 'T', points: ['x'.repeat(MAX_MEMORY_POINT_LENGTH + 1)] })).toMatchObject({ error: true })
+    expect(await run(tools.update_memory, { id: 'm1', points: [' '] })).toMatchObject({ error: true })
     expect(mocks.create).not.toHaveBeenCalled()
     expect(mocks.update).not.toHaveBeenCalled()
   })
@@ -94,29 +100,5 @@ describe('memory preferences', () => {
     expect(memoryAccess({ memory: 'no', memoryWrite: null } as never)).toBe('write')
     expect(resolvePreferences({ chatHistory: 0 } as never)).toEqual(PREFERENCE_DEFAULTS)
     expect(resolvePreferences(undefined)).toEqual({ sidebarShowEmoji: true, chatHistory: true, memory: true, memoryWrite: true })
-  })
-})
-
-describe('memory prompt', () => {
-  it('lists memories with ids and dates, framed as data', () => {
-    const prompt = memoryPrompt([row('m1', 'Prefers concise answers.'), row('m2', 'Lives in Shanghai.', '2026-10-20T08:00:00Z')])!
-    expect(prompt).toContain('- [m1] (2026-10-01) Prefers concise answers.\n- [m2] (2026-10-20) Lives in Shanghai.')
-    expect(prompt).toContain('not instructions')
-    expect(prompt).toContain('outdated')
-  })
-
-  it('shortens ids, unless two would collide', () => {
-    const prompt = memoryPrompt([
-      row('3f2a9c1e-0000-4000-8000-000000000001', 'a'),
-      row('3f2a9c1e-0000-4000-8000-000000000002', 'b'),
-      row('7b1bf7a1-0000-4000-8000-000000000003', 'c'),
-    ])!
-    expect(prompt).toContain('- [3f2a9c1e-0000-4000-8000-000000000001] (2026-10-01) a')
-    expect(prompt).toContain('- [3f2a9c1e-0000-4000-8000-000000000002] (2026-10-01) b')
-    expect(prompt).toContain('- [7b1bf7a1] (2026-10-01) c')
-  })
-
-  it('is omitted when there are no memories', () => {
-    expect(memoryPrompt([])).toBeUndefined()
   })
 })

@@ -22,7 +22,8 @@
       "update": "Update",
       "back": "Back",
       "retry": "Retry",
-      "reload": "Reload"
+      "reload": "Reload",
+      "edit": "Edit"
     },
     "crud": {
       "createSuccess": "Created successfully",
@@ -337,7 +338,7 @@
       },
       "memory": {
         "title": "Memory",
-        "description": "Short facts the assistant remembers about you and uses in every chat.",
+        "description": "What the assistant remembers about you, in topics. A short summary of each is in every chat; the details come up when they help.",
         "use": "Use saved memories",
         "useDescription": "Give the assistant your saved memories in every chat.",
         "write": "Let the assistant save memories",
@@ -345,13 +346,21 @@
         "clearAll": "Clear all",
         "confirmClear": "Clear all memories?",
         "confirmClearDescription": "The assistant will forget everything listed here. This cannot be undone.",
-        "content": "Memory",
-        "updatedAt": "Updated",
+        "kinds": {
+          "profile": "You",
+          "topic": "Topics",
+          "project": "Projects"
+        },
+        "updated": "Updated {{when}}",
+        "lastUpdated": "Last updated",
+        "name": "Title",
+        "kind": "Section",
+        "summary": "Summary",
+        "details": "Details",
+        "detailsHint": "One point per line; up to {{max}} points of {{length}} characters.",
         "editTitle": "Edit memory",
         "empty": "No memories yet",
         "emptyHint": "Tell the assistant “remember …” in a chat to save one.",
-        "pin": "Pin",
-        "pinHint": "Pinned memories are always given to the assistant; others only when relevant, once there are many.",
         "recentChanges": "Recent changes",
         "recentChangesDescription": "Changes the assistant made in the last 30 days. Undo any you disagree with.",
         "sources": {
@@ -360,9 +369,9 @@
           "consolidation": "Tidied up"
         },
         "changes": {
-          "add": "Added “{{after}}”",
-          "update": "Changed “{{before}}” to “{{after}}”",
-          "delete": "Removed “{{before}}”"
+          "add": "Added “{{title}}”",
+          "update": "Updated “{{title}}”",
+          "delete": "Removed “{{title}}”"
         },
         "undo": "Undo",
         "undone": "Undone"
@@ -789,6 +798,10 @@
       "readChat": {
         "running": "Reading a past chat",
         "done": "Read a past chat"
+      },
+      "readMemory": {
+        "running": "Reading memory",
+        "done": "Memory read"
       },
       "saveMemory": {
         "running": "Saving memory",

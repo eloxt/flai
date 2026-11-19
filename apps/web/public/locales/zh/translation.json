@@ -22,7 +22,8 @@
       "update": "更新",
       "back": "返回",
       "retry": "重试",
-      "reload": "刷新"
+      "reload": "刷新",
+      "edit": "编辑"
     },
     "crud": {
       "createSuccess": "创建成功",
@@ -332,7 +333,7 @@
       },
       "memory": {
         "title": "记忆",
-        "description": "助手记住的关于你的简短信息，会在每次对话中使用。",
+        "description": "助手按主题记住的关于你的信息。每次对话都会带上各主题的简介，详细内容在需要时提供。",
         "use": "使用已保存的记忆",
         "useDescription": "在每次对话中向助手提供你保存的记忆。",
         "write": "允许助手保存记忆",
@@ -340,13 +341,21 @@
         "clearAll": "全部清除",
         "confirmClear": "清除所有记忆？",
         "confirmClearDescription": "助手将忘记这里列出的所有内容，且无法撤销。",
-        "content": "记忆",
-        "updatedAt": "更新时间",
+        "kinds": {
+          "profile": "关于你",
+          "topic": "话题",
+          "project": "项目"
+        },
+        "updated": "{{when}}更新",
+        "lastUpdated": "最后更新",
+        "name": "标题",
+        "kind": "分组",
+        "summary": "简介",
+        "details": "详细内容",
+        "detailsHint": "每行一条，最多 {{max}} 条，每条不超过 {{length}} 字。",
         "editTitle": "编辑记忆",
         "empty": "还没有记忆",
         "emptyHint": "在对话中对助手说“记住……”即可保存。",
-        "pin": "置顶",
-        "pinHint": "置顶的记忆总会提供给助手；记忆较多时，其他记忆只在相关时提供。",
         "recentChanges": "最近的变更",
         "recentChangesDescription": "助手在最近 30 天内做出的修改，不认可的可以撤销。",
         "sources": {
@@ -355,9 +364,9 @@
           "consolidation": "自动整理"
         },
         "changes": {
-          "add": "新增「{{after}}」",
-          "update": "将「{{before}}」改为「{{after}}」",
-          "delete": "删除「{{before}}」"
+          "add": "新增「{{title}}」",
+          "update": "更新了「{{title}}」",
+          "delete": "删除了「{{title}}」"
         },
         "undo": "撤销",
         "undone": "已撤销"
@@ -784,6 +793,10 @@
       "readChat": {
         "running": "正在阅读历史对话",
         "done": "阅读了历史对话"
+      },
+      "readMemory": {
+        "running": "正在读取记忆",
+        "done": "已读取记忆"
       },
       "saveMemory": {
         "running": "正在保存记忆",

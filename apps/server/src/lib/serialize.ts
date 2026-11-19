@@ -12,7 +12,7 @@ import type {
   User,
 } from '@flai/shared'
 import type { schema } from '../db'
-import type { MemoryEventRow } from '../services/memories'
+import { contentOf, type MemoryEventRow, parseSnapshot } from '../services/memories'
 import { maskKey, type ProviderRow } from '../services/providers'
 import type { UserRow } from './hono'
 
@@ -73,9 +73,7 @@ export function toMcpServer(row: typeof schema.mcpServers.$inferSelect): McpServ
 export function toMemory(row: typeof schema.userMemories.$inferSelect): Memory {
   return {
     id: row.id,
-    content: row.content,
-    pinned: row.pinned,
-    sourceConversationId: row.sourceConversationId,
+    ...contentOf(row),
     createdAt: iso(row.createdAt),
     updatedAt: iso(row.updatedAt),
   }
@@ -87,8 +85,8 @@ export function toMemoryEvent(row: MemoryEventRow & { undoable: boolean }): Memo
     memoryId: row.memoryId,
     action: row.action,
     source: row.source,
-    before: row.before,
-    after: row.after,
+    before: parseSnapshot(row.before),
+    after: parseSnapshot(row.after),
     note: row.note,
     conversationId: row.conversationId,
     createdAt: iso(row.createdAt),

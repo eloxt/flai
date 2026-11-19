@@ -109,26 +109,51 @@ export const updateMeSchema = z.object({
 })
 export const updatePreferencesSchema = preferencesSchema.strict()
 // ---------- memories ----------
+//
+// Memory has two levels. Each memory is a topic: its title and one-line summary are the index,
+// always in front of the assistant; its points are the details, given in full only when they
+// fit or are relevant, and otherwise read on demand.
 
-/** Most memories a user can keep; the assistant has to update or delete one to save more. */
-export const MAX_MEMORIES = 100
-export const MAX_MEMORY_LENGTH = 200
-/** Pinned (core) memories are always given to the assistant, so there can only be a few. */
-export const MAX_PINNED_MEMORIES = 20
+/** About the user (identity, how they want answers), a recurring interest, or something they work on. */
+export const MEMORY_KINDS = ['profile', 'topic', 'project'] as const
+export type MemoryKind = (typeof MEMORY_KINDS)[number]
 
-export interface Memory {
+/** Most topics a user can keep; the assistant has to merge or delete one to start another. */
+export const MAX_MEMORY_TOPICS = 30
+/** Most points in one topic; a fuller topic is tidied by consolidation. */
+export const MAX_MEMORY_POINTS = 20
+export const MAX_MEMORY_POINT_LENGTH = 300
+export const MAX_MEMORY_TITLE_LENGTH = 40
+export const MAX_MEMORY_SUMMARY_LENGTH = 160
+
+/** What a memory says, without its bookkeeping. */
+export interface MemoryContent {
+  kind: MemoryKind
+  title: string
+  /** One line on what the topic covers; empty until written. */
+  summary: string
+  points: string[]
+}
+
+export interface Memory extends MemoryContent {
   id: string
-  content: string
-  pinned: boolean
-  sourceConversationId: string | null
   createdAt: string
   updatedAt: string
 }
 
-export const memoryContentSchema = z.string().trim().min(1).max(MAX_MEMORY_LENGTH)
+export const memoryKindSchema = z.enum(MEMORY_KINDS)
+export const memoryTitleSchema = z.string().trim().min(1).max(MAX_MEMORY_TITLE_LENGTH)
+export const memorySummarySchema = z.string().trim().max(MAX_MEMORY_SUMMARY_LENGTH)
+export const memoryPointSchema = z.string().trim().min(1).max(MAX_MEMORY_POINT_LENGTH)
+export const memoryPointsSchema = z.array(memoryPointSchema).max(MAX_MEMORY_POINTS)
 export const updateMemorySchema = z
-  .object({ content: memoryContentSchema.optional(), pinned: z.boolean().optional() })
-  .refine((v) => v.content !== undefined || v.pinned !== undefined, 'Nothing to update')
+  .object({
+    kind: memoryKindSchema.optional(),
+    title: memoryTitleSchema.optional(),
+    summary: memorySummarySchema.optional(),
+    points: memoryPointsSchema.optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'Nothing to update')
 
 /** Who changed a memory on the user's behalf: the chat assistant, or a background job. */
 export type MemoryEventSource = 'agent' | 'extraction' | 'consolidation'
@@ -139,8 +164,8 @@ export interface MemoryEvent {
   memoryId: string
   action: 'add' | 'update' | 'delete'
   source: MemoryEventSource
-  before: string | null
-  after: string | null
+  before: MemoryContent | null
+  after: MemoryContent | null
   note: string | null
   conversationId: string | null
   createdAt: string

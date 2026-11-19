@@ -50,7 +50,7 @@ async function request(memory: MemoryAccess) {
 
 beforeEach(() => {
   mocks.list.mockReset()
-  mocks.list.mockResolvedValue([{ id: 'm1', content: 'Prefers concise answers.', updatedAt: new Date('2026-10-01T08:00:00Z') }])
+  mocks.list.mockResolvedValue([{ id: 'm1', kind: 'profile', title: 'Profile', summary: '', points: ['Prefers concise answers.'], updatedAt: new Date('2026-10-01T08:00:00Z') }])
 })
 afterEach(() => vi.unstubAllGlobals())
 afterAll(() => shutdownGenerations())
@@ -59,14 +59,15 @@ describe('memory in chat generation', () => {
   it('gives the model saved memories and the tools to change them', async () => {
     const { system, tools } = await request('write')
     expect(mocks.list).toHaveBeenCalledWith('alice')
-    expect(system).toContain('- [m1] (2026-10-01) Prefers concise answers.')
-    expect(tools).toEqual(expect.arrayContaining(['save_memory', 'update_memory', 'delete_memory']))
+    expect(system).toContain('- [m1] Profile (2026-10-01)\n  - Prefers concise answers.')
+    expect(tools).toEqual(expect.arrayContaining(['read_memory', 'save_memory', 'update_memory', 'delete_memory']))
   })
 
   it('keeps memories read-only when the user turned writing off', async () => {
     const { system, tools } = await request('read')
     expect(system).toContain('Prefers concise answers.')
     expect(system).not.toContain('save_memory')
+    expect(tools).toContain('read_memory')
     expect(tools).not.toContain('save_memory')
     expect(tools).not.toContain('update_memory')
     expect(tools).not.toContain('delete_memory')
@@ -76,6 +77,7 @@ describe('memory in chat generation', () => {
     const { system, tools } = await request('off')
     expect(mocks.list).not.toHaveBeenCalled()
     expect(system ?? '').not.toContain('user_memories')
+    expect(tools).not.toContain('read_memory')
     expect(tools).not.toContain('save_memory')
   })
 })

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import {
+  BookOpenIcon,
   BookmarkPlusIcon,
   BookmarkXIcon,
   FileTextIcon,
@@ -28,6 +29,7 @@ const BUILT_IN: Record<string, ToolMeta> = {
   image_search: { icon: ImageIcon, key: "imageSearch" },
   search_chats: { icon: HistoryIcon, key: "searchChats" },
   read_chat: { icon: MessagesSquareIcon, key: "readChat" },
+  read_memory: { icon: BookOpenIcon, key: "readMemory" },
   save_memory: { icon: BookmarkPlusIcon, key: "saveMemory" },
   update_memory: { icon: PencilLineIcon, key: "updateMemory" },
   delete_memory: { icon: BookmarkXIcon, key: "deleteMemory" },

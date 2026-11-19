@@ -200,15 +200,19 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
       memoryMode === 'off' ? undefined : loadMemories(userId, embedQuery),
       preferences.chatHistory ? loadRelatedChats(userId, input.conversationId, { firstTurn, query, embedQuery }) : [],
     ])
-    const shown = selection ? [...selection.core, ...selection.relevant] : []
-    const label = memoryLabels(shown)
+    const label = memoryLabels(selection?.topics ?? [])
+    const memoryTools = model.toolCall && memoryMode !== 'off'
+    const { read_memory, ...writeTools } = createMemoryTools(scope)
     const memory = {
       ...(chatHistory && createChatHistoryTools(scope)),
-      ...(memoryWrite && createMemoryTools(scope)),
+      ...(memoryTools && { read_memory }),
+      ...(memoryWrite && writeTools),
     }
     const instructions = chatInstructions(model, {
       chatHistory, memoryWrite,
-      memories: selection && { rows: selection.core, partial: selection.partial, label },
+      memories: selection && {
+        rows: selection.topics, expanded: (id) => selection.expanded.has(id), partial: selection.partial, canRead: memoryTools, label,
+      },
     })
     const requestedAt = performance.now()
     const context = withPrelude(withContext(messages, relevantMemoriesPrompt(selection?.relevant ?? [], label)), relatedChatsPrompt(relatedChats))

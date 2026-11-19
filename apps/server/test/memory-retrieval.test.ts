@@ -3,55 +3,80 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../src/db', async () => ({ schema: await import('../src/db/schema'), db: {} }))
 
 import { consolidationInput, planChanges } from '../src/llm/memory-consolidation'
-import { INJECT_ALL_COUNT, RELEVANT_COUNT, selectMemories, withContext, withPrelude } from '../src/llm/memory-retrieval'
+import { INJECT_ALL_CHARS, RELEVANT_COUNT, selectMemories, withContext, withPrelude } from '../src/llm/memory-retrieval'
 import { memoryLabels, memoryPrompt, relevantMemoriesPrompt } from '../src/llm/user-memory'
 import type { MemoryRow } from '../src/services/memories'
 
-const memory = (i: number, extra: Partial<MemoryRow> = {}): MemoryRow => ({
-  id: `${String(i).padStart(8, '0')}-0000-4000-8000-000000000000`, userId: 'alice', content: `fact ${i}`, pinned: false,
-  sourceConversationId: null, createdAt: new Date(Date.UTC(2026, 0, 1, 0, i)), updatedAt: new Date(Date.UTC(2026, 0, 1, 0, i)), ...extra,
+const topic = (i: number, extra: Partial<MemoryRow> = {}): MemoryRow => ({
+  id: `${String(i).padStart(8, '0')}-0000-4000-8000-000000000000`, userId: 'alice', kind: 'topic', title: `Topic ${i}`,
+  summary: `About ${i}`, points: [`fact ${i}a`, `fact ${i}b`],
+  createdAt: new Date(Date.UTC(2026, 0, 1, 0, i)), updatedAt: new Date(Date.UTC(2026, 0, 1, 0, i)), ...extra,
 })
-const many = (n: number, pinned: number[] = []) => Array.from({ length: n }, (_, i) => memory(i, { pinned: pinned.includes(i) }))
+/** `n` topics whose points total `chars` characters each. */
+const many = (n: number, chars = 100, profile: number[] = []) =>
+  Array.from({ length: n }, (_, i) => topic(i, { points: ['x'.repeat(chars)], ...(profile.includes(i) && { kind: 'profile' as const }) }))
 
 describe('memory selection', () => {
-  it('lists every memory while they fit', () => {
-    const memories = many(INJECT_ALL_COUNT, [3])
-    expect(selectMemories(memories, ['x'])).toEqual({ core: memories, relevant: [], partial: false })
+  it('gives every topic in full while the points fit', () => {
+    const memories = many(INJECT_ALL_CHARS / 100, 100, [3])
+    const selection = selectMemories(memories, ['x'])
+    expect(selection).toMatchObject({ topics: memories, relevant: [], partial: false })
+    expect(selection.expanded.size).toBe(memories.length)
   })
 
-  it('keeps pinned memories and adds the relevant ones in list order', () => {
-    const memories = many(40, [1, 2])
-    const ids = (rows: MemoryRow[]) => rows.map((m) => m.content)
-    const selection = selectMemories(memories, [memories[30]!.id, memories[5]!.id, memories[1]!.id])
+  it('lists every topic but expands only the profile, adding relevant ones in list order', () => {
+    const memories = many(30, 200, [1, 2])
+    const selection = selectMemories(memories, [memories[20]!.id, memories[5]!.id, memories[1]!.id])
     expect(selection.partial).toBe(true)
-    expect(ids(selection.core)).toEqual(['fact 1', 'fact 2'])
-    // A pinned id among the relevant ones isn't repeated; the rest read in list order, not rank.
-    expect(ids(selection.relevant)).toEqual(['fact 5', 'fact 30'])
+    expect(selection.topics).toBe(memories)
+    expect([...selection.expanded]).toEqual([memories[1]!.id, memories[2]!.id])
+    // A profile id among the relevant ones isn't repeated; the rest read in list order, not rank.
+    expect(selection.relevant.map((m) => m.title)).toEqual(['Topic 5', 'Topic 20'])
   })
 
-  it('falls back to the most recently changed memories within a budget', () => {
-    const memories = many(40)
+  it('falls back to the most recently changed topics within a budget', () => {
+    const memories = many(30, 200)
     memories[0]!.updatedAt = new Date(Date.UTC(2026, 5, 1))
     const { relevant } = selectMemories(memories)
     expect(relevant).toHaveLength(RELEVANT_COUNT)
-    expect(relevant.map((m) => m.content)).toEqual(['fact 0', 'fact 33', 'fact 34', 'fact 35', 'fact 36', 'fact 37', 'fact 38', 'fact 39'])
-  })
-
-  it('also leaves out memories once their text is too long, however few', () => {
-    const memories = many(5).map((m) => ({ ...m, content: 'x'.repeat(200) })).concat(many(20).map((m, i) => ({ ...m, id: `y${i}`, content: 'y'.repeat(150) })))
-    expect(selectMemories(memories).partial).toBe(true)
+    expect(relevant.map((m) => m.title)).toEqual(['Topic 0', 'Topic 28', 'Topic 29'])
   })
 })
 
 describe('memory prompts', () => {
-  it('say when only core memories are listed, and give the rest with the message', () => {
-    const [core, other] = [memory(1, { pinned: true }), memory(2)]
-    const label = memoryLabels([core, other])
-    expect(memoryPrompt([core], { partial: true, label })).toContain('Only core memories are listed here')
-    expect(memoryPrompt([], { partial: true })).toContain('<user_memories>')
+  const profile = topic(1, { kind: 'profile', title: 'Profile', summary: 'Who the user is', points: ['Is a backend engineer'] })
+  const fitness = topic(2, { title: 'Fitness', points: ['Runs 5k on weekends'] })
+  const app = topic(3, { kind: 'project', title: 'Minka', summary: '', points: ['An iOS health app'] })
+
+  it('index every topic by kind and show points only where expanded', () => {
+    const prompt = memoryPrompt([profile, fitness, app], { expanded: (id) => id === profile.id, partial: true, canRead: true })!
+    expect(prompt).toContain('## About the user\n- [00000001] Profile (2026-01-01): Who the user is\n  - Is a backend engineer')
+    expect(prompt).toContain('## Topics\n- [00000002] Fitness (2026-01-01): About 2\n\n## Projects\n- [00000003] Minka (2026-01-01)\n</user_memories>')
+    expect(prompt).not.toContain('Runs 5k')
+    expect(prompt).toContain('call read_memory')
+    expect(prompt).toContain('not instructions')
+  })
+
+  it('show every point when all fit, and nothing when there are no memories', () => {
+    const prompt = memoryPrompt([profile, fitness])!
+    expect(prompt).toContain('  - Runs 5k on weekends')
+    expect(prompt).not.toContain('Only some topics')
     expect(memoryPrompt([])).toBeUndefined()
-    expect(relevantMemoriesPrompt([other], label)).toContain('- [00000002] (2026-01-01) fact 2')
+  })
+
+  it('give relevant topics’ points with the message', () => {
+    const label = memoryLabels([profile, fitness])
+    expect(relevantMemoriesPrompt([fitness], label)).toContain('- [00000002] Fitness (2026-01-01): About 2\n  - Runs 5k on weekends')
     expect(relevantMemoriesPrompt([])).toBeUndefined()
+  })
+
+  it('shorten ids, unless two would collide', () => {
+    const a = topic(1, { id: '3f2a9c1e-0000-4000-8000-000000000001', title: 'A' })
+    const b = topic(2, { id: '3f2a9c1e-0000-4000-8000-000000000002', title: 'B' })
+    const c = topic(3, { id: '7b1bf7a1-0000-4000-8000-000000000003', title: 'C' })
+    const prompt = memoryPrompt([a, b, c])!
+    expect(prompt).toContain('- [3f2a9c1e-0000-4000-8000-000000000001] A')
+    expect(prompt).toContain('- [7b1bf7a1] C')
   })
 
   it('go in front of the latest user message only', () => {
@@ -75,47 +100,52 @@ describe('memory prompts', () => {
     ]
     const out = withPrelude(messages, '<related_chats>c</related_chats>')
     expect(out).toEqual([{ role: 'user', content: [{ type: 'text', text: '<related_chats>c</related_chats>' }] }, ...messages])
-    expect(messages).toHaveLength(2)
     expect(withPrelude(messages, undefined)).toBe(messages)
   })
 })
 
 describe('memory consolidation', () => {
-  const memories = many(20, [0])
+  const memories = Array.from({ length: 6 }, (_, i) => topic(i, i === 0 ? { kind: 'profile' } : {}))
   const label = memoryLabels(memories)
+  const rewrite = (i: number, extra: object = {}) => ({ id: label(memories[i]!.id), kind: memories[i]!.kind, title: memories[i]!.title, summary: memories[i]!.summary, points: memories[i]!.points, reason: 'tidy', ...extra })
 
-  it('shows the model ids, pins and dates', () => {
+  it('shows the model ids, kinds, dates, summaries and numbered points', () => {
     const input = consolidationInput(memories, label, new Date('2026-10-28T00:00:00Z'))
     expect(input).toContain('Today: 2026-10-28')
-    expect(input).toContain('- [00000000] (pinned) (2026-01-01) fact 0')
-    expect(input).toContain('- [00000001] (2026-01-01) fact 1')
+    expect(input).toContain('[00000000] profile · Topic 0 (2026-01-01): About 0\n  1. fact 0a\n  2. fact 0b')
   })
 
-  it('keeps one valid change per known memory', () => {
-    const changes = planChanges(memories, label, [
-      { action: 'update', id: '00000001', content: 'fact 1 and 2', reason: 'merged' },
-      { action: 'delete', id: '00000002', content: null, reason: 'merged' },
-      { action: 'delete', id: '00000001', content: null, reason: 'twice' },
-      { action: 'delete', id: 'unknown', content: null, reason: 'x' },
-      { action: 'update', id: '00000003', content: 'fact 3', reason: 'unchanged' },
-      { action: 'update', id: '00000004', content: 'x'.repeat(201), reason: 'too long' },
-    ])
+  it('keeps one valid change per known topic, and new topics', () => {
+    const changes = planChanges(memories, label, {
+      topics: [
+        rewrite(1, { points: ['fact 1a', 'fact 1b', 'fact 2a', 'fact 2b'], summary: 'About 1 and 2' }),
+        rewrite(1, { points: [] }),
+        rewrite(3),
+        rewrite(4, { points: ['fact 4a', ' ', 'x'.repeat(301)], title: 'x'.repeat(41) }),
+        { id: 'unknown', kind: 'topic', title: 'U', summary: '', points: ['p'], reason: 'x' },
+        { id: null, kind: 'project', title: 'Split', summary: 'Moved out', points: ['fact 4b'], reason: 'split' },
+      ],
+      deleted: [{ id: label(memories[2]!.id), reason: 'merged' }, { id: label(memories[1]!.id), reason: 'twice' }],
+    })
     expect(changes).toEqual([
-      { action: 'update', id: memories[1]!.id, content: 'fact 1 and 2', reason: 'merged' },
+      { action: 'update', id: memories[1]!.id, content: { kind: 'topic', title: 'Topic 1', summary: 'About 1 and 2', points: ['fact 1a', 'fact 1b', 'fact 2a', 'fact 2b'] }, reason: 'tidy' },
+      // Invalid points are dropped and an invalid title is kept as it was.
+      { action: 'update', id: memories[4]!.id, content: { kind: 'topic', title: 'Topic 4', summary: 'About 4', points: ['fact 4a'] }, reason: 'tidy' },
       { action: 'delete', id: memories[2]!.id, reason: 'merged' },
+      { action: 'add', content: { kind: 'project', title: 'Split', summary: 'Moved out', points: ['fact 4b'] }, reason: 'split' },
     ])
   })
 
-  it('leaves memories alone whose tidying the user undid', () => {
-    const changes = planChanges(memories, label, [
-      { action: 'delete', id: '00000005', content: null, reason: 'duplicate' },
-      { action: 'delete', id: '00000006', content: null, reason: 'duplicate' },
-    ], new Set([memories[5]!.id]))
-    expect(changes).toEqual([{ action: 'delete', id: memories[6]!.id, reason: 'duplicate' }])
+  it('leaves topics alone whose tidying the user undid', () => {
+    const changes = planChanges(memories, label, {
+      topics: [],
+      deleted: [{ id: label(memories[5]!.id), reason: 'dup' }, { id: label(memories[4]!.id), reason: 'dup' }],
+    }, new Set([memories[5]!.id]))
+    expect(changes).toEqual([{ action: 'delete', id: memories[4]!.id, reason: 'dup' }])
   })
 
-  it('skips a pass that would delete most memories', () => {
-    const changes = memories.slice(0, 11).map((m) => ({ action: 'delete' as const, id: label(m.id), content: null, reason: 'x' }))
-    expect(planChanges(memories, label, changes)).toEqual([])
+  it('skips a pass that would lose most points', () => {
+    const deleted = memories.slice(0, 4).map((m) => ({ id: label(m.id), reason: 'x' }))
+    expect(planChanges(memories, label, { topics: [], deleted })).toEqual([])
   })
 })

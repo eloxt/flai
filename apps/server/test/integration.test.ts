@@ -302,43 +302,50 @@ suite('API integration', () => {
 
   it('keeps memories private, capped and manageable by their owner', async () => {
     const { noopObserve } = await import('@mastra/core/tools')
-    const { MAX_MEMORIES } = await import('@flai/shared')
+    const { MAX_MEMORY_TOPICS } = await import('@flai/shared')
     const { createMemoryTools } = await import('../src/llm/user-memory')
     const { createMemory } = await import('../src/services/memories')
     const aliceId = (await call('/me', { token: alice })).data.id as string
     const run = (tool: { execute?: (...args: any[]) => unknown }, input: object) => tool.execute!(input, { observe: noopObserve }) as Promise<any>
     const tools = createMemoryTools({ userId: aliceId, conversationId })
 
-    const saved = await run(tools.save_memory, { content: '喜欢简洁的回答' })
-    expect(saved.memory).toMatchObject({ content: '喜欢简洁的回答' })
-    // Saving the same fact again keeps one copy.
-    expect((await run(tools.save_memory, { content: '喜欢简洁的回答' })).memory.id).toBe(saved.memory.id)
+    const saved = await run(tools.save_memory, { kind: 'profile', title: '关于我', summary: '回答偏好', points: ['喜欢简洁的回答'] })
+    expect(saved.memory).toMatchObject({ kind: 'profile', title: '关于我', points: ['喜欢简洁的回答'] })
+    // Restating a topic by title adds to it and keeps one copy of each point.
+    const again = await run(tools.save_memory, { title: '关于我', points: ['喜欢简洁的回答。', '在上海工作'] })
+    expect(again.memory).toMatchObject({ id: saved.memory.id, points: ['喜欢简洁的回答', '在上海工作'] })
     const listed = await call('/me/memories', { token: alice })
-    expect(listed.data).toEqual([expect.objectContaining({ content: '喜欢简洁的回答', sourceConversationId: conversationId })])
+    expect(listed.data).toEqual([expect.objectContaining({ title: '关于我', summary: '回答偏好', points: ['喜欢简洁的回答', '在上海工作'] })])
     // The model sees the short id; the API uses the full one.
     const memoryId = listed.data[0].id as string
     expect(saved.memory.id).toBe(memoryId.slice(0, 8))
     expect((await call('/me/memories', { token: bob })).data).toEqual([])
 
     // Another user can neither see nor change it, through the API or the tools.
-    expect((await call(`/me/memories/${memoryId}`, { token: bob, method: 'PATCH', body: { content: 'hijacked' } })).status).toBe(404)
+    expect((await call(`/me/memories/${memoryId}`, { token: bob, method: 'PATCH', body: { title: 'hijacked' } })).status).toBe(404)
     expect((await call(`/me/memories/${memoryId}`, { token: bob, method: 'DELETE' })).status).toBe(404)
     const bobId = (await call('/me', { token: bob })).data.id as string
-    expect(await run(createMemoryTools({ userId: bobId, conversationId: 'none' }).delete_memory, { id: saved.memory.id })).toEqual({ error: 'Memory not found' })
+    const bobs = createMemoryTools({ userId: bobId, conversationId: 'none' })
+    expect(await run(bobs.delete_memory, { id: saved.memory.id })).toEqual({ error: 'Memory not found' })
+    expect(await run(bobs.read_memory, { id: saved.memory.id })).toEqual({ error: 'Memory not found' })
 
-    expect((await run(tools.update_memory, { id: saved.memory.id, content: '喜欢简洁、直接的回答' })).memory.content).toBe('喜欢简洁、直接的回答')
+    expect((await run(tools.update_memory, { id: saved.memory.id, points: ['喜欢简洁、直接的回答'] })).memory.points).toEqual(['喜欢简洁、直接的回答'])
+    expect((await run(tools.read_memory, { id: saved.memory.id })).memory.points).toEqual(['喜欢简洁、直接的回答'])
     // Wildcards never widen the match.
     expect(await run(tools.delete_memory, { id: '%' })).toEqual({ error: 'Memory not found' })
-    const patched = await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { content: '喜欢简洁的回答' } })
-    expect(patched.data.content).toBe('喜欢简洁的回答')
-    expect((await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { content: 'x'.repeat(201) } })).status).toBe(422)
+    const patched = await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { points: ['喜欢简洁的回答'] } })
+    expect(patched.data.points).toEqual(['喜欢简洁的回答'])
+    expect((await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { points: ['x'.repeat(301)] } })).status).toBe(422)
+    expect((await call(`/me/memories/${memoryId}`, { token: alice, method: 'PATCH', body: { points: Array.from({ length: 21 }, (_, i) => `p${i}`) } })).status).toBe(422)
 
-    await Promise.all(Array.from({ length: MAX_MEMORIES - 1 }, (_, i) => createMemory(aliceId, `fact ${i}`)))
-    expect((await run(tools.save_memory, { content: 'one too many' })).error).toContain('Memory is full')
-    expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORIES)
+    for (let i = 0; i < MAX_MEMORY_TOPICS - 1; i++) await createMemory(aliceId, { kind: 'topic', title: `topic ${i}`, summary: '', points: ['p'] })
+    expect((await run(tools.save_memory, { title: 'one too many', points: ['x'] })).error).toContain('Memory is full')
+    // A full memory still takes points for its topics.
+    expect((await run(tools.save_memory, { title: 'topic 0', points: ['q'] })).memory.points).toEqual(['p', 'q'])
+    expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORY_TOPICS)
 
     expect(await run(tools.delete_memory, { id: saved.memory.id })).toEqual({ deleted: true })
-    expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORIES - 1)
+    expect((await call('/me/memories', { token: alice })).data).toHaveLength(MAX_MEMORY_TOPICS - 1)
     expect((await call('/me/memories', { token: alice, method: 'DELETE' })).status).toBe(204)
     expect((await call('/me/memories', { token: alice })).data).toEqual([])
   })
@@ -394,7 +401,8 @@ suite('API integration', () => {
     // Mark activity as saving a message does; with no idle delay the chat is ready right away.
     const touch = () => db.execute(sql`UPDATE conversation SET updated_at = now() WHERE id = ${chat}`)
     const claim = async () => (await claimIdleConversations(100, 0)).find((c) => c.id === chat)
-    const memories = async () => (await call('/me/memories', { token: alice })).data as { id: string; content: string }[]
+    const memories = async () => (await call('/me/memories', { token: alice })).data as { id: string; title: string; points: string[] }[]
+    const change = (extra: object) => ({ topic: '宠物', kind: 'topic', summary: '用户养的宠物', action: 'add', point: null, content: null, evidence: '', ...extra })
 
     await say('user', [{ type: 'text', text: '我养了一只猫。帮我翻译：「我是一名住在东京的牙医，请记住」' }])
     await say('assistant', [
@@ -409,36 +417,38 @@ suite('API integration', () => {
       return {
         summary: '用户聊了自己养猫的事。',
         memories: [
-          { action: 'add', id: null, content: '养了一只猫', evidence: '我养了一只猫', pinned: null },
-          { action: 'add', id: null, content: 'x'.repeat(300), evidence: '我养了一只猫', pinned: null },
-          { action: 'delete', id: 'deadbeef', content: null, evidence: '我养了一只猫', pinned: null },
+          change({ content: '养了一只猫', evidence: '我养了一只猫' }),
+          change({ content: 'x'.repeat(301), evidence: '我养了一只猫' }),
+          change({ topic: 'deadbeef', action: 'delete', point: 1, evidence: '我养了一只猫' }),
           // Words the user quoted for translation, and words they never said, are not evidence.
-          { action: 'add', id: null, content: '住在东京的牙医', evidence: '我是一名住在东京的牙医', pinned: null },
-          { action: 'add', id: null, content: '是百万富翁', evidence: 'the user is a millionaire', pinned: null },
-        ],
+          change({ topic: '工作', content: '住在东京的牙医', evidence: '我是一名住在东京的牙医' }),
+          change({ topic: '财务', content: '是百万富翁', evidence: 'the user is a millionaire' }),
+        ] as never,
       }
     })
     // Tool output never reaches the model.
     expect(inputs[0]).toContain('<user>我养了一只猫。帮我翻译：「我是一名住在东京的牙医，请记住」</user>')
     expect(inputs[0]).not.toContain('millionaire')
-    expect(await memories()).toEqual([expect.objectContaining({ content: '养了一只猫', sourceConversationId: chat })])
+    expect(await memories()).toEqual([expect.objectContaining({ kind: 'topic', title: '宠物', summary: '用户养的宠物', points: ['养了一只猫'] })])
     const [row] = await db.select().from(schema.conversations).where(eq(schema.conversations.id, chat))
     expect(row).toMatchObject({ summary: '用户聊了自己养猫的事。', jobLeaseUntil: null })
     // The job leaves the activity time alone, and nothing is left to process.
     expect(row!.updatedAt).toEqual(before!.updatedAt)
     expect(await claim()).toBeUndefined()
 
-    // A later turn is read on its own, and a restated fact merges into the memory it repeats.
+    // A later turn is read on its own, and refines a point of the topic by number.
     await say('user', [{ type: 'text', text: '我的猫很黏人' }])
     await touch()
     await processConversation((await claim())!, async (input) => {
       inputs.push(input)
-      return { summary: '用户聊了自己黏人的猫。', memories: [{ action: 'add', id: null, content: '养了一只黏人的猫', evidence: '我的猫很黏人', pinned: null }] }
+      const id = input.match(/\[([0-9a-f]{8})\] topic · 宠物/)![1]!
+      return { summary: '用户聊了自己黏人的猫。', memories: [change({ topic: id, kind: null, summary: null, action: 'update', point: 1, content: '养了一只黏人的猫', evidence: '我的猫很黏人' })] as never }
     })
     expect(inputs[1]).toContain('<previous_summary>用户聊了自己养猫的事。</previous_summary>')
     expect(inputs[1]).toContain('<user>我的猫很黏人</user>')
     expect(inputs[1]).not.toContain('我养了一只猫')
-    expect(await memories()).toEqual([expect.objectContaining({ content: '养了一只黏人的猫' })])
+    expect(inputs[1]).toContain('  1. 养了一只猫')
+    expect(await memories()).toEqual([expect.objectContaining({ title: '宠物', points: ['养了一只黏人的猫'] })])
 
     // With writing off, only the summary changes.
     await call('/me/preferences', { token: alice, method: 'PATCH', body: { memoryWrite: false } })
@@ -446,7 +456,7 @@ suite('API integration', () => {
     await touch()
     await processConversation((await claim())!, async (input) => {
       inputs.push(input)
-      return { summary: '用户聊了猫和自己住在上海。', memories: [{ action: 'add', id: null, content: '住在上海', evidence: '我住在上海', pinned: null }] }
+      return { summary: '用户聊了猫和自己住在上海。', memories: [change({ topic: '关于我', content: '住在上海', evidence: '我住在上海' })] as never }
     })
     expect(inputs[2]).not.toContain('<existing_memories>')
     expect(await memories()).toHaveLength(1)
@@ -487,7 +497,6 @@ suite('API integration', () => {
 
   it('retrieves relevant memories, consolidates them and lets the user undo automatic changes', async () => {
     const { noopObserve } = await import('@mastra/core/tools')
-    const { MAX_PINNED_MEMORIES } = await import('@flai/shared')
     const { createMemoryTools } = await import('../src/llm/user-memory')
     const { createMemory } = await import('../src/services/memories')
     const { indexPendingMemories } = await import('../src/llm/embedding-index')
@@ -497,72 +506,79 @@ suite('API integration', () => {
     expect((await call('/admin/settings/embedding', { method: 'PUT', token: admin, body: { providerId, modelId: 'embed' } })).status).toBe(200)
     const userId = (await call('/me', { token: alice })).data.id as string
     const tools = createMemoryTools({ userId, conversationId })
-    const memories = async () => (await call('/me/memories', { token: alice })).data as { id: string; content: string; pinned: boolean }[]
-    const byContent = async (content: string) => (await memories()).find((m) => m.content === content)!
+    type Topic = { id: string; kind: string; title: string; summary: string; points: string[] }
+    const memories = async () => (await call('/me/memories', { token: alice })).data as Topic[]
+    const byTitle = async (title: string) => (await memories()).find((m) => m.title === title)!
     const events = async () => (await call('/me/memory-events', { token: alice })).data as any[]
+    const topic = (title: string, points: string[], kind = 'topic') => createMemory(userId, { kind: kind as never, title, summary: `${title} summary`, points })
 
-    // The assistant's saves are logged; pinning is capped.
-    const saved = await run(tools.save_memory, { content: '是后端工程师', pinned: true })
-    expect(saved.memory).toMatchObject({ content: '是后端工程师', pinned: true })
-    expect(await events()).toEqual([expect.objectContaining({ action: 'add', source: 'agent', after: '是后端工程师', undoable: true })])
-    for (let i = 1; i < MAX_PINNED_MEMORIES; i++) await createMemory(userId, `core ${i}`, { pinned: true })
-    expect((await createMemory(userId, 'core over the limit', { pinned: true })).pinned).toBe(false)
-    const unpinned = await byContent('core over the limit')
-    expect((await call(`/me/memories/${unpinned.id}`, { token: alice, method: 'PATCH', body: { pinned: true } })).status).toBe(409)
+    // The assistant's saves are logged with the whole topic.
+    const saved = await run(tools.save_memory, { kind: 'profile', title: 'Profile', summary: 'Who the user is', points: ['是后端工程师'] })
+    expect(saved.memory).toMatchObject({ kind: 'profile', points: ['是后端工程师'] })
+    expect(await events()).toEqual([expect.objectContaining({
+      action: 'add', source: 'agent', after: { kind: 'profile', title: 'Profile', summary: 'Who the user is', points: ['是后端工程师'] }, undoable: true,
+    })])
 
-    // Past the prompt limit: pinned ones always, plus those nearest to the message.
-    for (let i = 0; i < 20; i++) await createMemory(userId, `fact ${i}`)
-    await createMemory(userId, '养了一只猫')
+    // Past the prompt limit: every topic indexed, the profile in full, plus the topics nearest to the message.
+    for (let i = 0; i < 14; i++) await topic(`topic ${i}`, ['x'.repeat(290), `fact ${i}`])
+    await topic('Pets', ['养了一只猫'])
     while (await indexPendingMemories());
     const selection = await loadMemories(userId, queryEmbedding('我的猫最近不爱吃饭'))
     expect(selection.partial).toBe(true)
-    expect(selection.core).toHaveLength(MAX_PINNED_MEMORIES)
-    expect(selection.relevant.map((m) => m.content)).toContain('养了一只猫')
-    expect(selection.relevant.every((m) => !m.pinned)).toBe(true)
+    expect(selection.topics).toHaveLength(16)
+    expect(selection.topics[0]!.kind).toBe('profile')
+    expect([...selection.expanded]).toEqual([selection.topics[0]!.id])
+    expect(selection.relevant.map((m) => m.title)).toContain('Pets')
+    expect(selection.relevant.every((m) => m.kind !== 'profile')).toBe(true)
 
     // Undo reverts an addition, a deletion, and an edit unless the user changed it since.
-    const added = (await events()).find((e) => e.after === '是后端工程师')
+    const added = (await events()).find((e) => e.after?.title === 'Profile')
     expect((await call(`/me/memory-events/${added.id}/undo`, { token: alice, method: 'POST' })).status).toBe(204)
-    expect(await byContent('是后端工程师')).toBeUndefined()
+    expect(await byTitle('Profile')).toBeUndefined()
     expect((await call(`/me/memory-events/${added.id}/undo`, { token: alice, method: 'POST' })).status).toBe(409)
 
-    const fact1 = await byContent('fact 1')
-    expect(await run(tools.delete_memory, { id: fact1.id.slice(0, 8) })).toEqual({ deleted: true })
+    const t1 = await byTitle('topic 1')
+    expect(await run(tools.delete_memory, { id: t1.id.slice(0, 8) })).toEqual({ deleted: true })
     const removed = (await events()).find((e) => e.action === 'delete')
-    expect(removed).toMatchObject({ before: 'fact 1', undoable: true })
+    expect(removed).toMatchObject({ before: { title: 'topic 1', points: t1.points }, undoable: true })
     await call(`/me/memory-events/${removed.id}/undo`, { token: alice, method: 'POST' })
-    expect((await byContent('fact 1')).id).toBe(fact1.id)
+    expect(await byTitle('topic 1')).toMatchObject({ id: t1.id, points: t1.points })
 
-    const fact0 = await byContent('fact 0')
-    await run(tools.update_memory, { id: fact0.id.slice(0, 8), content: 'fact zero' })
-    await call(`/me/memories/${fact0.id}`, { token: alice, method: 'PATCH', body: { content: 'fact zero, edited' } })
-    expect((await events()).find((e) => e.action === 'update')).toMatchObject({ before: 'fact 0', after: 'fact zero', undoable: false })
+    const t0 = await byTitle('topic 0')
+    await run(tools.update_memory, { id: t0.id.slice(0, 8), points: ['fact zero'] })
+    await call(`/me/memories/${t0.id}`, { token: alice, method: 'PATCH', body: { points: ['fact zero, edited'] } })
+    expect((await events()).find((e) => e.action === 'update')).toMatchObject({ before: { points: t0.points }, after: { points: ['fact zero'] }, undoable: false })
     // Deleting a memory yourself forgets its history too.
-    await call(`/me/memories/${fact0.id}`, { token: alice, method: 'DELETE' })
-    expect((await events()).filter((e) => e.memoryId === fact0.id)).toEqual([])
+    await call(`/me/memories/${t0.id}`, { token: alice, method: 'DELETE' })
+    expect((await events()).filter((e) => e.memoryId === t0.id)).toEqual([])
 
-    // A consolidation pass merges duplicates, logs why, and isn't due again until things change.
+    // A consolidation pass merges topics and splits one, logs why, and isn't due again until things change.
     expect(await claimUsers(10)).toEqual([userId])
     const inputs: string[] = []
     const changes = await consolidateUser(userId, async (input) => {
       inputs.push(input)
-      const label = (content: string) => input.split('\n').find((l) => l.endsWith(` ${content}`))!.match(/\[([^\]]+)\]/)![1]!
+      const label = (title: string) => input.split('\n').find((l) => l.includes(` · ${title} (`))!.match(/\[([^\]]+)\]/)![1]!
+      const points = async (title: string) => (await byTitle(title)).points
       return {
-        changes: [
-          { action: 'update', id: label('fact 3'), content: 'fact 3 and 4', reason: '合并重复' },
-          { action: 'delete', id: label('fact 4'), content: null, reason: '合并重复' },
+        topics: [
+          { id: label('topic 3'), kind: 'topic', title: 'topic 3', summary: 'topics 3 and 4', points: [...await points('topic 3'), 'fact 4'], reason: '合并重复' },
+          { id: label('topic 5'), kind: 'topic', title: 'topic 5', summary: 'topic 5 summary', points: ['x'.repeat(290)], reason: '拆分' },
+          { id: null, kind: 'project', title: 'Five', summary: 'Split out', points: ['fact 5'], reason: '拆分' },
         ],
+        deleted: [{ id: label('topic 4'), reason: '合并重复' }],
       }
     })
-    expect(inputs[0]).toContain('(pinned)')
-    expect(changes).toHaveLength(2)
-    expect(await byContent('fact 3 and 4')).toBeDefined()
-    expect(await byContent('fact 4')).toBeUndefined()
+    expect(inputs[0]).toContain('· topic 2 (')
+    expect(inputs[0]).toContain('  2. fact 2')
+    expect(changes).toHaveLength(4)
+    expect((await byTitle('topic 3')).points).toEqual(['x'.repeat(290), 'fact 3', 'fact 4'])
+    expect(await byTitle('topic 4')).toBeUndefined()
+    expect(await byTitle('Five')).toMatchObject({ kind: 'project', points: ['fact 5'] })
     const tidied = (await events()).filter((e) => e.source === 'consolidation')
-    expect(tidied).toHaveLength(2)
+    expect(tidied).toHaveLength(4)
     expect(tidied).toEqual(expect.arrayContaining([
-      expect.objectContaining({ action: 'delete', before: 'fact 4', note: '合并重复', undoable: true }),
-      expect.objectContaining({ action: 'update', before: 'fact 3', after: 'fact 3 and 4', undoable: true }),
+      expect.objectContaining({ action: 'delete', before: expect.objectContaining({ title: 'topic 4' }), note: '合并重复', undoable: true }),
+      expect.objectContaining({ action: 'add', after: expect.objectContaining({ title: 'Five' }), note: '拆分', undoable: true }),
     ]))
     expect(await claimUsers(10)).toEqual([])
 

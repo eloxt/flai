@@ -1,5 +1,15 @@
-import { MAX_MEMORY_LENGTH, type Memory, type MemoryEvent } from "@flai/shared"
-import { PencilIcon, PinIcon, Trash2Icon, Undo2Icon } from "lucide-react"
+import {
+  MAX_MEMORY_POINT_LENGTH,
+  MAX_MEMORY_POINTS,
+  MAX_MEMORY_SUMMARY_LENGTH,
+  MAX_MEMORY_TITLE_LENGTH,
+  MEMORY_KINDS,
+  type Memory,
+  type MemoryContent,
+  type MemoryEvent,
+  type MemoryKind,
+} from "@flai/shared"
+import { Undo2Icon } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { ConfirmDialog } from "~/components/confirm-dialog"
@@ -26,16 +36,18 @@ import {
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field"
+import { Input } from "~/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
 import { Switch } from "~/components/ui/switch"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table"
+import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table"
 import { Textarea } from "~/components/ui/textarea"
 import { api } from "~/lib/api"
 import { formatDateTime } from "~/lib/format"
@@ -44,13 +56,60 @@ import { cn } from "cn"
 import { usePreferences } from "~/store/auth-store"
 import { useUpdatePreferences } from "./preference-settings"
 
+const DAY_MS = 86_400_000
+
+/** "5 days ago" within a week, otherwise a short date ("Jul 18", with the year when not this one). */
+function useUpdatedLabel() {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage
+  return (iso: string) => {
+    const date = new Date(iso)
+    const days = Math.floor((Date.now() - date.getTime()) / DAY_MS)
+    const when =
+      days < 7
+        ? new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
+            -days,
+            "day"
+          )
+        : date.toLocaleDateString(locale, {
+            month: "short",
+            day: "numeric",
+            ...(date.getFullYear() !== new Date().getFullYear() && {
+              year: "numeric",
+            }),
+          })
+    return t("pages.settings.memory.updated", { when })
+  }
+}
+
+interface Draft {
+  kind: MemoryKind
+  title: string
+  summary: string
+  points: string
+}
+
+const toDraft = (memory: Memory): Draft => ({
+  kind: memory.kind,
+  title: memory.title,
+  summary: memory.summary,
+  points: memory.points.join("\n"),
+})
+
+const draftPoints = (draft: Draft) =>
+  draft.points
+    .split("\n")
+    .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim())
+    .filter(Boolean)
+
 export function MemorySettings() {
   const { t } = useTranslation()
   const preferences = usePreferences()
   const updatePreferences = useUpdatePreferences()
+  const updatedLabel = useUpdatedLabel()
   const [memories, setMemories] = useState<Memory[] | null>(null)
-  const [editing, setEditing] = useState<Memory | null>(null)
-  const [draft, setDraft] = useState("")
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Draft | null>(null)
   const [deleting, setDeleting] = useState<Memory | null>(null)
   const [clearing, setClearing] = useState(false)
   const [events, setEvents] = useState<MemoryEvent[]>([])
@@ -74,33 +133,30 @@ export function MemorySettings() {
   }, [reload])
 
   const enabled = preferences.memory
+  const open = memories?.find((m) => m.id === openId) ?? null
 
-  const save = async () => {
-    if (!editing) return
-    try {
-      const updated = await api<Memory>(`/me/memories/${editing.id}`, {
-        method: "PATCH",
-        body: { content: draft },
-      })
-      setMemories((list) =>
-        (list ?? []).map((m) => (m.id === updated.id ? updated : m))
-      )
-      setEditing(null)
-      void reload()
-    } catch (error) {
-      notify.error(error)
-    }
+  const close = () => {
+    setOpenId(null)
+    setDraft(null)
   }
 
-  const togglePin = async (memory: Memory) => {
+  const save = async () => {
+    if (!open || !draft) return
     try {
-      const updated = await api<Memory>(`/me/memories/${memory.id}`, {
+      const updated = await api<Memory>(`/me/memories/${open.id}`, {
         method: "PATCH",
-        body: { pinned: !memory.pinned },
+        body: {
+          kind: draft.kind,
+          title: draft.title,
+          summary: draft.summary,
+          points: draftPoints(draft),
+        },
       })
       setMemories((list) =>
         (list ?? []).map((m) => (m.id === updated.id ? updated : m))
       )
+      setDraft(null)
+      void reload()
     } catch (error) {
       notify.error(error)
     }
@@ -114,6 +170,11 @@ export function MemorySettings() {
       notify.error(error)
     }
   }
+
+  const tooManyPoints = draft !== null && draftPoints(draft).length > MAX_MEMORY_POINTS
+  const pointTooLong =
+    draft !== null &&
+    draftPoints(draft).some((p) => p.length > MAX_MEMORY_POINT_LENGTH)
 
   return (
     <PanelSection
@@ -183,70 +244,38 @@ export function MemorySettings() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <PanelTable>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("pages.settings.memory.content")}</TableHead>
-                <TableHead>{t("pages.settings.memory.updatedAt")}</TableHead>
-                <TableHead className="text-right">
-                  {t("common.table.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {memories.map((memory) => (
-                <TableRow key={memory.id}>
-                  <TableCell className="min-w-56 break-words whitespace-normal">
-                    {memory.content}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDateTime(memory.updatedAt)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("pages.settings.memory.pin")}
-                        aria-pressed={memory.pinned}
-                        title={t("pages.settings.memory.pinHint")}
-                        onClick={() => void togglePin(memory)}
+        <div className="flex flex-col gap-6">
+          {MEMORY_KINDS.map((kind) => {
+            const topics = memories.filter((m) => m.kind === kind)
+            if (topics.length === 0) return null
+            return (
+              <section key={kind} className="flex flex-col gap-2">
+                <h4 className="text-sm font-medium">
+                  {t(`pages.settings.memory.kinds.${kind}`)}
+                </h4>
+                <ul className="divide-y divide-border border-y border-border">
+                  {topics.map((memory) => (
+                    <li key={memory.id}>
+                      <button
+                        type="button"
+                        className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-0.5 py-3 text-left text-sm transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] sm:px-1"
+                        onClick={() => setOpenId(memory.id)}
                       >
-                        <PinIcon
-                          className={cn(
-                            memory.pinned
-                              ? "fill-current"
-                              : "text-muted-foreground"
-                          )}
-                        />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("pages.settings.memory.editTitle")}
-                        onClick={() => {
-                          setDraft(memory.content)
-                          setEditing(memory)
-                        }}
-                      >
-                        <PencilIcon />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("common.actions.delete")}
-                        onClick={() => setDeleting(memory)}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </PanelTable>
+                        <span className="truncate">{memory.title}</span>
+                        <span className="col-span-2 row-start-2 truncate text-muted-foreground sm:col-span-1 sm:row-start-auto">
+                          {memory.summary}
+                        </span>
+                        <span className="col-start-2 row-start-1 whitespace-nowrap text-muted-foreground tabular-nums sm:col-start-auto sm:row-start-auto">
+                          {updatedLabel(memory.updatedAt)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
       )}
 
       {events.length > 0 && (
@@ -265,14 +294,13 @@ export function MemorySettings() {
                 {events.map((event) => (
                   <TableRow key={event.id}>
                     <TableCell className="min-w-56 break-words whitespace-normal">
-                      <div className="flex flex-col gap-1">
-                        <span
-                          className={cn(
-                            event.undoneAt && "line-through opacity-60"
-                          )}
-                        >
-                          <ChangeText event={event} />
-                        </span>
+                      <div
+                        className={cn(
+                          "flex flex-col gap-1",
+                          event.undoneAt && "line-through opacity-60"
+                        )}
+                      >
+                        <ChangeText event={event} />
                         <span className="text-xs text-muted-foreground">
                           {t(`pages.settings.memory.sources.${event.source}`)}
                           {event.note && ` · ${event.note}`}
@@ -310,32 +338,151 @@ export function MemorySettings() {
         </section>
       )}
 
-      <Dialog
-        open={editing !== null}
-        onOpenChange={(open) => !open && setEditing(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("pages.settings.memory.editTitle")}</DialogTitle>
-          </DialogHeader>
-          <Textarea
-            value={draft}
-            maxLength={MAX_MEMORY_LENGTH}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <DialogFooter>
-            <Button disabled={!draft.trim()} onClick={save}>
-              {t("common.actions.save")}
-            </Button>
-          </DialogFooter>
+      <Dialog open={open !== null} onOpenChange={(o) => !o && close()}>
+        <DialogContent className="sm:max-w-xl">
+          {open && !draft && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{open.title}</DialogTitle>
+              </DialogHeader>
+              <dl className="flex max-h-[60vh] flex-col gap-5 overflow-y-auto text-sm">
+                <DetailItem label={t("pages.settings.memory.lastUpdated")}>
+                  {new Date(open.updatedAt).toLocaleDateString(undefined, {
+                    dateStyle: "medium",
+                  })}
+                </DetailItem>
+                {open.summary && (
+                  <DetailItem label={t("pages.settings.memory.summary")}>
+                    {open.summary}
+                  </DetailItem>
+                )}
+                <DetailItem label={t("pages.settings.memory.details")}>
+                  <ul className="flex list-disc flex-col gap-1.5 pl-5 marker:text-muted-foreground">
+                    {open.points.map((point, i) => (
+                      <li key={i} className="text-pretty">
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </DetailItem>
+              </dl>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleting(open)}>
+                  {t("common.actions.delete")}
+                </Button>
+                <Button onClick={() => setDraft(toDraft(open))}>
+                  {t("common.actions.edit")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+          {open && draft && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("pages.settings.memory.editTitle")}</DialogTitle>
+              </DialogHeader>
+              <FieldGroup>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+                  <Field>
+                    <FieldLabel htmlFor="memory-title">
+                      {t("pages.settings.memory.name")}
+                    </FieldLabel>
+                    <Input
+                      id="memory-title"
+                      value={draft.title}
+                      maxLength={MAX_MEMORY_TITLE_LENGTH}
+                      onChange={(e) =>
+                        setDraft({ ...draft, title: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>{t("pages.settings.memory.kind")}</FieldLabel>
+                    <Select
+                      value={draft.kind}
+                      onValueChange={(v) =>
+                        setDraft({ ...draft, kind: v as MemoryKind })
+                      }
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue>
+                          {(v: MemoryKind) =>
+                            t(`pages.settings.memory.kinds.${v}`)
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {MEMORY_KINDS.map((kind) => (
+                            <SelectItem key={kind} value={kind}>
+                              {t(`pages.settings.memory.kinds.${kind}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="memory-summary">
+                    {t("pages.settings.memory.summary")}
+                  </FieldLabel>
+                  <Input
+                    id="memory-summary"
+                    value={draft.summary}
+                    maxLength={MAX_MEMORY_SUMMARY_LENGTH}
+                    onChange={(e) =>
+                      setDraft({ ...draft, summary: e.target.value })
+                    }
+                  />
+                </Field>
+                <Field data-invalid={tooManyPoints || pointTooLong || undefined}>
+                  <FieldLabel htmlFor="memory-points">
+                    {t("pages.settings.memory.details")}
+                  </FieldLabel>
+                  <Textarea
+                    id="memory-points"
+                    className="max-h-[40vh] min-h-40"
+                    value={draft.points}
+                    aria-invalid={tooManyPoints || pointTooLong || undefined}
+                    onChange={(e) =>
+                      setDraft({ ...draft, points: e.target.value })
+                    }
+                  />
+                  <FieldDescription>
+                    {t("pages.settings.memory.detailsHint", {
+                      max: MAX_MEMORY_POINTS,
+                      length: MAX_MEMORY_POINT_LENGTH,
+                    })}
+                  </FieldDescription>
+                </Field>
+              </FieldGroup>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDraft(null)}>
+                  {t("common.actions.cancel")}
+                </Button>
+                <Button
+                  disabled={
+                    !draft.title.trim() ||
+                    draftPoints(draft).length === 0 ||
+                    tooManyPoints ||
+                    pointTooLong
+                  }
+                  onClick={save}
+                >
+                  {t("common.actions.save")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
       <ConfirmDialog
         open={deleting !== null}
-        onOpenChange={(open) => !open && setDeleting(null)}
+        onOpenChange={(o) => !o && setDeleting(null)}
         title={t("common.dialog.confirmDelete")}
-        description={deleting?.content}
+        description={deleting?.title}
         confirmLabel={t("common.actions.delete")}
         destructive
         onConfirm={async () => {
@@ -345,6 +492,7 @@ export function MemorySettings() {
             setMemories((list) =>
               (list ?? []).filter((m) => m.id !== deleting.id)
             )
+            close()
             void reload()
           } catch (error) {
             notify.error(error)
@@ -373,11 +521,44 @@ export function MemorySettings() {
   )
 }
 
-/** One automatic change in words: what was added, changed or removed. */
+function DetailItem({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  )
+}
+
+/** Points in `b` that `a` doesn't have. */
+const missing = (a: MemoryContent | null, b: MemoryContent | null) =>
+  (b?.points ?? []).filter((p) => !(a?.points ?? []).includes(p))
+
+/** One automatic change in words: which topic, and the points it added or removed. */
 function ChangeText({ event }: { event: MemoryEvent }) {
   const { t } = useTranslation()
-  return t(`pages.settings.memory.changes.${event.action}`, {
-    before: event.before,
-    after: event.after,
-  })
+  const title = (event.after ?? event.before)!.title
+  const added = event.action === "delete" ? [] : missing(event.before, event.after)
+  const removed = event.action === "add" ? [] : missing(event.after, event.before)
+  return (
+    <>
+      <span>{t(`pages.settings.memory.changes.${event.action}`, { title })}</span>
+      {event.action === "update" && (added.length > 0 || removed.length > 0) && (
+        <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+          {added.map((p, i) => (
+            <li key={`a${i}`}>+ {p}</li>
+          ))}
+          {removed.map((p, i) => (
+            <li key={`r${i}`}>− {p}</li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
 }

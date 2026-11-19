@@ -89,29 +89,31 @@ export async function indexPendingSummaries(abortSignal?: AbortSignal): Promise<
   return pending.rows.length
 }
 
-export async function saveMemoryEmbedding(memoryId: string, model: string, text: string, embedding: number[], tx: Pick<typeof db, 'insert'> = db) {
-  const e = schema.memoryEmbeddings
-  await tx.insert(e).values({ memoryId, model, text, embedding })
-    .onConflictDoUpdate({ target: e.memoryId, set: { model, text, embedding } })
-}
+/** The text a memory topic is embedded as: its title, summary and points, one per line. */
+const memoryTextSql = sql`um.title || chr(10) || um.summary || chr(10) || coalesce(
+  (SELECT string_agg(p.value, chr(10) ORDER BY p.ordinality) FROM jsonb_array_elements_text(um.points) WITH ORDINALITY AS p(value, ordinality)), '')`
 
 /**
- * Embed one batch of memories (of one user, or anyone's) with no vector for the current model
- * and text, as relevance retrieval and duplicate checks need them; returns how many.
+ * Embed one batch of memory topics (of one user, or anyone's) with no vector for the current
+ * model and text, as relevance retrieval needs them; returns how many.
  */
 export async function indexPendingMemories({ userId, abortSignal }: { userId?: string; abortSignal?: AbortSignal } = {}): Promise<number> {
   const embedder = getEmbedder()
   if (!embedder) return 0
-  const pending = await db.execute<{ id: string; content: string }>(sql`
-    SELECT um.id, um.content FROM user_memory um
-    LEFT JOIN memory_embedding e ON e.memory_id = um.id AND e.model = ${embedder.key} AND e.text = um.content
+  const pending = await db.execute<{ id: string; text: string }>(sql`
+    SELECT um.id, ${memoryTextSql} AS text FROM user_memory um
+    LEFT JOIN memory_embedding e ON e.memory_id = um.id AND e.model = ${embedder.key} AND e.text = ${memoryTextSql}
     WHERE e.memory_id IS NULL ${userId ? sql`AND um.user_id = ${userId}` : sql``}
     ORDER BY um.updated_at DESC
-    LIMIT ${userId ? 1000 : BATCH_MESSAGES}
+    LIMIT ${BATCH_MESSAGES}
   `)
   if (pending.rows.length === 0) return 0
-  const vectors = await embedder.embed(pending.rows.map((r) => r.content), abortSignal ?? AbortSignal.timeout(60_000))
-  for (const [i, r] of pending.rows.entries()) await saveMemoryEmbedding(r.id, embedder.key, r.content, vectors[i]!)
+  const vectors = await embedder.embed(pending.rows.map((r) => r.text), abortSignal ?? AbortSignal.timeout(60_000))
+  const e = schema.memoryEmbeddings
+  for (const [i, r] of pending.rows.entries()) {
+    const values = { model: embedder.key, text: r.text, embedding: vectors[i]! }
+    await db.insert(e).values({ memoryId: r.id, ...values }).onConflictDoUpdate({ target: e.memoryId, set: values })
+  }
   return pending.rows.length
 }
 

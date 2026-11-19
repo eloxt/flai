@@ -6,7 +6,7 @@ import type { ModelConfig } from '@flai/shared'
 import type { MemoryRow } from '../services/memories'
 import { getSetting } from '../services/settings'
 import type { ResolvedModel } from './models'
-import { memoryPrompt } from './user-memory'
+import { memoryPrompt, type MemoryPromptOptions } from './user-memory'
 
 /** Values the chat agent reads from the per-request context. */
 export interface ChatRequestContext {
@@ -48,8 +48,8 @@ export function getGenuiPrompt(): string {
 
 export interface ChatInstructionOptions {
   chatHistory?: boolean
-  /** The memories for the system prompt, oldest first, and whether others were left out; none when memory is off. */
-  memories?: { rows: MemoryRow[]; partial: boolean; label?: (id: string) => string }
+  /** The memory topics for the system prompt and which of them show their points; none when memory is off. */
+  memories?: { rows: MemoryRow[] } & MemoryPromptOptions
   /** Whether the memory tools are offered. */
   memoryWrite?: boolean
   now?: Date
@@ -60,10 +60,10 @@ export function chatInstructions(model: ModelConfig, { chatHistory = false, memo
   return [
     base,
     // Right after the system prompt, and only changing when memories do, so the prefix caches well.
-    memories && memoryPrompt(memories.rows, { partial: memories.partial, label: memories.label }),
+    memories && memoryPrompt(memories.rows, memories),
     model.toolCall && 'Use ask_user when you need clarification or a decision from the user. Ask in the user’s language, provide concise choices when helpful, and wait for the answer before continuing.',
     model.toolCall && chatHistory && 'Use search_chats and read_chat to recall the user’s earlier conversations when they refer to something discussed before or when past context would clearly help; don’t mention them otherwise.',
-    model.toolCall && memoryWrite && 'Use save_memory when the user shares a lasting fact or preference about themselves or asks you to remember something; use update_memory or delete_memory, with ids from the saved memories, when one changes or the user asks you to forget it. Keep one fact per memory and say briefly what you saved.',
+    model.toolCall && memoryWrite && 'Use save_memory when the user shares a lasting fact or preference about themselves or asks you to remember something: add it to the topic it belongs to, or start a topic when none fits (profile for who the user is and how they want answers, topic for a recurring interest, project for something they work on). Use update_memory, with ids from the saved memories, when something changes or the user asks you to forget part of a topic, and delete_memory to forget a whole topic. Say briefly what you saved.',
     model.generativeUi && getGenuiPrompt(),
   ].filter(Boolean).join('\n\n')
 }

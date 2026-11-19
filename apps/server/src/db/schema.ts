@@ -1,4 +1,4 @@
-import type { McpToolInfo, MessageMetadata, ModelConfig, FlaiPart, Preferences, ProviderType } from '@flai/shared'
+import { MEMORY_KINDS, type McpToolInfo, type MessageMetadata, type ModelConfig, type FlaiPart, type Preferences, type ProviderType } from '@flai/shared'
 import { sql } from 'drizzle-orm'
 import {
   type AnyPgColumn,
@@ -213,6 +213,10 @@ export const notifications = pgTable('notification', {
 })
 
 /** Short, durable facts about the user, given to the assistant in every chat. */
+/**
+ * One memory topic. Its title and summary are the index the assistant always sees; its points
+ * are the details, given when they fit or are relevant and otherwise read on demand.
+ */
 export const userMemories = pgTable(
   'user_memory',
   {
@@ -220,11 +224,12 @@ export const userMemories = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id),
-    content: text('content').notNull(),
-    /** Core memories are always in the prompt; the rest only when relevant, once there are many. */
-    pinned: boolean('pinned').notNull().default(false),
-    /** The chat the assistant saved it from; null when the user wrote it. */
-    sourceConversationId: text('source_conversation_id').references(() => conversations.id),
+    /** Profile topics are always given in full; the others when relevant. */
+    kind: text('kind', { enum: MEMORY_KINDS }).notNull().default('topic'),
+    title: text('title').notNull().default(''),
+    /** One line on what the topic covers. */
+    summary: text('summary').notNull().default(''),
+    points: jsonb('points').$type<string[]>().notNull().default([]),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

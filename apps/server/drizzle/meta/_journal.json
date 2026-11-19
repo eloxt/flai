@@ -85,6 +85,20 @@
       "when": 1793706813008,
       "tag": "0011_drop_related_chat_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794986649405,
+      "tag": "0012_memory_topics",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794986666809,
+      "tag": "0013_drop_flat_memories",
+      "breakpoints": true
     }
   ]
 }
