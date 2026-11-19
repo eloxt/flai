@@ -55,6 +55,12 @@ export default function ChatPage() {
 const Composer = memo(function Composer({ conversationId, collapsed, expand }: { conversationId: string } & FooterState) {
   const streaming = useChatStore((s) => Boolean(s.streaming))
   const stopping = useChatStore((s) => s.streaming?.stopping)
+  // Every branch counts: regenerated and edited replies were paid for too.
+  const cost = useChatStore((s) => {
+    let total = 0
+    for (const message of Object.values(s.map)) total += message.metadata.usage?.cost ?? 0
+    return total
+  })
   const navigate = useNavigate()
   // The draft flagged as a new topic; sending it unchanged again keeps it here.
   const [flagged, setFlagged] = useState<string | null>(null)
@@ -98,6 +104,7 @@ const Composer = memo(function Composer({ conversationId, collapsed, expand }: {
         onExpand={expand}
         confirm={confirm}
         onSubmit={sendMessage}
+        cost={cost}
       />
     </div>
   )

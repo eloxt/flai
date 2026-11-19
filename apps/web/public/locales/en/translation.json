@@ -169,7 +169,8 @@
         "firstToken": "First token",
         "duration": "Duration",
         "speed": "Output speed",
-        "tokensPerSecond": "{{value}} tokens/s"
+        "tokensPerSecond": "{{value}} tokens/s",
+        "conversationCost": "Estimated cost of this conversation"
       },
       "streamInterrupted": "The reply was interrupted. Please try again.",
       "navLabel": "Conversation navigation",

@@ -14,6 +14,9 @@ export function initials(name?: string | null): string {
 
 export const formatNumber = (n: number | undefined) => (n === undefined ? "-" : n.toLocaleString())
 
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumSignificantDigits: 3 })
+export const formatUsd = (n: number) => (n > 0 && n < 0.0001 ? "< $0.0001" : usd.format(n))
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return ""
   const d = new Date(iso)

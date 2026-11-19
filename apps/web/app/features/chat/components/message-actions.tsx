@@ -9,7 +9,7 @@ import { ConfirmDialog } from "~/components/confirm-dialog"
 import { Button } from "~/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
-import { formatDateTime, formatNumber } from "~/lib/format"
+import { formatDateTime, formatNumber, formatUsd } from "~/lib/format"
 import { useChatStore } from "../chat-store"
 import { siblingsOf } from "../tree"
 
@@ -166,6 +166,4 @@ function UsagePopover({ message }: { message: MessageRecord }) {
   )
 }
 
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumSignificantDigits: 3 })
-const formatUsd = (n: number) => (n > 0 && n < 0.0001 ? "< $0.0001" : usd.format(n))
 const formatDuration = (ms: number) => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`)

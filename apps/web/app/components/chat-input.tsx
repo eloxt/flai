@@ -34,6 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
 import { useUploads } from "~/hooks/use-uploads"
 import { api } from "~/lib/api"
+import { formatUsd } from "~/lib/format"
 import { isAllowedAttachment } from "~/lib/upload"
 import { type BuiltinTool, useInputStore } from "~/store/input-store"
 import { useCurrentModel } from "~/store/model-store"
@@ -52,6 +53,8 @@ interface ChatInputProps {
   /** Shrink to a one-line bar; clicking it calls onExpand. */
   collapsed?: boolean
   onExpand?: () => void
+  /** Estimated USD spent on this conversation so far; hidden when unknown. */
+  cost?: number
 }
 
 const EMPTY: FileRecord[] = []
@@ -67,7 +70,7 @@ const INNER_RADIUS = "[--inner-radius:calc(var(--radius-xl)-var(--spacing)*1.5)]
 const RING_INSIDE = "focus-visible:ring-inset"
 const SWAP = "grid min-w-0 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 
-export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stopping = false, onStop, autoFocus, collapsed = false, onExpand }: ChatInputProps) {
+export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stopping = false, onStop, autoFocus, collapsed = false, onExpand, cost }: ChatInputProps) {
   const { t } = useTranslation()
   const current = useCurrentModel()
   const model = current?.model
@@ -257,6 +260,17 @@ export function ChatInput({ draftKey, onSubmit, confirm, streaming = false, stop
               )}
               <ToolBar />
               <div className="ml-auto flex shrink-0 items-center gap-2">
+                {cost !== undefined && cost > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<span tabIndex={0} className="rounded-sm px-1 text-xs text-muted-foreground tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring" />}
+                      aria-label={`${t("pages.chat.usage.conversationCost")}: ${formatUsd(cost)}`}
+                    >
+                      {formatUsd(cost)}
+                    </TooltipTrigger>
+                    <TooltipContent>{t("pages.chat.usage.conversationCost")}</TooltipContent>
+                  </Tooltip>
+                )}
                 {streaming ? (
                   <InputGroupButton variant="destructive" size="icon-sm" className={cn("size-9 rounded-(--inner-radius)", RING_INSIDE)} aria-label={t("pages.chat.actions.stop")} disabled={stopping} onClick={onStop}>
                     <SquareIcon className={ICON_ENTER} />

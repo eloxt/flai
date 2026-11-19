@@ -167,7 +167,8 @@
         "firstToken": "首字延迟",
         "duration": "总耗时",
         "speed": "输出速度",
-        "tokensPerSecond": "{{value}} tokens/s"
+        "tokensPerSecond": "{{value}} tokens/s",
+        "conversationCost": "本会话预估总费用"
       },
       "streamInterrupted": "回复中断，请重试。",
       "navLabel": "会话导航",
