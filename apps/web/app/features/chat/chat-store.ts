@@ -21,6 +21,7 @@ import {
   isMultiSelect,
   pendingQuestion,
   questionsAnswered,
+  textOf,
   toFilePart,
 } from "@flai/shared"
 import { readUIMessageStream } from "ai"
@@ -28,6 +29,8 @@ import { useMemo } from "react"
 import { create } from "zustand"
 import i18n from "~/i18n"
 import { api, apiFetch, errorText } from "~/lib/api"
+import { notifyInBackground } from "~/lib/browser-notifications"
+import { stripFences } from "~/lib/format"
 import { notify } from "~/lib/notify"
 import { ReplyStreamInterrupted, replyStream } from "~/lib/reply-stream"
 import type { Chunk } from "~/lib/ui-stream"
@@ -483,16 +486,32 @@ export async function deleteLastMessage() {
 
 // ---------------------------------------------------------------- streaming
 
-function notifyIfHidden() {
-  if (!document.hidden || !("Notification" in window)) return
-  const show = () =>
-    new Notification(i18n.t("pages.chat.notification.complete"), {
-      body: i18n.t("pages.chat.notification.messageReady"),
-      icon: "/favicon.ico",
-    })
-  if (Notification.permission === "granted") show()
-  else if (Notification.permission !== "denied")
-    void Notification.requestPermission().then((p) => p === "granted" && show())
+function conversationTitle(conversationId: string) {
+  const { conversations, favourites } = useConversationStore.getState()
+  const isIt = (c: { id: string }) => c.id === conversationId
+  return (conversations.find(isIt) ?? favourites.find(isIt))?.title
+}
+
+function notifyReplyDone(conversationId: string, parts: FlaiPart[]) {
+  const excerpt = stripFences(textOf(parts).slice(0, 600)).slice(0, 200)
+  notifyInBackground({
+    conversationId,
+    title: conversationTitle(conversationId) || i18n.t("pages.chat.notification.complete"),
+    body: pendingQuestion(parts)
+      ? i18n.t("pages.chat.notification.question")
+      : excerpt || i18n.t("pages.chat.notification.messageReady"),
+  })
+}
+
+function notifyReplyFailed(conversationId: string, error: string) {
+  const title = conversationTitle(conversationId)
+  notifyInBackground({
+    conversationId,
+    title: title
+      ? i18n.t("pages.chat.notification.failedIn", { title })
+      : i18n.t("pages.chat.notification.failed"),
+    body: error,
+  })
 }
 
 const postStream = (url: string, body: unknown) => (signal: AbortSignal) =>
@@ -575,7 +594,7 @@ async function followReply({
       if (live()) schedule()
     }
   } catch (error) {
-    if (controller.signal.aborted || !live()) return false
+    if (controller.signal.aborted) return false
     failure =
       error instanceof ReplyStreamInterrupted ? undefined : errorText(error)
   } finally {
@@ -586,7 +605,15 @@ async function followReply({
         clearReplying(conversationId, assistantId)
     }
   }
-  if (!live()) return false
+  if (!live()) {
+    // The user moved on while this ran in the background; a notification is all that reports it.
+    if (!controller.signal.aborted && session === useAuthStore.getState().sessionVersion) {
+      if (failure) notifyReplyFailed(conversationId, failure)
+      else if (finished && message.parts.length > 0)
+        notifyReplyDone(conversationId, message.parts as FlaiPart[])
+    }
+    return false
+  }
 
   if (finished && !failure && message.parts.length === 0) {
     // Stopped before any output: nothing was saved.
@@ -605,7 +632,7 @@ async function followReply({
     const map = { ...get().map, [assistantId]: record }
     const tree = buildTree(map)
     set({ map, tree, path: ancestry(tree, assistantId), streaming: null })
-    notifyIfHidden()
+    notifyReplyDone(conversationId, record.parts)
     return true
   }
 
@@ -615,8 +642,14 @@ async function followReply({
   await reload(token, assistantId)
   if (!live()) return false
   const { map } = get()
-  if (map[assistantId] && !failure) return true
-  notify.error(failure ?? i18n.t("pages.chat.streamInterrupted"))
+  const saved = map[assistantId]
+  if (saved && !failure) {
+    notifyReplyDone(conversationId, saved.parts)
+    return true
+  }
+  const problem = failure ?? i18n.t("pages.chat.streamInterrupted")
+  notify.error(problem)
+  notifyReplyFailed(conversationId, problem)
   const lost = sentText !== undefined && conversationId && !map[parentId]
   if (lost && !useInputStore.getState().drafts[conversationId])
     useInputStore.getState().setDraft(conversationId, sentText)

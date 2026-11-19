@@ -1,11 +1,14 @@
 import type { Preferences } from "@flai/shared"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { PanelSection } from "~/components/panel-dialog"
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Switch } from "~/components/ui/switch"
 import { api } from "~/lib/api"
+import { notificationAccess } from "~/lib/browser-notifications"
 import { notify } from "~/lib/notify"
+import { useAppStore } from "~/store/app-store"
 import { useAuthStore, usePreferences } from "~/store/auth-store"
 
 const languages = [
@@ -27,6 +30,39 @@ export function useUpdatePreferences() {
       notify.error(error)
     }
   }
+}
+
+function BrowserNotificationsField() {
+  const { t } = useTranslation()
+  const enabled = useAppStore((s) => s.browserNotifications)
+  const setEnabled = useAppStore((s) => s.setBrowserNotifications)
+  const [access, setAccess] = useState(notificationAccess)
+
+  const toggle = async (checked: boolean) => {
+    if (checked && access === "default") {
+      const result = await Notification.requestPermission()
+      setAccess(result)
+      if (result !== "granted") return
+    }
+    setEnabled(checked)
+  }
+
+  const description = { unsupported: "Unsupported", denied: "Blocked", default: "Description", granted: "Description" }[access]
+
+  return (
+    <Field orientation="horizontal" className="items-center py-4">
+      <FieldContent>
+        <FieldLabel htmlFor="pref-browser-notifications">{t("pages.settings.preference.browserNotifications")}</FieldLabel>
+        <FieldDescription>{t(`pages.settings.preference.browserNotifications${description}`)}</FieldDescription>
+      </FieldContent>
+      <Switch
+        id="pref-browser-notifications"
+        checked={enabled && access === "granted"}
+        disabled={access === "unsupported" || access === "denied"}
+        onCheckedChange={(checked) => void toggle(checked)}
+      />
+    </Field>
+  )
 }
 
 export function PreferenceSettings() {
@@ -83,6 +119,7 @@ export function PreferenceSettings() {
             onCheckedChange={(checked) => void update({ chatHistory: checked })}
           />
         </Field>
+        <BrowserNotificationsField />
       </FieldGroup>
     </PanelSection>
   )

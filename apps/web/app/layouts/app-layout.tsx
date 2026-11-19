@@ -1,12 +1,20 @@
-import { Outlet } from "react-router"
+import { useEffect } from "react"
+import { Outlet, useNavigate } from "react-router"
 import { ChatHeader } from "~/components/chat-header"
 import { AppSidebar } from "~/components/sidebar/app-sidebar"
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar"
+import { setNotificationNavigator } from "~/lib/browser-notifications"
 import { useAppStore } from "~/store/app-store"
 
 export default function AppLayout() {
   const sidebarOpen = useAppStore((s) => s.isSidebarOpen)
   const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    setNotificationNavigator((url) => void navigate(url))
+    return () => setNotificationNavigator(null)
+  }, [navigate])
 
   return (
     <SidebarProvider

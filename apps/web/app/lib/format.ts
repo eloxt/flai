@@ -19,3 +19,10 @@ export function formatDateTime(iso: string | null | undefined): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleString()
 }
+
+/** Drop code fences (including generative UI programs) from previews; they would read as noise. */
+export const stripFences = (text: string) =>
+  text
+    .replace(/```[\s\S]*?(```|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()

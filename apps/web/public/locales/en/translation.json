@@ -129,7 +129,10 @@
       "newChat": "New Chat",
       "notification": {
         "complete": "Response Complete",
-        "messageReady": "Your AI response is ready"
+        "failed": "Response Failed",
+        "failedIn": "Response Failed · {{title}}",
+        "messageReady": "Your AI response is ready",
+        "question": "Waiting for your answer"
       },
       "selection": {
         "copy": "Copy",
@@ -298,6 +301,10 @@
         "sidebarEmojiDescription": "Display conversation emojis in the sidebar list.",
         "chatHistory": "Search past chats",
         "chatHistoryDescription": "Let the assistant search and read your other chats to recall earlier context.",
+        "browserNotifications": "Browser notifications",
+        "browserNotificationsDescription": "Notify you when a reply finishes or fails while this page is in the background.",
+        "browserNotificationsBlocked": "Notifications are blocked. Allow them in your browser's site settings.",
+        "browserNotificationsUnsupported": "This browser doesn't support notifications.",
         "updateSuccess": "Preferences updated",
         "updateError": "Failed to update preferences"
       },

@@ -24,6 +24,7 @@ const { count, size, warnings } = await generateSW({
   swDest: resolve(clientDir, "sw.js"),
   inlineWorkboxRuntime: true,
   sourcemap: false,
+  importScripts: ["/notification-click.js"],
   // A new version waits until the user chooses to reload (see app/lib/service-worker.ts).
   skipWaiting: false,
   clientsClaim: true,

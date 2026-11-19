@@ -7,6 +7,9 @@ interface AppState {
   setSidebarOpen: (open: boolean) => void
   dismissedNotifications: string[]
   dismissNotification: (id: string) => void
+  /** Kept per device, since the browser permission it depends on is too. */
+  browserNotifications: boolean
+  setBrowserNotifications: (enabled: boolean) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -21,6 +24,8 @@ export const useAppStore = create<AppState>()(
             ? s.dismissedNotifications
             : [...s.dismissedNotifications, id],
         })),
+      browserNotifications: true,
+      setBrowserNotifications: (enabled) => set({ browserNotifications: enabled }),
     }),
     {
       name: "flai-app",
@@ -28,6 +33,7 @@ export const useAppStore = create<AppState>()(
       partialize: (s) => ({
         isSidebarOpen: s.isSidebarOpen,
         dismissedNotifications: s.dismissedNotifications,
+        browserNotifications: s.browserNotifications,
       }),
     }
   )

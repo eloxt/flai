@@ -127,7 +127,10 @@
       "newChat": "新聊天",
       "notification": {
         "complete": "回复完成",
-        "messageReady": "AI 回复已就绪"
+        "failed": "回复失败",
+        "failedIn": "回复失败 · {{title}}",
+        "messageReady": "AI 回复已就绪",
+        "question": "正在等你回答问题"
       },
       "selection": {
         "copy": "复制",
@@ -293,6 +296,10 @@
         "sidebarEmojiDescription": "在侧边栏列表中显示对话 Emoji。",
         "chatHistory": "检索历史对话",
         "chatHistoryDescription": "允许助手搜索和阅读你的其他对话，以回忆之前的内容。",
+        "browserNotifications": "浏览器通知",
+        "browserNotificationsDescription": "页面在后台时，回复完成或失败会发送通知。",
+        "browserNotificationsBlocked": "通知已被拦截，请在浏览器的网站设置中允许。",
+        "browserNotificationsUnsupported": "当前浏览器不支持通知。",
         "updateSuccess": "偏好已更新",
         "updateError": "更新偏好失败"
       },

@@ -8,6 +8,7 @@ import {
   useMessageScroller,
   useMessageScrollerVisibility,
 } from "~/components/ui/message-scroller"
+import { stripFences } from "~/lib/format"
 import { useChatStore } from "../chat-store"
 
 /**
@@ -22,13 +23,6 @@ interface NavSection {
   preview: string
   attachmentCount: number
 }
-
-/** Drop code fences (including generative UI programs) from previews; they would read as noise. */
-const stripFences = (text: string) =>
-  text
-    .replace(/```[\s\S]*?(```|$)/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
 
 /** The preview card shows ~3 clamped lines, so only the head of an answer matters. */
 const PREVIEW_SCAN_CHARS = 600
