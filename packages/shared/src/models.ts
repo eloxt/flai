@@ -67,6 +67,33 @@ export function estimateCostBreakdown(cost: ModelCost, steps: MessageUsage[]): M
   return hasUsage ? breakdown : undefined
 }
 
+/** Reconcile older replies to the saved total, using current category prices as weights. */
+export function reconstructCostBreakdown(cost: ModelCost, usage: MessageUsage): MessageCostBreakdown | undefined {
+  if (usage.cost === undefined) return undefined
+  const breakdown = estimateCostBreakdown(cost, [usage])
+  if (!breakdown) return undefined
+
+  let weights = breakdown
+  let estimate = Object.values(weights).reduce((sum, amount) => sum + amount, 0)
+  if (cost.contextOver200k && (usage.inputTokens ?? 0) > 200_000) {
+    // A reply that crosses 200k may still consist of individually shorter requests.
+    const standard = estimateCostBreakdown({ ...cost, contextOver200k: undefined }, [usage])!
+    const standardTotal = Object.values(standard).reduce((sum, amount) => sum + amount, 0)
+    if (standardTotal > 0 && Math.abs(standardTotal - usage.cost) < Math.abs(estimate - usage.cost)) {
+      weights = standard
+      estimate = standardTotal
+    }
+  }
+  if (estimate <= 0) return usage.cost === 0 ? weights : undefined
+  return {
+    input: usage.cost * (weights.input / estimate),
+    output: usage.cost * (weights.output / estimate),
+    cacheRead: usage.cost * (weights.cacheRead / estimate),
+    cacheWrite: usage.cost * (weights.cacheWrite / estimate),
+    toolInput: usage.cost * (weights.toolInput / estimate),
+  }
+}
+
 export const modelConfigSchema = z.object({
   id: z.string().trim().min(1),
   name: z.string().trim().default(''),

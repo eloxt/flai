@@ -46,6 +46,8 @@ export interface MessageUsage {
   /** Estimated USD, from the model's prices when the reply was generated. */
   cost?: number
   costBreakdown?: MessageCostBreakdown
+  /** Older replies only saved a total. Their category amounts are apportioned on read. */
+  reconstructedCost?: boolean
   /** Estimated standalone fee for provider-executed web searches. */
   toolCallsCost?: number
   /** Tool prompt tokens the provider reports within inputTokens. */

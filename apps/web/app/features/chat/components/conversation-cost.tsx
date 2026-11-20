@@ -34,6 +34,7 @@ export function ConversationCost() {
     const tools = new Map<string, { name: string; calls: number; usd?: number; queries?: boolean }>()
     let hasReplies = false
     let missingEstimate = false
+    let reconstructedCost = false
     let modelToolCost: number | undefined
     let totalTokens: number | undefined
     let totalCost: number | undefined
@@ -60,6 +61,7 @@ export function ConversationCost() {
       if (usage?.cost !== undefined) {
         totalCost = (totalCost ?? 0) + usage.cost
         if (usage.costBreakdown) {
+          reconstructedCost ||= !!usage.reconstructedCost
           for (const key of ["input", "output", "cacheRead", "cacheWrite", "toolInput"] as const) {
             amounts[key] = (amounts[key] ?? 0) + usage.costBreakdown[key]
           }
@@ -101,7 +103,7 @@ export function ConversationCost() {
         }
       }
     }
-    return { tokens, amounts, tools, hasReplies, missingEstimate, modelToolCost, totalTokens, totalCost }
+    return { tokens, amounts, tools, hasReplies, missingEstimate, reconstructedCost, modelToolCost, totalTokens, totalCost }
   }, [messages])
 
   if (!summary.hasReplies) return null
@@ -111,6 +113,7 @@ export function ConversationCost() {
       : key !== "historical" || summary.amounts.historical !== undefined,
   )
   const total = summary.totalCost === undefined ? "—" : formatUsd(summary.totalCost)
+  const totalCost = summary.totalCost ?? 0
   const hasTools = summary.tools.size > 0 || summary.tokens.toolInput > 0
 
   return (
@@ -141,13 +144,14 @@ export function ConversationCost() {
               <dd className="mt-0.5 text-xl font-semibold tabular-nums sm:text-2xl">{formatNumber(summary.totalTokens)} <span className="text-xs font-normal text-muted-foreground">{t("pages.chat.usage.tokens")}</span></dd>
             </div>
           </dl>
-          {(summary.totalCost ?? 0) > 0 && (
+          {totalCost > 0 && (
             <div className="mt-3 flex items-center gap-2.5 text-xs text-muted-foreground">
               <span>{t(`${p}.distribution`)}</span>
               <div className="flex h-2 min-w-0 flex-1 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
-                {rows.map(({ key, color }) => (summary.amounts[key] ?? 0) > 0 && (
-                  <span key={key} className={cn("bg-current", color)} style={{ flex: summary.amounts[key] }} />
-                ))}
+                {rows.map(({ key, color }) => {
+                  const share = (summary.amounts[key] ?? 0) / totalCost
+                  return share > 0 && <span key={key} className={cn("bg-current", color)} style={{ flex: share * 100 }} />
+                })}
               </div>
             </div>
           )}
@@ -191,8 +195,8 @@ export function ConversationCost() {
                   <TableCell className="px-0 text-right tabular-nums">{tokenCount ? formatNumber(tokenCount) : "—"}</TableCell>
                   <TableCell className="pl-1 pr-0 text-right font-medium tabular-nums">
                     {usd === undefined ? "—" : formatUsd(usd)}
-                    {usd !== undefined && (summary.totalCost ?? 0) > 0 && (
-                      <div className="text-xs font-normal text-muted-foreground">{percent.format(usd / summary.totalCost!)}</div>
+                    {usd !== undefined && totalCost > 0 && (
+                      <div className="text-xs font-normal text-muted-foreground">{percent.format(usd / totalCost)}</div>
                     )}
                   </TableCell>
                 </TableRow>
@@ -229,6 +233,7 @@ export function ConversationCost() {
 
         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
           <p className="flex items-start gap-1.5"><InfoIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />{t(`${p}.estimateNote`)}</p>
+          {summary.reconstructedCost && <p>{t(`${p}.reconstructedNote`)}</p>}
           {summary.amounts.historical !== undefined && <p>{t(`${p}.historicalNote`)}</p>}
           {summary.missingEstimate && <p>{t(`${p}.missingNote`)}</p>}
         </div>

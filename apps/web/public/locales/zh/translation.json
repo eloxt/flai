@@ -186,10 +186,11 @@
         "toolInput": "工具调用",
         "toolTokens": "单独记录的工具 Token",
         "searchQueries": "网页搜索查询",
-        "historical": "未拆分历史费用",
+        "historical": "历史金额（缺少明细）",
         "calls_other": "{{count}} 次",
         "estimateNote": "金额按配置的单价估算。未报告或未设置单价的工具费用以 — 显示。",
-        "historicalNote": "部分历史回复只保存了总金额，用量归入上方各类，金额保留在历史费用一行。",
+        "reconstructedNote": "历史回复按现有模型单价估算各项占比，沿用当时保存的总金额。",
+        "historicalNote": "部分历史回复缺少对应的模型定价或用量，仍保留当时保存的金额。",
         "missingNote": "部分回复缺少用量或单价，只汇总已知费用。"
       },
       "streamInterrupted": "回复中断，请重试。",

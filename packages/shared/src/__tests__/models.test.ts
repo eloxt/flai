@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateCost, estimateCostBreakdown, estimateStepsCost, modelCostSchema } from '../models'
+import { estimateCost, estimateCostBreakdown, estimateStepsCost, modelCostSchema, reconstructCostBreakdown } from '../models'
 
 describe('estimateCost', () => {
   const cost = modelCostSchema.parse({ input: 2, output: 10, cacheRead: 0.5, cacheWrite: 2.5 })
@@ -55,5 +55,29 @@ describe('estimateStepsCost', () => {
   it('has nothing to say without usage', () => {
     expect(estimateStepsCost(tiered, [])).toBeUndefined()
     expect(estimateStepsCost(tiered, [{}])).toBeUndefined()
+  })
+})
+
+describe('reconstructCostBreakdown', () => {
+  it('uses the recorded total even when current prices give a different total', () => {
+    const rates = modelCostSchema.parse({ input: 2, output: 10, cacheRead: 0.5 })
+    const result = reconstructCostBreakdown(rates, {
+      inputTokens: 44_274, cachedInputTokens: 14_706, outputTokens: 1_895, cost: 0.0597,
+    })!
+    expect(result.input).toBeGreaterThan(0)
+    expect(result.cacheRead).toBeGreaterThan(0)
+    expect(result.output).toBeGreaterThan(0)
+    expect(Object.values(result).reduce((sum, usd) => sum + usd, 0)).toBeCloseTo(0.0597)
+  })
+
+  it('uses the standard tier when the saved cost indicates multiple shorter requests', () => {
+    const rates = modelCostSchema.parse({ input: 2, output: 10, contextOver200k: { input: 4, output: 25 } })
+    const result = reconstructCostBreakdown(rates, { inputTokens: 310_000, outputTokens: 1_100, cost: 0.631 })
+    expect(result?.input).toBeCloseTo(0.62)
+    expect(result?.output).toBeCloseTo(0.011)
+  })
+
+  it('leaves a positive total unallocated if current rates provide no weights', () => {
+    expect(reconstructCostBreakdown(modelCostSchema.parse({}), { inputTokens: 500, cost: 0.01 })).toBeUndefined()
   })
 })

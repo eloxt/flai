@@ -2,6 +2,7 @@ import {
   createConversationSchema,
   generateTitleSchema,
   listConversationsQuerySchema,
+  reconstructCostBreakdown,
   type SearchHit,
   updateConversationSchema,
 } from '@flai/shared'
@@ -17,6 +18,7 @@ import { toConversation, toMessage } from '../lib/serialize'
 import { generateTitle } from '../llm/title'
 import { activeGeneration, cancelConversationGeneration } from '../llm/generation'
 import { deleteMessage, getConversation, listConversations, listMessages } from '../services/conversations'
+import { findProvider } from '../services/providers'
 import { searchChats } from '../services/search'
 
 const c_ = schema.conversations
@@ -44,7 +46,19 @@ export const conversationRoutes = new Hono<AppEnv>()
       // Lets the owner's client re-attach to a reply that is still being written.
       conversation.userId === c.get('user').id ? activeGeneration(conversation.id) : null,
     ])
-    return c.json({ ...toConversation(conversation), messages: messages.map(toMessage), activeGeneration: active })
+    const records = messages.map((row) => {
+      const record = toMessage(row)
+      const { usage, providerId, modelId } = record.metadata
+      if (record.role !== 'assistant' || usage?.cost === undefined || usage.costBreakdown ||
+          usage.toolCallsCost !== undefined || !providerId || !modelId) return record
+      const prices = findProvider(providerId)?.models.find((model) => model.id === modelId)?.cost
+      const breakdown = prices && reconstructCostBreakdown(prices, usage)
+      if (breakdown) {
+        record.metadata = { ...record.metadata, usage: { ...usage, costBreakdown: breakdown, reconstructedCost: true } }
+      }
+      return record
+    })
+    return c.json({ ...toConversation(conversation), messages: records, activeGeneration: active })
   })
   .patch('/conversations/:id', async (c) => {
     const conversation = await getConversation(c.get('user'), c.req.param('id'))
