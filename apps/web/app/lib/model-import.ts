@@ -26,7 +26,11 @@ export function normalizeModel(raw: Raw): ModelConfig | null {
   }
   flag(pick(raw, "internal_search", "internalSearch", "web_search", "webSearch"), "web_search")
   flag(pick(raw, "url_context", "urlContext"), "url_context")
-  const cost = isRecord(raw.cost) ? { ...normalizeCost(raw.cost)!, contextOver200k: normalizeCost(pick(raw.cost, "context_over_200k", "contextOver200k")) } : undefined
+  const cost = isRecord(raw.cost) ? {
+    ...normalizeCost(raw.cost)!,
+    contextOver200k: normalizeCost(pick(raw.cost, "context_over_200k", "contextOver200k")),
+    webSearchCall: num(pick(raw.cost, "web_search_call", "webSearchCall")),
+  } : undefined
   const limit = isRecord(raw.limit) ? { context: num(raw.limit.context), output: num(raw.limit.output) } : undefined
   const modalities = isRecord(raw.modalities)
     ? { input: (raw.modalities.input as string[]) ?? [], output: (raw.modalities.output as string[]) ?? [] }

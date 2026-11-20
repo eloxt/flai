@@ -34,10 +34,11 @@ const optionalNumber = (value: string) => (value === "" ? undefined : Number(val
 
 interface ModelListEditorProps {
   models: ModelConfig[]
+  nativeSearchPricing?: boolean
   onChange: (models: ModelConfig[]) => void
 }
 
-export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
+export function ModelListEditor({ models, nativeSearchPricing, onChange }: ModelListEditorProps) {
   const { t } = useTranslation()
   const update = (index: number, model: ModelConfig) => onChange(models.map((m, i) => (i === index ? model : m)))
   const move = (index: number, delta: -1 | 1) => {
@@ -71,7 +72,7 @@ export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
           </div>
           <CollapsibleContent>
             <div className="border-t p-4 md:p-6">
-              <ModelEditor model={model} onChange={(m) => update(index, m)} />
+              <ModelEditor model={model} nativeSearchPricing={nativeSearchPricing} onChange={(m) => update(index, m)} />
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -84,7 +85,7 @@ export function ModelListEditor({ models, onChange }: ModelListEditorProps) {
   )
 }
 
-function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model: ModelConfig) => void }) {
+function ModelEditor({ model, nativeSearchPricing, onChange }: { model: ModelConfig; nativeSearchPricing?: boolean; onChange: (model: ModelConfig) => void }) {
   const { t } = useTranslation()
   const set = <K extends keyof ModelConfig>(key: K, value: ModelConfig[K]) => onChange({ ...model, [key]: value })
   const p = "pages.admin.providers.model"
@@ -253,6 +254,19 @@ function ModelEditor({ model, onChange }: { model: ModelConfig; onChange: (model
               </Field>
             ))}
           </div>
+          {nativeSearchPricing && model.internalTools.includes("web_search") && (
+            <Field>
+              <FieldLabel>{t(`${p}.costWebSearch`)}</FieldLabel>
+              <Input
+                type="number"
+                min={0}
+                step="any"
+                value={model.cost?.webSearchCall ?? ""}
+                onChange={(e) => set("cost", { input: 0, output: 0, ...model.cost, webSearchCall: optionalNumber(e.target.value) })}
+              />
+              <FieldDescription>{t(`${p}.costWebSearchDescription`)}</FieldDescription>
+            </Field>
+          )}
         </FieldSet>
       </div>
     </FieldGroup>

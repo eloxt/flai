@@ -45,8 +45,21 @@ export interface MessageUsage {
   totalTokens?: number
   /** Estimated USD, from the model's prices when the reply was generated. */
   cost?: number
+  costBreakdown?: MessageCostBreakdown
+  /** Estimated standalone fee for provider-executed web searches. */
+  toolCallsCost?: number
+  /** Tool prompt tokens the provider reports within inputTokens. */
+  toolInputTokens?: number
   /** Legacy (Go backend) only: tokens spent on tool use prompts. */
   toolUseTokens?: number
+}
+
+export interface MessageCostBreakdown {
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
+  toolInput: number
 }
 
 export interface MessageTiming {

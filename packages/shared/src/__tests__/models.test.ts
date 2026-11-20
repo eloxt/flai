@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateCost, estimateStepsCost, modelCostSchema } from '../models'
+import { estimateCost, estimateCostBreakdown, estimateStepsCost, modelCostSchema } from '../models'
 
 describe('estimateCost', () => {
   const cost = modelCostSchema.parse({ input: 2, output: 10, cacheRead: 0.5, cacheWrite: 2.5 })
@@ -22,6 +22,14 @@ describe('estimateCost', () => {
 
   it('has nothing to say without usage', () => {
     expect(estimateCost(cost, {})).toBeUndefined()
+  })
+
+  it('moves reported tool input out of uncached input without changing the total', () => {
+    const usage = { inputTokens: 10_000, cachedInputTokens: 6_000, cacheWriteTokens: 1_000, toolInputTokens: 1_800, outputTokens: 2_000 }
+    expect(estimateCostBreakdown(cost, [usage])).toEqual({
+      input: 0.0024, cacheRead: 0.003, cacheWrite: 0.0025, toolInput: 0.0036, output: 0.02,
+    })
+    expect(estimateCost(cost, usage)).toBeCloseTo(estimateCost(cost, { ...usage, toolInputTokens: 0 })!)
   })
 })
 

@@ -115,6 +115,7 @@ function UsagePopover({ message }: { message: MessageRecord }) {
   const usage = metadata.usage
   const timing = metadata.timing
   const input = usage?.inputTokens
+  const toolTokens = usage?.toolInputTokens ?? usage?.toolUseTokens
   const share = (n: number | undefined) =>
     n ? `${formatNumber(n)}${input ? ` (${Math.round((n / input) * 100)}%)` : ""}` : undefined
   const generatingMs = timing?.firstTokenMs === undefined ? undefined : timing.durationMs - timing.firstTokenMs
@@ -131,7 +132,7 @@ function UsagePopover({ message }: { message: MessageRecord }) {
       { label: t("pages.chat.usage.cacheWrite"), value: share(usage?.cacheWriteTokens), sub: true },
       { label: t("pages.chat.usage.output"), value: usage && formatNumber(usage.outputTokens) },
       { label: t("pages.chat.usage.reasoning"), value: usage?.reasoningTokens ? formatNumber(usage.reasoningTokens) : undefined, sub: true },
-      { label: t("components.modelSelector.toolUse"), value: usage?.toolUseTokens ? formatNumber(usage.toolUseTokens) : undefined },
+      { label: t("components.modelSelector.toolUse"), value: toolTokens ? formatNumber(toolTokens) : undefined },
       { label: t("pages.chat.usage.total"), value: usage?.totalTokens ? formatNumber(usage.totalTokens) : undefined },
       { label: t("pages.chat.usage.cost"), value: usage?.cost === undefined ? undefined : formatUsd(usage.cost) },
     ],

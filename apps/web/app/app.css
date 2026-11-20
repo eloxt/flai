@@ -30,6 +30,10 @@
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+    --color-usage-input: var(--usage-input);
+    --color-usage-cache: var(--usage-cache);
+    --color-usage-output: var(--usage-output);
+    --color-usage-tools: var(--usage-tools);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -111,6 +115,10 @@
     --chart-3: #6b6b6b;
     --chart-4: #9a9a9a;
     --chart-5: #c8c8c8;
+    --usage-input: #3563ba;
+    --usage-cache: #16776b;
+    --usage-output: #7348ad;
+    --usage-tools: #915600;
     --radius: 12px;
     --sidebar: var(--page);
     --sidebar-foreground: var(--foreground);
@@ -169,6 +177,10 @@
     --chart-3: #969696;
     --chart-4: #6a6a6a;
     --chart-5: #3e3e3e;
+    --usage-input: #91b4ff;
+    --usage-cache: #62cab6;
+    --usage-output: #c5a3ff;
+    --usage-tools: #edb665;
     --sidebar-primary-foreground: #0d0d0d;
     --sidebar-accent: rgb(255 255 255 / 6%);
     --sidebar-border: rgb(255 255 255 / 8%);

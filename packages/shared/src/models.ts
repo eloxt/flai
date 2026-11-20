@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { MessageUsage } from './messages'
+import type { MessageCostBreakdown, MessageUsage } from './messages'
 
 export const THINKING_LEVELS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 export const thinkingLevelSchema = z.enum(THINKING_LEVELS)
@@ -24,6 +24,7 @@ const costBaseSchema = z.object({
 })
 export const modelCostSchema = costBaseSchema.extend({
   contextOver200k: costBaseSchema.optional(),
+  webSearchCall: z.number().nonnegative().optional(),
 })
 export type ModelCost = z.infer<typeof modelCostSchema>
 
@@ -32,19 +33,7 @@ export type ModelCost = z.infer<typeof modelCostSchema>
  * price when the model lists none; prompts over 200k tokens use that tier when it is set.
  */
 export function estimateCost(cost: ModelCost, usage: MessageUsage): number | undefined {
-  const input = usage.inputTokens ?? 0
-  const output = usage.outputTokens ?? 0
-  if (input === 0 && output === 0) return undefined
-  const prices = (input > 200_000 && cost.contextOver200k) || cost
-  const cacheRead = usage.cachedInputTokens ?? 0
-  const cacheWrite = usage.cacheWriteTokens ?? 0
-  const uncached = Math.max(0, input - cacheRead - cacheWrite)
-  return (
-    uncached * prices.input +
-    cacheRead * (prices.cacheRead ?? prices.input) +
-    cacheWrite * (prices.cacheWrite ?? prices.input) +
-    output * prices.output
-  ) / 1_000_000
+  return estimateStepsCost(cost, [usage])
 }
 
 /**
@@ -52,12 +41,30 @@ export function estimateCost(cost: ModelCost, usage: MessageUsage): number | und
  * because providers pick the long-context tier per request, not from the reply's summed input.
  */
 export function estimateStepsCost(cost: ModelCost, steps: MessageUsage[]): number | undefined {
-  let total: number | undefined
+  const breakdown = estimateCostBreakdown(cost, steps)
+  return breakdown && Object.values(breakdown).reduce((total, amount) => total + amount, 0)
+}
+
+export function estimateCostBreakdown(cost: ModelCost, steps: MessageUsage[]): MessageCostBreakdown | undefined {
+  const breakdown: MessageCostBreakdown = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, toolInput: 0 }
+  let hasUsage = false
   for (const step of steps) {
-    const usd = estimateCost(cost, step)
-    if (usd !== undefined) total = (total ?? 0) + usd
+    const input = step.inputTokens ?? 0
+    const output = step.outputTokens ?? 0
+    if (!input && !output) continue
+    hasUsage = true
+    const prices = (input > 200_000 && cost.contextOver200k) || cost
+    const cacheRead = step.cachedInputTokens ?? 0
+    const cacheWrite = step.cacheWriteTokens ?? 0
+    const uncached = Math.max(0, input - cacheRead - cacheWrite)
+    const toolInput = Math.min(uncached, step.toolInputTokens ?? 0)
+    breakdown.input += (uncached - toolInput) * prices.input / 1_000_000
+    breakdown.cacheRead += cacheRead * (prices.cacheRead ?? prices.input) / 1_000_000
+    breakdown.cacheWrite += cacheWrite * (prices.cacheWrite ?? prices.input) / 1_000_000
+    breakdown.output += output * prices.output / 1_000_000
+    breakdown.toolInput += toolInput * prices.input / 1_000_000
   }
-  return total
+  return hasUsage ? breakdown : undefined
 }
 
 export const modelConfigSchema = z.object({

@@ -272,7 +272,7 @@ function ProviderDialog({
                     {t(`${f}.importJson`)}
                   </Button>
                 </div>
-                <ModelListEditor models={form.models} onChange={(models) => setForm({ ...form, models })} />
+                <ModelListEditor models={form.models} nativeSearchPricing={form.type === "openai"} onChange={(models) => setForm({ ...form, models })} />
               </Field>
             </FieldGroup>
           </div>

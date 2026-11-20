@@ -1,5 +1,5 @@
 import type { ChatOptions, FlaiPart, FlaiUIMessage, GoogleGrounding, MessageMetadata, MessageUsage, ModelConfig } from '@flai/shared'
-import { estimateCost, estimateStepsCost, resolvePreferences, textOf } from '@flai/shared'
+import { estimateCostBreakdown, resolvePreferences, textOf } from '@flai/shared'
 import { toAISdkStream } from '@mastra/ai-sdk'
 import { askUserTool } from '@mastra/core/tools'
 import { readUIMessageStream } from 'ai'
@@ -289,6 +289,18 @@ async function run(generation: Generation, input: StartGenerationInput): Promise
 
   const message = await finalMessage.catch(() => undefined)
   const parts = (message?.parts ?? []).filter((p) => p.type !== 'step-start') as FlaiPart[]
+  const webSearchRate = provider.type === 'openai' ? model.cost?.webSearchCall : undefined
+  if (webSearchRate !== undefined) {
+    const calls = new Set(parts.flatMap((part) => {
+      const webSearch = part.type === 'tool-web_search' || (part.type === 'dynamic-tool' && part.toolName === 'web_search')
+      return webSearch && part.providerExecuted && part.state !== 'input-streaming' ? [part.toolCallId] : []
+    }))
+    if (calls.size > 0) {
+      const usage = metadata.usage ??= {}
+      usage.toolCallsCost = calls.size * webSearchRate
+      usage.cost = (usage.cost ?? 0) + usage.toolCallsCost
+    }
+  }
 
   try {
     if (reason === 'discard') {
@@ -340,7 +352,11 @@ interface StreamUsage {
   cacheCreationInputTokens?: number
 }
 
-function toMessageUsage(usage: StreamUsage): MessageUsage {
+type ProviderMetadata = Record<string, Record<string, unknown>>
+
+function toMessageUsage(usage: StreamUsage, providerMetadata?: ProviderMetadata): MessageUsage {
+  // The Google adapter already includes tool prompt tokens in the model's input total.
+  const toolInput = (providerMetadata?.google?.usageMetadata as { toolUsePromptTokenCount?: number } | undefined)?.toolUsePromptTokenCount
   return {
     inputTokens: usage.inputTokens,
     outputTokens: usage.outputTokens,
@@ -348,13 +364,14 @@ function toMessageUsage(usage: StreamUsage): MessageUsage {
     reasoningTokens: usage.reasoningTokens,
     cachedInputTokens: usage.cachedInputTokens,
     cacheWriteTokens: usage.cacheCreationInputTokens,
+    toolInputTokens: typeof toolInput === 'number' && toolInput > 0 ? toolInput : undefined,
   }
 }
 
 async function collectMetadata(stream: {
   totalUsage: Promise<StreamUsage>
-  steps: Promise<Array<{ usage?: StreamUsage }>>
-  providerMetadata: Promise<Record<string, Record<string, unknown>> | undefined>
+  steps: Promise<Array<{ usage?: StreamUsage; providerMetadata?: ProviderMetadata }>>
+  providerMetadata: Promise<ProviderMetadata | undefined>
 }, model: ModelConfig): Promise<MessageMetadata> {
   const [total, steps, providerMetadata] = await Promise.all([
     stream.totalUsage.catch(() => undefined),
@@ -364,13 +381,16 @@ async function collectMetadata(stream: {
   const grounding = providerMetadata?.google?.groundingMetadata as GoogleGrounding | null | undefined
   let usage: MessageUsage | undefined
   if (total) {
-    usage = toMessageUsage(total)
+    const stepUsages = steps?.flatMap((step) => step.usage ? [toMessageUsage(step.usage, step.providerMetadata)] : [])
+    usage = toMessageUsage(total, providerMetadata)
+    if (stepUsages?.some((step) => step.toolInputTokens !== undefined)) {
+      usage.toolInputTokens = stepUsages.reduce((sum, step) => sum + (step.toolInputTokens ?? 0), 0)
+    }
     if (model.cost) {
       // Tool use makes several model calls; each is priced on its own so long-context tiers apply per request.
-      const stepUsages = steps?.map((step) => step.usage)
-      usage.cost = stepUsages?.length && stepUsages.every((u) => u !== undefined)
-        ? estimateStepsCost(model.cost, stepUsages.map(toMessageUsage))
-        : estimateCost(model.cost, usage)
+      const pricedSteps = stepUsages?.length && stepUsages.length === steps?.length ? stepUsages : [usage]
+      usage.costBreakdown = estimateCostBreakdown(model.cost, pricedSteps)
+      if (usage.costBreakdown) usage.cost = Object.values(usage.costBreakdown).reduce((sum, usd) => sum + usd, 0)
     }
   }
   return {
