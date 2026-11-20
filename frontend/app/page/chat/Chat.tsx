@@ -5,6 +5,7 @@ import type { MetaFunction } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat-input";
+import { ConversationCost } from "@/components/conversation-cost";
 import { useInputStore } from "@/store/input-store";
 import { useConversationStore } from "@/store/conversation-store";
 import { useAppStore } from "@/store/app-store";
@@ -319,6 +320,7 @@ export default function Chat() {
                         onHeightChange={setInputHeight}
                         autoFocus={true}
                         contextUsagePercentage={contextUsagePercentage}
+                        costDetails={nodeMap.size > 0 && <ConversationCost messages={nodeMap} streamingId={streamingMessage?.id} />}
                     />
                 </div>
             </div>

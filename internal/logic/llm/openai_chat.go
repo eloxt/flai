@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flai/internal/consts"
 	"flai/internal/logic"
 	"flai/internal/logic/mcp"
@@ -80,9 +81,10 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 	params := openai.ChatCompletionNewParams{
 		Model:           modelName,
 		ReasoningEffort: shared.ReasoningEffort(thinkingIntensity),
+		StreamOptions:   openai.ChatCompletionStreamOptionsParam{IncludeUsage: openai.Bool(true)},
 	}
 
-	for range maxToolRounds {
+	for round := 0; round < maxToolRounds; round++ {
 
 		params.Messages = currentMessages
 
@@ -93,11 +95,18 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 		stream := client.Chat.Completions.NewStreaming(ctx, params)
 		defer stream.Close()
 		acc := openai.ChatCompletionAccumulator{}
+		var usage *openai.CompletionUsage
+		receivedChunk := false
 
 		for stream.Next() {
 			chunk := stream.Current()
+			receivedChunk = true
 			acc.AddChunk(chunk)
 
+			// The final usage chunk normally has no choices.
+			if chunk.Usage.JSON.PromptTokens.Valid() && chunk.Usage.JSON.CompletionTokens.Valid() {
+				usage = &chunk.Usage
+			}
 			if len(chunk.Choices) == 0 {
 				continue
 			}
@@ -114,17 +123,33 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 				shouldSend = true
 			}
 
-			if chunk.Usage.PromptTokens > 0 {
-				metaInfo.PromptTokenCount = int(chunk.Usage.PromptTokens)
-				metaInfo.ResponseTokenCount = int(chunk.Usage.CompletionTokens)
-			}
-
 			if shouldSend {
 				if err := response(streamResponse); err != nil {
 					return err
 				}
 			}
 		}
+
+		var upstreamErr *openai.Error
+		if !receivedChunk && params.StreamOptions.IncludeUsage.Valid() &&
+			errors.As(stream.Err(), &upstreamErr) && (upstreamErr.StatusCode == 400 || upstreamErr.StatusCode == 422) &&
+			strings.Contains(strings.ToLower(upstreamErr.Param+" "+upstreamErr.Message), "stream_options") {
+			// Some OpenAI-compatible endpoints reject stream_options outright.
+			params.StreamOptions = openai.ChatCompletionStreamOptionsParam{}
+			round--
+			continue
+		}
+		if usage != nil {
+			metaInfo.PromptTokenCount = int(usage.PromptTokens)
+			metaInfo.ResponseTokenCount = int(usage.CompletionTokens)
+			metaInfo.CachedTokenCount = int(usage.PromptTokensDetails.CachedTokens)
+			metaInfo.ReasoningTokenCount = int(usage.CompletionTokensDetails.ReasoningTokens)
+		}
+		var toolUsage []ToolUsage
+		if receivedChunk && strings.HasSuffix(modelName, ":online") {
+			toolUsage = append(toolUsage, ToolUsage{Name: consts.InternalTools.WebSearch})
+		}
+		metaInfo.RecordUsage(modelConfig, consts.ProviderType.OpenAICompletion, usage != nil, toolUsage)
 
 		if err := stream.Err(); err != nil {
 			if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo); handled {
@@ -203,7 +228,10 @@ func (c *OpenAIChatClient) StreamChat(ctx context.Context, messageId string, res
 		break
 	}
 
-	return c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
+	if err := c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo); err != nil {
+		return err
+	}
+	return response(StreamResponse{MessageId: messageId, Type: consts.MessageType.MetaInfo, Data: metaInfo})
 }
 
 func (c *OpenAIChatClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) error {

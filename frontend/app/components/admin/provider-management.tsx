@@ -460,7 +460,7 @@ export function ProviderManagement() {
                                     {t("pages.admin.providers.form.importJson")}
                                 </Button>
                             </div>
-                            <ModelEditor models={newModels} onChange={setNewModels} />
+                            <ModelEditor models={newModels} providerType={newProviderType} onChange={setNewModels} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="logo">{t("pages.admin.providers.form.logo")}</Label>
@@ -551,7 +551,7 @@ export function ProviderManagement() {
                                     {t("pages.admin.providers.form.importJson")}
                                 </Button>
                             </div>
-                            <ModelEditor models={editModels} onChange={setEditModels} />
+                            <ModelEditor models={editModels} providerType={editProviderType} onChange={setEditModels} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-logo">{t("pages.admin.providers.form.logo")}</Label>

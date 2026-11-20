@@ -36,6 +36,7 @@ const STATUS_OPTIONS = ["alpha", "beta", "deprecated"] as const;
 
 interface ModelEditorProps {
     models: Model[];
+    providerType?: string;
     onChange: (models: Model[]) => void;
 }
 
@@ -57,6 +58,7 @@ function createEmptyModel(): Model {
 
 interface ModelItemEditorProps {
     model: Model;
+    providerType?: string;
     index: number;
     onChange: (model: Model) => void;
     onDelete: () => void;
@@ -66,7 +68,7 @@ interface ModelItemEditorProps {
     onOpenChange: (open: boolean) => void;
 }
 
-function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDown, isOpen, onOpenChange }: ModelItemEditorProps) {
+function ModelItemEditor({ model, providerType, index, onChange, onDelete, onMoveUp, onMoveDown, isOpen, onOpenChange }: ModelItemEditorProps) {
     const { t } = useTranslation();
 
     const updateField = <K extends keyof Model>(field: K, value: Model[K]) => {
@@ -95,11 +97,10 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
         });
     };
 
-    const updateCost = <K extends keyof ModelCost>(field: K, value: number) => {
-        const currentCost = model.cost || { input: 0, output: 0 };
+    const updateCost = (field: keyof Omit<ModelCost, "context_over_200k">, value: number) => {
         onChange({
             ...model,
-            cost: { ...currentCost, [field]: value },
+            cost: { ...model.cost, [field]: Number.isFinite(value) && value >= 0 ? value : undefined },
         });
     };
 
@@ -375,9 +376,10 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
                                     <Label className="text-xs text-muted-foreground">{t("pages.admin.providers.model.costInput")}</Label>
                                     <Input
                                         type="number"
-                                        step="0.01"
-                                        value={model.cost?.input || 0}
-                                        onChange={(e) => updateCost("input", parseFloat(e.target.value) || 0)}
+                                        min="0"
+                                        step="any"
+                                        value={model.cost?.input ?? ""}
+                                        onChange={(e) => updateCost("input", e.target.valueAsNumber)}
                                         className="h-8 text-sm"
                                     />
                                 </div>
@@ -385,9 +387,10 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
                                     <Label className="text-xs text-muted-foreground">{t("pages.admin.providers.model.costOutput")}</Label>
                                     <Input
                                         type="number"
-                                        step="0.01"
-                                        value={model.cost?.output || 0}
-                                        onChange={(e) => updateCost("output", parseFloat(e.target.value) || 0)}
+                                        min="0"
+                                        step="any"
+                                        value={model.cost?.output ?? ""}
+                                        onChange={(e) => updateCost("output", e.target.valueAsNumber)}
                                         className="h-8 text-sm"
                                     />
                                 </div>
@@ -395,9 +398,10 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
                                     <Label className="text-xs text-muted-foreground">{t("pages.admin.providers.model.costCacheRead")}</Label>
                                     <Input
                                         type="number"
-                                        step="0.01"
-                                        value={model.cost?.cache_read || 0}
-                                        onChange={(e) => updateCost("cache_read", parseFloat(e.target.value) || 0)}
+                                        min="0"
+                                        step="any"
+                                        value={model.cost?.cache_read ?? ""}
+                                        onChange={(e) => updateCost("cache_read", e.target.valueAsNumber)}
                                         placeholder="-"
                                         className="h-8 text-sm"
                                     />
@@ -406,14 +410,28 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
                                     <Label className="text-xs text-muted-foreground">{t("pages.admin.providers.model.costCacheWrite")}</Label>
                                     <Input
                                         type="number"
-                                        step="0.01"
-                                        value={model.cost?.cache_write || 0}
-                                        onChange={(e) => updateCost("cache_write", parseFloat(e.target.value) || 0)}
+                                        min="0"
+                                        step="any"
+                                        value={model.cost?.cache_write ?? ""}
+                                        onChange={(e) => updateCost("cache_write", e.target.valueAsNumber)}
                                         placeholder="-"
                                         className="h-8 text-sm"
                                     />
                                 </div>
                             </div>
+                            {providerType === "openai" && <Field>
+                                <FieldLabel htmlFor={`web-search-price-${index}`}>{t("pages.admin.providers.model.costWebSearch")}</FieldLabel>
+                                <Input
+                                    id={`web-search-price-${index}`}
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    value={model.cost?.web_search ?? ""}
+                                    onChange={(e) => updateCost("web_search", e.target.valueAsNumber)}
+                                    className="h-8 max-w-40"
+                                />
+                                <FieldDescription>{t("pages.admin.providers.model.costWebSearchDescription")}</FieldDescription>
+                            </Field>}
                         </div>
                     </CardContent>
                 </CollapsibleContent>
@@ -422,7 +440,7 @@ function ModelItemEditor({ model, index, onChange, onDelete, onMoveUp, onMoveDow
     );
 }
 
-export function ModelEditor({ models, onChange }: ModelEditorProps) {
+export function ModelEditor({ models, providerType, onChange }: ModelEditorProps) {
     const { t } = useTranslation();
     const [expandedIndexes, setExpandedIndexes] = useState<number[]>([]);
 
@@ -466,6 +484,7 @@ export function ModelEditor({ models, onChange }: ModelEditorProps) {
                         <ModelItemEditor
                             key={index}
                             model={model}
+                            providerType={providerType}
                             index={index}
                             onChange={(m) => updateModel(index, m)}
                             onDelete={() => deleteModel(index)}

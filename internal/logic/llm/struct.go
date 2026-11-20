@@ -88,6 +88,8 @@ type MessageMetaInfo struct {
 	ResponseTokenCount  int                                           `json:"response_token_count"`
 	ToolUseTokenCount   int                                           `json:"tool_use_token_count"`
 	CachedTokenCount    int                                           `json:"cached_token_count"`
+	Usage               []UsageRound                                  `json:"usage,omitempty"`
+	UsageLegacy         bool                                          `json:"usage_legacy,omitempty"`
 	ThoughtSignature    string                                        `json:"thought_signature"`
 	GoogleGroundingData *genai.GroundingMetadata                      `json:"google_grounding_data,omitempty"`
 	OpenaiGroundingData []responses.ResponseOutputTextAnnotationUnion `json:"openai_grounding_data,omitempty"`

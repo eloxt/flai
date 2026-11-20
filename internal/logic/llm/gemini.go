@@ -245,26 +245,47 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 		var functionCalls []*genai.FunctionCall
 		var thoughtSignature []byte
 		var modelParts []*genai.Part // Collect model's response parts for history
+		var streamErr error
+		var usageReported, searchObserved bool
+		searchQueries := make(map[string]struct{})
+		retrievedURLs := make(map[string]struct{})
+		generatedImages := 0
 
 		// Process stream
 		for resp, err := range iter {
 			if err != nil {
-				if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo); handled {
-					return saveErr
-				}
-				return err
+				streamErr = err
+				break
 			}
 
 			// Update usage metadata
-			if resp.UsageMetadata != nil {
-				metaInfo.CachedTokenCount = int(resp.UsageMetadata.CachedContentTokenCount)
-				metaInfo.PromptTokenCount = int(resp.UsageMetadata.PromptTokenCount)
-				metaInfo.ReasoningTokenCount = int(resp.UsageMetadata.ThoughtsTokenCount)
-				metaInfo.ResponseTokenCount = int(resp.UsageMetadata.CandidatesTokenCount)
-				metaInfo.ToolUseTokenCount = int(resp.UsageMetadata.ToolUsePromptTokenCount)
+			if usage := resp.UsageMetadata; usage != nil && (usage.TotalTokenCount > 0 ||
+				usage.PromptTokenCount > 0 || usage.CandidatesTokenCount > 0 ||
+				usage.ThoughtsTokenCount > 0 || usage.ToolUsePromptTokenCount > 0) {
+				usageReported = true
+				metaInfo.CachedTokenCount = int(usage.CachedContentTokenCount)
+				metaInfo.PromptTokenCount = int(usage.PromptTokenCount)
+				metaInfo.ReasoningTokenCount = int(usage.ThoughtsTokenCount)
+				metaInfo.ResponseTokenCount = int(usage.CandidatesTokenCount)
+				metaInfo.ToolUseTokenCount = int(usage.ToolUsePromptTokenCount)
 			}
 
 			for _, candidate := range resp.Candidates {
+				if grounding := candidate.GroundingMetadata; grounding != nil {
+					searchObserved = searchObserved || grounding.SearchEntryPoint != nil
+					for _, query := range grounding.WebSearchQueries {
+						if query = strings.TrimSpace(query); query != "" {
+							searchQueries[query] = struct{}{}
+						}
+					}
+				}
+				if urls := candidate.URLContextMetadata; urls != nil {
+					for _, url := range urls.URLMetadata {
+						if url != nil && url.RetrievedURL != "" {
+							retrievedURLs[url.RetrievedURL] = struct{}{}
+						}
+					}
+				}
 				if candidate.Content != nil {
 					for _, part := range candidate.Content.Parts {
 						var partType string
@@ -343,6 +364,7 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 							// Get public URL
 							imageUrl := s3.GetPublicUrl(ctx, imageKey)
 							currentImages = append(currentImages, ContentImage{PublicUrl: imageUrl})
+							generatedImages++
 
 							// Stream to client
 							streamResponse := StreamResponse{
@@ -372,16 +394,6 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 				if candidate.FinishReason == genai.FinishReasonStop {
 					metaInfo.ThoughtSignature = base64.StdEncoding.EncodeToString(thoughtSignature)
 
-					// Send meta info
-					metaResponse := StreamResponse{
-						MessageId: messageId,
-						Type:      consts.MessageType.MetaInfo,
-						Data:      metaInfo,
-					}
-					if err := response(metaResponse); err != nil {
-						return err
-					}
-
 					// Send grounding data if present
 					if candidate.GroundingMetadata != nil && len(candidate.GroundingMetadata.GroundingChunks) > 0 {
 						metaInfo.GoogleGroundingData = candidate.GroundingMetadata
@@ -396,6 +408,25 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 					}
 				}
 			}
+		}
+
+		var toolUsage []ToolUsage
+		if count := len(searchQueries); count > 0 || searchObserved {
+			toolUsage = append(toolUsage, ToolUsage{Name: "web_search_queries", Calls: count})
+		}
+		if count := len(retrievedURLs); count > 0 {
+			// Retrieved content is priced as input tokens, without a separate per-URL fee.
+			toolUsage = append(toolUsage, ToolUsage{Name: consts.InternalTools.URLContext, Calls: count, USD: new(float64)})
+		}
+		if generatedImages > 0 {
+			toolUsage = append(toolUsage, ToolUsage{Name: consts.InternalTools.ImageGeneration, Calls: generatedImages})
+		}
+		metaInfo.RecordUsage(modelConfig, consts.ProviderType.Gemini, usageReported, toolUsage)
+		if streamErr != nil {
+			if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo); handled {
+				return saveErr
+			}
+			return streamErr
 		}
 
 		// Check if we need to execute function calls
@@ -495,7 +526,10 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messageId string, respons
 	}
 
 	// Save final message
-	return c.saveAndClose(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo)
+	if err := c.saveAndClose(ctx, message, currentImages, currentId, &currentContentBuilder, currentMessageType, &contentList, metaInfo); err != nil {
+		return err
+	}
+	return response(StreamResponse{MessageId: messageId, Type: consts.MessageType.MetaInfo, Data: metaInfo})
 }
 
 // executeMCPToolCallByName executes an MCP tool by name and returns the result

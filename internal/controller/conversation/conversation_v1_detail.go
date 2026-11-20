@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flai/internal/consts"
 	"flai/internal/dao"
+	"flai/internal/logic"
 	"flai/internal/logic/llm"
 	"flai/internal/middleware"
 	"flai/internal/model/do"
@@ -87,6 +88,19 @@ func (c *ControllerV1) Detail(ctx context.Context, req *v1.DetailReq) (res *v1.D
 		err = json.Unmarshal([]byte(msg.MetaInfo), &metaInfo)
 		if err != nil {
 			return nil, gerror.WrapCode(gcode.CodeInternalError, err, "Failed to unmarshal message meta info")
+		}
+		if msg.Role == consts.MessageRole.Assistant && len(metaInfo.Usage) == 0 {
+			provider, model := logic.FindProviderModel(metaInfo.ProviderName, metaInfo.ModelName)
+			var providerType string
+			if provider != nil {
+				providerType = provider.ProviderType
+			} else if metaInfo.GoogleGroundingData != nil || metaInfo.ThoughtSignature != "" || metaInfo.ToolUseTokenCount > 0 {
+				providerType = consts.ProviderType.Gemini
+			}
+			reported := metaInfo.PromptTokenCount > 0 || metaInfo.ResponseTokenCount > 0 ||
+				metaInfo.ReasoningTokenCount > 0 || metaInfo.ToolUseTokenCount > 0
+			metaInfo.RecordUsage(model, providerType, reported, nil)
+			metaInfo.UsageLegacy = true
 		}
 
 		*res = append(*res, v1.MessageResponse{

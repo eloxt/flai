@@ -264,8 +264,8 @@ function ModelCardDetail({ model }: ModelCardDetailProps) {
                     <div className="flex flex-col col-span-2 mt-2">
                         <span className="text-muted-foreground mb-1">{t("components.modelSelector.pricing")}</span>
                         <div className="grid grid-cols-2 gap-x-4">
-                            <div>{t("components.modelSelector.input")}: ${model.cost.input}</div>
-                            <div>{t("components.modelSelector.output")}: ${model.cost.output}</div>
+                            <div>{t("components.modelSelector.input")}: {model.cost.input == null ? "—" : `$${model.cost.input}`}</div>
+                            <div>{t("components.modelSelector.output")}: {model.cost.output == null ? "—" : `$${model.cost.output}`}</div>
                         </div>
                     </div>
                 )}

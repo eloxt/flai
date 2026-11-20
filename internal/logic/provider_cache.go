@@ -21,6 +21,32 @@ func GetProvider(id string) *SimpleProviderInfo {
 	return providerMap[id]
 }
 
+// Older messages only stored display names. Leave pricing unknown for ambiguous matches.
+func FindProviderModel(providerName, modelName string) (*SimpleProviderInfo, *ModelConfig) {
+	if providerName == "" || modelName == "" {
+		return nil, nil
+	}
+	providerMu.RLock()
+	defer providerMu.RUnlock()
+	var providerMatch *SimpleProviderInfo
+	var modelMatch *ModelConfig
+	for _, provider := range providerMap {
+		if provider.Name != providerName {
+			continue
+		}
+		for _, model := range provider.ModelIdMap {
+			if model.Name != modelName && model.ID != modelName {
+				continue
+			}
+			if modelMatch != nil {
+				return nil, nil
+			}
+			providerMatch, modelMatch = provider, model
+		}
+	}
+	return providerMatch, modelMatch
+}
+
 type ModelConfig struct {
 	ID               string     `json:"id"`
 	Name             string     `json:"name"`
@@ -36,17 +62,18 @@ type ModelConfig struct {
 	LastUpdated      string     `json:"last_updated"`
 	Modalities       Modalities `json:"modalities"`
 	OpenWeights      bool       `json:"open_weights"`
-	Cost             Cost       `json:"cost"`
+	Cost             *Cost      `json:"cost,omitempty"`
 	Limit            Limit      `json:"limit"`
 	InternalTools    []string   `json:"internal_tools"`
 }
 
 type Cost struct {
-	Input           float64 `json:"input"`
-	Output          float64 `json:"output"`
-	CacheRead       float64 `json:"cache_read"`
-	CacheWrite      float64 `json:"cache_write"`
-	ContextOver200K *Cost   `json:"context_over_200k,omitempty"`
+	Input           *float64 `json:"input,omitempty"`
+	Output          *float64 `json:"output,omitempty"`
+	CacheRead       *float64 `json:"cache_read,omitempty"`
+	CacheWrite      *float64 `json:"cache_write,omitempty"`
+	WebSearch       *float64 `json:"web_search,omitempty"` // USD per OpenAI Responses web search call.
+	ContextOver200K *Cost    `json:"context_over_200k,omitempty"`
 }
 
 type Limit struct {

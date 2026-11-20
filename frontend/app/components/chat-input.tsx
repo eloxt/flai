@@ -5,7 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import TextareaAutosize from 'react-textarea-autosize';
 import { useInputStore } from "@/store/input-store";
 import { useModelStore } from "@/store/model-store";
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,7 @@ interface ChatInputProps {
     onHeightChange?: (height: number) => void;
     autoFocus?: boolean;
     contextUsagePercentage?: number;
+    costDetails?: ReactNode;
 }
 
 export function ChatInput({
@@ -83,7 +84,8 @@ export function ChatInput({
     className,
     onHeightChange,
     autoFocus = false,
-    contextUsagePercentage
+    contextUsagePercentage,
+    costDetails,
 }: ChatInputProps) {
     const { t } = useTranslation();
     const selectedTools = useInputStore((state) => state.selectedTools);
@@ -352,6 +354,7 @@ export function ChatInput({
                             </ScrollArea>
                         )}
                     </div>
+                    {costDetails}
                     {isStreaming ? (
                         <InputGroupButton
                             variant="destructive"

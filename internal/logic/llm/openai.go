@@ -130,6 +130,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 		defer stream.Close()
 
 		var functionCalls []responses.ResponseFunctionToolCall
+		recordedUsage := false
 
 		// Process stream
 		for stream.Next() {
@@ -252,17 +253,35 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 					shouldSend = true
 				}
 
-			case responses.ResponseCompletedEvent:
-				previousResponseId = e.Response.ID
+			case responses.ResponseCompletedEvent, responses.ResponseIncompleteEvent:
+				result := event.Response
+				previousResponseId = result.ID
 				metaInfo.OpenaiResponseId = previousResponseId
-				metaInfo.CachedTokenCount = int(e.Response.Usage.InputTokensDetails.CachedTokens)
-				metaInfo.PromptTokenCount = int(e.Response.Usage.InputTokens)
-				metaInfo.ReasoningTokenCount = int(e.Response.Usage.OutputTokensDetails.ReasoningTokens)
-				metaInfo.ResponseTokenCount = int(e.Response.Usage.OutputTokens)
-				streamResponse.Type = consts.MessageType.MetaInfo
-				streamResponse.Data = metaInfo
-				shouldSend = true
-
+				metaInfo.CachedTokenCount = int(result.Usage.InputTokensDetails.CachedTokens)
+				metaInfo.PromptTokenCount = int(result.Usage.InputTokens)
+				metaInfo.ReasoningTokenCount = int(result.Usage.OutputTokensDetails.ReasoningTokens)
+				metaInfo.ResponseTokenCount = int(result.Usage.OutputTokens)
+				var searches, images int
+				for _, item := range result.Output {
+					switch item.Type {
+					case "web_search_call":
+						searches++
+					case "image_generation_call":
+						images++
+					}
+				}
+				var toolUsage []ToolUsage
+				if searches > 0 {
+					toolUsage = append(toolUsage, ToolUsage{Name: consts.InternalTools.WebSearch, Calls: searches})
+				}
+				if images > 0 {
+					toolUsage = append(toolUsage, ToolUsage{Name: consts.InternalTools.ImageGeneration, Calls: images})
+				}
+				if !recordedUsage {
+					reported := result.Usage.JSON.InputTokens.Valid() && result.Usage.JSON.OutputTokens.Valid()
+					metaInfo.RecordUsage(modelConfig, consts.ProviderType.OpenAI, reported, toolUsage)
+					recordedUsage = true
+				}
 			default:
 				continue
 			}
@@ -274,6 +293,9 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 			}
 		}
 
+		if !recordedUsage {
+			metaInfo.RecordUsage(modelConfig, consts.ProviderType.OpenAI, false, nil)
+		}
 		if err := stream.Err(); err != nil {
 			if handled, saveErr := HandleStreamError(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo); handled {
 				return saveErr
@@ -376,7 +398,10 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messageId string, respons
 	}
 
 	// Save final message
-	return c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo)
+	if err := c.saveAndClose(ctx, message, currentImages, currentContentId, &currentContentBuilder, contentType, &contentList, metaInfo); err != nil {
+		return err
+	}
+	return response(StreamResponse{MessageId: messageId, Type: consts.MessageType.MetaInfo, Data: metaInfo})
 }
 
 func (c *OpenAIClient) saveAndClose(ctx context.Context, message *entity.Message, imageUrls []ContentImage, currentId string, contentBuilder *strings.Builder, contentType string, contentList *[]Content, metaInfo MessageMetaInfo) error {

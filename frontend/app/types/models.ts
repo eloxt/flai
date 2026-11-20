@@ -5,11 +5,12 @@ export interface ModelModalities {
 }
 
 export interface ModelCost {
-  input: number;
-  output: number;
+  input?: number;
+  output?: number;
   reasoning?: number;
   cache_read?: number;
   cache_write?: number;
+  web_search?: number;
   input_audio?: number;
   output_audio?: number;
   context_over_200k?: ModelCost;

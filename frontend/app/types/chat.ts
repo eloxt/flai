@@ -78,8 +78,24 @@ export interface MessageMetaInfo {
     response_token_count: number;
     cached_token_count: number;
     tool_use_token_count: number;
+    usage?: UsageRound[];
+    usage_legacy?: boolean;
     google_grounding_data?: GoogleGroundingData;
     openai_grounding_data?: OpenaiGroundingData[];
+}
+
+export interface UsageCharge {
+    tokens: number;
+    usd?: number;
+}
+
+export interface UsageRound {
+    input: UsageCharge;
+    output: UsageCharge;
+    cache_read: UsageCharge;
+    tool_input: UsageCharge;
+    tools?: { name: string; calls?: number; usd?: number }[];
+    incomplete?: boolean;
 }
 
 // Grounding/Citation types
